@@ -15,7 +15,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, ChevronLeft, ChevronRight, Edit, Plus, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-
+import { toast } from "sonner"
 // Student Details Dialog Component
 function StudentDetailsDialog({ student, open, onOpenChange, students, onStudentChange }: { 
   student: Student | null, 
@@ -250,6 +250,10 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error('Failed to delete student');
       }
+
+      toast("成功", {
+        description: "學生已從系統中刪除",
+      })
 
       // 更新學生列表
       setStudents(students.filter((student) => student.id !== id))
