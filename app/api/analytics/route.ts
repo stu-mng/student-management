@@ -97,11 +97,12 @@ export async function GET(_request: NextRequest) {
         name, 
         email,
         role,
-        updated_at,
+        last_active,
         teacher_student_access(count)
       `)
       .eq('role', 'teacher')
-      .order('updated_at', { ascending: false })
+      .not('last_active', 'is', null)
+      .order('last_active', { ascending: false })
       .limit(5);
     
     if (teachersError) {
@@ -113,7 +114,7 @@ export async function GET(_request: NextRequest) {
     const teachersByActivity = teachersData.map(teacher => ({
       name: teacher.name || (teacher.email?.split('@')[0] || 'Unknown'),
       studentsCount: teacher.teacher_student_access[0]?.count || 0,
-      lastActive: teacher.updated_at || new Date().toISOString()
+      lastActive: teacher.last_active,
     }));
     
     // Get all teachers with student counts for bar chart

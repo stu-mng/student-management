@@ -16,6 +16,8 @@ export interface User {
   role: 'admin' | 'teacher' | 'root';
   created_at: string;
   updated_at: string;
+  avatar_url?: string | null;
+  last_active?: string | null;
 }
 
 export interface UserCreateRequest {

@@ -2,25 +2,25 @@
 
 import { Button } from "@/components/ui/button"
 import {
-    Card, CardContent, CardDescription, CardHeader,
-    CardTitle
+  Card, CardContent, CardDescription, CardHeader,
+  CardTitle
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
-    Bar,
-    BarChart,
-    Cell,
-    Legend,
-    Line,
-    LineChart,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from "recharts"
 import { toast } from "sonner"
 
@@ -44,6 +44,23 @@ interface AnalyticsData {
   }>
 }
 
+interface OnlineUsersData {
+  online: {
+    users: Array<{
+      id: string
+      name: string
+      role: string
+      last_active: string
+    }>
+    byRole: {
+      teachers: number
+      admins: number
+      root: number
+      total: number
+    }
+  }
+}
+
 const COLORS = [
   "#0088FE", "#00C49F", "#FFBB28", "#FF8042", 
   "#8884D8", "#83A6ED", "#8DD1E1", "#A4DE6C"
@@ -51,7 +68,9 @@ const COLORS = [
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [onlineData, setOnlineData] = useState<OnlineUsersData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [onlineLoading, setOnlineLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
 
   const fetchAnalyticsData = async () => {
@@ -75,8 +94,37 @@ export default function AnalyticsPage() {
     }
   }
 
+  const fetchOnlineUsersData = async () => {
+    try {
+      setOnlineLoading(true)
+      const response = await fetch('/api/analytics/sessions')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch online users data')
+      }
+      
+      const result = await response.json()
+      setOnlineData(result)
+    } catch (error) {
+      toast("錯誤", {
+        description: "無法獲取線上用戶數據",
+      })
+      console.error("Error fetching online users:", error)
+    } finally {
+      setOnlineLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchAnalyticsData()
+    fetchOnlineUsersData()
+
+    // 每 30 秒更新一次在線用戶數據
+    const interval = setInterval(() => {
+      fetchOnlineUsersData()
+    }, 30 * 1000)
+
+    return () => clearInterval(interval)
   }, [])
 
   // Transform data for charts
@@ -98,7 +146,8 @@ export default function AnalyticsPage() {
   }
   
   // Format relative time for display
-  const getRelativeTimeString = (dateString: string): string => {
+  const getRelativeTimeString = (dateString: string | null): string => {
+    if (!dateString) return '從未登入';
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -141,13 +190,76 @@ export default function AnalyticsPage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={fetchAnalyticsData}
-            disabled={loading}
+            onClick={() => {
+              fetchAnalyticsData();
+              fetchOnlineUsersData();
+            }}
+            disabled={loading || onlineLoading}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading || onlineLoading ? 'animate-spin' : ''}`} />
             重新整理
           </Button>
         </div>
+      </div>
+
+      {/* Online Users Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              當前在線用戶數
+              <div className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {onlineLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{onlineData?.online.byRole.total || 0}</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              在線教師
+              <div className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {onlineLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{onlineData?.online.byRole.teachers || 0}</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              在線管理員
+              <div className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {onlineLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">
+                {(onlineData?.online.byRole.admins || 0) + (onlineData?.online.byRole.root || 0)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Key Statistics */}
@@ -202,6 +314,54 @@ export default function AnalyticsPage() {
                 {data && data.teachersByActivity.length > 0 
                   ? Math.round(data.totalStudents / data.teachersByActivity.length) 
                   : 0}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Online Users List */}
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              當前在線用戶
+              <div className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
+              </div>
+            </CardTitle>
+            <CardDescription>最近 15 分鐘內活躍的用戶</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {onlineLoading ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ) : onlineData?.online.users && onlineData.online.users.length > 0 ? (
+              <div className="rounded-md border">
+                <div className="grid grid-cols-4 p-3 bg-muted/50">
+                  <div className="font-medium">用戶名稱</div>
+                  <div className="font-medium">角色</div>
+                  <div className="font-medium col-span-2">最後活動時間</div>
+                </div>
+                <div className="divide-y">
+                  {onlineData.online.users.map((user) => (
+                    <div key={user.id} className="grid grid-cols-4 p-3">
+                      <div>{user.name}</div>
+                      <div>
+                        {user.role === 'teacher' && '教師'}
+                        {user.role === 'admin' && '管理員'}
+                        {user.role === 'root' && '系統管理員'}
+                      </div>
+                      <div className="col-span-2">{getRelativeTimeString(user.last_active)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-muted-foreground">
+                目前沒有在線用戶
               </div>
             )}
           </CardContent>

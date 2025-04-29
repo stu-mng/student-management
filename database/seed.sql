@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(20) NOT NULL,
   created_at TIMESTAMP NOT NULL,
   updated_at TIMESTAMP NOT NULL
+  last_active TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS students (

@@ -16,7 +16,8 @@
   "role": "VARCHAR(10) NOT NULL CHECK (role IN ('teacher', 'admin', 'root'))", // 用戶角色：教師、管理員或最高管理員
   "avatar_url": "TEXT", // 頭貼超連結
   "created_at": "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP", // 創建時間
-  "updated_at": "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP"  // 更新時間
+  "updated_at": "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP",  // 更新時間
+  "last_active": "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP"  // 更新時間
 }
 ```
 
@@ -110,7 +111,8 @@ CREATE TABLE "users" (
   "role" VARCHAR(10) NOT NULL CHECK (role IN ('teacher', 'admin', 'root')),
   "avatar_url" TEXT,
   "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "last_active" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 刪除已存在的學生表（如果存在）以及所有依賴它的物件

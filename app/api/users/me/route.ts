@@ -129,6 +129,7 @@ export async function PUT(request: NextRequest) {
     const id = user.id;
     const name = user.user_metadata?.name || user.user_metadata?.full_name;
     const avatar_url = user.user_metadata?.picture || user.user_metadata?.avatar_url;
+    const now = new Date().toISOString();
 
     // 更新用戶資料
     const { data: updatedUser, error } = await supabase
@@ -137,7 +138,8 @@ export async function PUT(request: NextRequest) {
         id,
         name,
         avatar_url,
-        updated_at: new Date().toISOString()
+        updated_at: now,
+        last_active: now
       })
       .eq('email', user.email)
       .select()

@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     // 計算分頁的起始位置
     const offset = (page - 1) * limit;
     
-    let query = supabase.from('users').select('*', { count: 'exact' });
+    // 確保包含 last_active 欄位
+    let query = supabase.from('users').select('id, email, role, created_at, updated_at, avatar_url, name, last_active', { count: 'exact' });
     
     // 應用查詢過濾條件
     if (search) {

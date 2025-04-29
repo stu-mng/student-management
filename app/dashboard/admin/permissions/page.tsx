@@ -25,6 +25,7 @@ type User = {
   created_at: string
   avatar_url: string | null
   name: string | null
+  last_active?: string
 }
 
 // 根據角色獲取背景顏色
@@ -92,6 +93,43 @@ const getRoleSortKey = (role: string) => {
       return 2;
     default:
       return 3;
+  }
+}
+
+// 檢查用戶是否在線 (15分鐘內有活動)
+const isUserOnline = (lastActive?: string) => {
+  if (!lastActive) return false;
+  const lastActiveTime = new Date(lastActive).getTime();
+  const currentTime = Date.now();
+  return (currentTime - lastActiveTime) < 15 * 60 * 1000; // 15分鐘閾值
+}
+
+// 格式化最後活動時間為相對時間
+const formatLastActive = (lastActive?: string) => {
+  if (!lastActive) return '從未登入';
+  
+  const lastActiveDate = new Date(lastActive);
+  const now = new Date();
+  const diffMs = now.getTime() - lastActiveDate.getTime();
+  
+  // 轉換為秒、分鐘、小時、天
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  // 格式化相對時間
+  if (diffSecs < 60) {
+    return `${diffSecs} 秒前`;
+  } else if (diffMins < 60) {
+    return `${diffMins} 分鐘前`;
+  } else if (diffHours < 24) {
+    return `${diffHours} 小時前`;
+  } else if (diffDays < 30) {
+    return `${diffDays} 天前`;
+  } else {
+    // 如果超過30天，顯示日期
+    return lastActiveDate.toLocaleDateString('zh-TW');
   }
 }
 
@@ -322,6 +360,37 @@ export default function PermissionsPage() {
 
   const columns: ColumnDef<User>[] = [
     {
+      accessorKey: "status",
+      header: "",
+      cell: ({ row }) => {
+        const user = row.original
+        const online = isUserOnline(user.last_active)
+        return (
+          <div className="flex items-center pl-4">
+            <div className={`h-2.5 w-2.5 rounded-full mr-2 ${online ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+          </div>
+        )
+      }
+    },
+    {
+      accessorKey: "name",
+      header: "",
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <div className="flex items-center gap-4 m-0 p-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.avatar_url || ""} alt={user.name || ""} />
+              <AvatarFallback className={getRoleColor(user.role)}>
+                {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span>{user.name || user.email.split('@')[0]}</span>
+          </div>
+        )
+      }
+    },
+    {
       accessorKey: "role",
       header: ({ column }) => {
         return (
@@ -381,106 +450,43 @@ export default function PermissionsPage() {
       },
     },
     {
-      id: "avatar",
-      header: '',
+      accessorKey: "email",
+      header: "電子郵件",
+    },
+    {
+      accessorKey: "last_active",
+      header: "最後活動",
       cell: ({ row }) => {
         const user = row.original
-        const userInitial = (user.name?.charAt(0) || user.email?.charAt(0) || '?').toUpperCase()
-        
-        return (
-          <div className="flex justify-center items-center py-2">
-            <Avatar className={`h-9 w-9 ${!user.avatar_url ? getRoleColor(user.role) : ''}`}>
-              <AvatarImage
-                src={user.avatar_url || ''}
-                alt={`${user.name || user.email} avatar`}
-              />
-              <AvatarFallback className={`text-white font-medium ${getRoleColor(user.role)}`}>
-                {userInitial}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => {
-        return (
-          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            帳號名稱
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-2 text-center pr-4 truncate" title={row.getValue("name") || "-"}>
-          {
-            row.getValue("name") ?
-              <p>{row.getValue("name")}</p>
-            :
-              <Badge variant="outline" className="text-red-500 rounded-full">未註冊</Badge>
-          }
-          {row.getValue('email') === user?.email && <Badge variant="outline" className="rounded-full text-gray-600">你</Badge> }
-        </div>
-      ),
-    },
-    {
-      accessorKey: "email",
-      header: ({ column }) => {
-        return (
-          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            電子郵件
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => (
-        <div className="w-full text-center pr-4 truncate" title={row.getValue("email") || "-"}>
-          {row.getValue("email") || "-"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "created_at",
-      header: ({ column }) => {
-        return (
-          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            創建時間
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => <div className="text-center pr-4">{new Date(row.getValue("created_at")).toLocaleDateString('zh-TW', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }).replace(/(\d+)([^\d\s]+)|([^\d\s]+)(\d+)/g, '$1 $3 $2 $4') || "-"}</div>,
+        return formatLastActive(user.last_active)
+      }
     },
     {
       id: "actions",
+      header: "",
       cell: ({ row }) => {
-        const userRow = row.original
+        const currentUser = row.original
+        const isCurrentUser = currentUser.id === user?.id
+        const isDeletable = !isCurrentUser && 
+                           (currentUserRole === 'root' || 
+                            (currentUserRole === 'admin' && currentUser.role === 'teacher'))
         
-        if (userRow.id === user?.id) {
-          return null;
-        }
-
+        
+        
         return (
-          <div className="w-full flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDeleteUser(userRow.id)}
-              disabled={currentUserRole === 'admin' && userRow.role !== 'teacher' || currentUserRole === 'teacher'}
-              className="text-destructive hover:text-destructive"
+          <div className="flex space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => handleDeleteUser(currentUser.id)}
+              disabled={!isDeletable}
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              刪除
+              <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
           </div>
         )
-      },
-    },
+      }
+    }
   ]
 
   return (

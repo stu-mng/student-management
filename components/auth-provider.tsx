@@ -20,6 +20,7 @@ type User = {
   avatar_url?: string
   created_at?: string
   updated_at?: string
+  last_active?: string
 }
 
 type AuthContextType = {
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (existingUserResponse.status === 404) {
         // User is not in the whitelist, redirect to blocked page
-        router.push('/blocked')
+        router.replace('/blocked')
         return authUser
       }
       
@@ -80,12 +81,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
+  // 定期更新用戶活動時間
+  useEffect(() => {
+    if (!user) return
+    
+    // 初始登入時更新活動時間
+    const updateActivity = async () => {
+      try {
+        await fetch('/api/users/activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch (error) {
+        console.error('Error updating activity:', error)
+      }
+    }
+    
+    updateActivity()
+    
+    // 每5分鐘更新一次活動時間
+    const activityInterval = setInterval(() => {
+      updateActivity()
+    }, 5 * 60 * 1000)
+    
+    return () => clearInterval(activityInterval)
+  }, [user])
+
   useEffect(() => {
     let isMounted = true
     let lastAuthId: string | null = null
     
     const initializeAuth = async () => {
       try {
+        setIsLoading(true)
         const { data, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -97,7 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data?.session?.user && isMounted) {
           lastAuthId = data.session.user.id
           const fullUser = await syncUserData(data.session.user as User)
-          setUser(fullUser)
+          if (isMounted) setUser(fullUser)
+        } else if (isMounted) {
+          // Explicitly set user to null if no session
+          setUser(null)
         }
         
         if (isMounted) setIsLoading(false)
@@ -113,19 +144,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!isMounted) return
         
-        if (session) {
-          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session.user.id !== lastAuthId) {
-            lastAuthId = session.user.id
-            const fullUser = await syncUserData(session.user as User)
-            setUser(fullUser)
-          } else if (event !== 'SIGNED_IN' && event !== 'TOKEN_REFRESHED') {
-            setUser(session.user as User)
-          }
-        } else {
-          setUser(null)
-        }
+        // Set loading to true during auth state changes
+        setIsLoading(true)
         
-        if (isMounted) setIsLoading(false)
+        try {
+          if (session) {
+            if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session.user.id !== lastAuthId) {
+              lastAuthId = session.user.id
+              const fullUser = await syncUserData(session.user as User)
+              setUser(fullUser)
+            } else if (event === 'USER_UPDATED') {
+              // Handle user updates
+              setUser(session.user as User)
+            } else if (event !== 'SIGNED_IN' && event !== 'TOKEN_REFRESHED') {
+              setUser(session.user as User)
+            }
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null)
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error)
+        } finally {
+          if (isMounted) setIsLoading(false)
+        }
       }
     )
 
@@ -162,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(null)
-      router.push("/login")
+      router.replace("/login")
     } catch (error) {
       console.error("Error signing out:", error)
     }
