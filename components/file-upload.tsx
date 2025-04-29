@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { parseStudentFile, StudentImportData } from "@/lib/utils/file-parser"
+import type { StudentImportData } from "@/lib/utils/file-parser"
+import { parseStudentFile } from "@/lib/utils/file-parser"
 import type { ColumnDef } from "@tanstack/react-table"
 import { RefreshCw, Upload } from "lucide-react"
-import { useMemo, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface FileUploadProps {
@@ -72,7 +73,7 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
         throw new Error(errorData || "上傳失敗")
       }
 
-      const result = await response.json()
+      // const result = await response.json()
       
       toast.success("成功", {
         description: `已成功上傳 ${parsedData.length} 筆學生資料`,
@@ -86,11 +87,11 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
 
       // 呼叫成功回調
       if (onSuccess) onSuccess()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("上傳資料錯誤:", error)
 
       toast.error("錯誤", {
-        description: error.message || "上傳資料時發生錯誤",
+        description: error instanceof Error ? error.message : "上傳資料時發生錯誤",
       })
     } finally {
       setIsUploading(false)
@@ -134,21 +135,6 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
       header: '是否弱勢生'
     },
   ]
-
-  // 使用 useMemo 來避免不必要的重新計算
-  const searchableColumns = useMemo(
-    () => [
-      {
-        id: "name",
-        title: "姓名",
-      },
-      {
-        id: "email",
-        title: "電子郵件",
-      },
-    ],
-    [],
-  )
 
   return (
     <Card>

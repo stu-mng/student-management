@@ -49,9 +49,9 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col space-y-2 text-xs text-center text-gray-500 pt-2">
           <p>登入即表示您同意我們的</p>
           <div className="flex justify-center space-x-2">
-            <Link href="/terms" target="_blank" className="text-primary hover:underline">使用者條款</Link>
+            <Link href="/terms" className="text-primary hover:underline">使用者條款</Link>
             <span>與</span>
-            <Link href="/privacy" target="_blank" className="text-primary hover:underline">隱私條款</Link>
+            <Link href="/privacy" className="text-primary hover:underline">隱私條款</Link>
           </div>
         </CardFooter>
       </Card>

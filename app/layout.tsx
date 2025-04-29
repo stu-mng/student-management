@@ -8,8 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
   title: "學生資料管理系統",
-  description: "提供教師查詢學生資料和管理員管理學生資訊的系統",
-    generator: 'v0.dev'
+  description: "提供教師查詢學生資料和管理員管理學生資訊的系統"
 }
 
 export default function RootLayout({
@@ -24,9 +23,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <AuthProvider>
-                {children}
-            </AuthProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>

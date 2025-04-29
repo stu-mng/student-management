@@ -139,19 +139,25 @@ export default function AssignStudentsPage() {
 
     try {
       // 使用 API 更新學生分配
-      const result = await bulkAssignStudentsToTeacher(selectedTeacher, selectedStudents)
+      await bulkAssignStudentsToTeacher(selectedTeacher, selectedStudents)
       
-      console.log(`已成功更新教師 ${selectedTeacher} 的學生分配`, result)
-      
+      let message = `學生分配已成功更新：`;
+      if (studentsToBeAssigned.length > 0) {
+        message = message.concat(`新增 ${studentsToBeAssigned.length} 位`);
+      }
+      if (studentsToBeAssigned.length > 0 && studentsToBeUnassigned.length > 0) {
+        message = message.concat(`、`);
+      }
+      if (studentsToBeUnassigned.length > 0) {
+        message = message.concat(`移除 ${studentsToBeUnassigned.length} 位`);
+      }
       toast("成功", {
-        description: `學生分配已成功更新：新增 ${studentsToBeAssigned.length} 位，移除 ${studentsToBeUnassigned.length} 位`,
+        description: message
       })
 
       // 更新已分配學生列表
       setAssignedStudents([...selectedStudents])
     } catch (error: unknown) {
-      console.error("更新學生分配錯誤:", error)
-
       toast("錯誤", {
         description: error instanceof Error ? error.message : "更新學生分配時發生錯誤",
       })
@@ -324,8 +330,17 @@ export default function AssignStudentsPage() {
                       <span>位學生將被取消分配</span>
                     </div>
                   )}
-                  <div className="text-xs text-amber-600 mt-1">
-                    請檢查變更並點擊「保存分配」按鈕確認。
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="text-xs text-amber-600">
+                      請檢查變更並點擊「保存分配」按鈕確認。
+                    </div>
+                    <Button 
+                      onClick={handleSubmit} 
+                      disabled={isSubmitting} 
+                      className="bg-amber-600 hover:bg-amber-700 text-white h-8 px-3 text-sm"
+                    >
+                      {isSubmitting ? "保存中..." : "保存分配"}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -359,11 +374,6 @@ export default function AssignStudentsPage() {
                     data={students.filter((student) => selectedStudents.includes(student.id))}
                     initialState={{ columnVisibility: initialColumnVisibility }}
                   />
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
-                      {isSubmitting ? "保存中..." : "保存分配"}
-                    </Button>
-                  </div>
                 </div>
               )}
             </CardContent>

@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         </div>
         
         <div className="prose max-w-none">
-          <p className="text-gray-600 mb-4">最後更新日期：2023年12月1日</p>
+          <p className="text-gray-600 mb-4">最後更新日期：2025 年 04 月 29 日</p>
           
           <section className="mb-6">
             <h2 className="text-xl font-semibold mb-3">1. 資料收集</h2>

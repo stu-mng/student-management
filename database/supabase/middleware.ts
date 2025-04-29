@@ -39,7 +39,7 @@ export const updateSession = async (request: NextRequest) => {
     const { data: { session } } = await supabase.auth.getSession();
 
     // Public routes
-    const publicRoutes = ['/login', '/auth/callback'];
+    const publicRoutes = ['/', '/login', '/auth/callback', '/terms', '/privacy'];
     
     // Check if the current path is a public route
     const isPublicRoute = publicRoutes.some(route => 

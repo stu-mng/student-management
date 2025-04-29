@@ -1,26 +1,27 @@
+"use client"
 
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function TermsPage() {
-  
+  const router = useRouter()
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 md:p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">使用者條款</h1>
-          <Link href="/login" className="text-sm" passHref>
             <Button
               variant="outline"
               className="text-sm"
+              onClick={() => router.back()}
             >
               返回
             </Button>
-          </Link>
         </div>
         
         <div className="prose max-w-none">
-          <p className="text-gray-600 mb-4">最後更新日期：2023年12月1日</p>
+          <p className="text-gray-600 mb-4">最後更新日期：2025 年 04 月 29 日</p>
           
           <section className="mb-6">
             <h2 className="text-xl font-semibold mb-3">1. 服務介紹</h2>

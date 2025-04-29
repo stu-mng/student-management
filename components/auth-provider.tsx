@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createBrowserClient } from "@supabase/ssr"
 import { useRouter } from "next/navigation"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 
 type User = {
   id: string
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const syncUserData = async (authUser: User): Promise<User> => {
+  const syncUserData = useCallback(async (authUser: User): Promise<User> => {
     try {
       // Check if user exists
       const existingUserResponse = await fetch(`/api/users/me`, {
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error syncing user data:', error)
       return authUser
     }
-  }
+  }, [router])
 
   useEffect(() => {
     let isMounted = true
@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, syncUserData])
 
   const signInWithGoogle = async () => {
     try {
