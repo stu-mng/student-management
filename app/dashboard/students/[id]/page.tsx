@@ -4,8 +4,9 @@ import type React from "react"
 
 import type { Student, StudentUpdateRequest } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
+import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -165,7 +166,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
           <p className="text-muted-foreground">更新學生的資料</p>
         </div>
 
-        <Card>
+        <RestrictedCard allowedRoles={["admin", "root"]}>
           <CardHeader>
             <CardTitle>學生資料</CardTitle>
             <CardDescription>編輯學生的基本資料</CardDescription>
@@ -184,7 +185,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
             <Skeleton className="h-10 w-20" />
             <Skeleton className="h-10 w-24" />
           </CardFooter>
-        </Card>
+        </RestrictedCard>
       </div>
     )
   }
@@ -196,7 +197,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
         <p className="text-muted-foreground">更新學生的資料</p>
       </div>
 
-      <Card>
+      <RestrictedCard allowedRoles={["admin", "root"]}>
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -398,7 +399,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
             </Button>
           </CardFooter>
         </form>
-      </Card>
+      </RestrictedCard>
     </div>
   )
 }

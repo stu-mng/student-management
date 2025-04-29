@@ -1,6 +1,7 @@
+import { RestrictedCard } from "@/components/restricted-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Database, FileSpreadsheet, Settings, Shield, Users } from "lucide-react";
+import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart3, FileSpreadsheet, Settings, Shield, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -29,7 +30,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-center mb-12">核心功能</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Student Management */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["teacher", "admin", "root"]}>
               <CardHeader>
                 <Users className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>學生資料管理</CardTitle>
@@ -37,10 +38,10 @@ export default function Home() {
                   完整的學生資料管理，包含新增、編輯、查詢及教師分配
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </RestrictedCard>
 
             {/* Data Import */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["admin", "root"]}>
               <CardHeader>
                 <FileSpreadsheet className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>資料匯入</CardTitle>
@@ -48,10 +49,10 @@ export default function Home() {
                   支援多種格式的資料匯入，快速建立學生資料庫
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </RestrictedCard>
 
             {/* User Permissions */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["admin", "root"]}>
               <CardHeader>
                 <Shield className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>權限管理</CardTitle>
@@ -59,10 +60,10 @@ export default function Home() {
                   細緻的權限控制系統，確保資料安全
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </RestrictedCard>
 
             {/* Analytics */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["root"]}>
               <CardHeader>
                 <BarChart3 className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>數據分析</CardTitle>
@@ -70,10 +71,10 @@ export default function Home() {
                   強大的數據分析工具，協助決策制定
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </RestrictedCard>
 
             {/* System Settings */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["root"]}>
               <CardHeader>
                 <Settings className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>系統設定</CardTitle>
@@ -81,18 +82,8 @@ export default function Home() {
                   靈活的系統配置選項，滿足不同需求
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </RestrictedCard>
 
-            {/* Data Management */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <Database className="h-8 w-8 mb-2 text-primary" />
-                <CardTitle>資料管理</CardTitle>
-                <CardDescription>
-                  完整的資料管理解決方案
-                </CardDescription>
-              </CardHeader>
-            </Card>
           </div>
         </div>
       </main>

@@ -3,12 +3,12 @@
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
-    Sheet,
-    SheetClose,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 import Image from "next/image"
@@ -21,7 +21,7 @@ export function MobileNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
-  const isAdmin = user?.email && ["admin@example.com"].includes(user.email)
+  const isAdmin = user?.role === "admin" || user?.role === "root"
   
   const avatarUrl = user?.user_metadata?.avatar_url || 
                     user?.user_metadata?.picture || 
@@ -33,10 +33,8 @@ export function MobileNav() {
                      ""
 
   const navigation = [
-    { name: "學生管理", href: "/dashboard", admin: false },
-    { name: "用戶權限", href: "/dashboard/permissions", admin: true },
-    { name: "學生分配", href: "/dashboard/assign", admin: true },
-    { name: "資料匯入", href: "/dashboard/import", admin: true },
+    { name: "控制台", href: "/dashboard", admin: false },
+    { name: "學生管理", href: "/dashboard/students", admin: false },
   ]
 
   const handleSignOut = () => {

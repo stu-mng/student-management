@@ -23,10 +23,8 @@ export default function DashboardHeader() {
                      ""
 
   const navigation = [
-    { name: "學生管理", href: "/dashboard", admin: false },
-    { name: "用戶權限", href: "/dashboard/permissions", admin: false },
-    { name: "學生分配", href: "/dashboard/assign", admin: true },
-    { name: "資料匯入", href: "/dashboard/import", admin: true },
+    { name: "控制台", href: "/dashboard", admin: false },
+    { name: "學生管理", href: "/dashboard/students", admin: false },
   ]
 
   return (
@@ -35,7 +33,7 @@ export default function DashboardHeader() {
         <div className="flex items-center gap-4">
           <MobileNav />
           <Link href="/dashboard" className="font-semibold">
-            學生資料管理系統
+            學生管理系統
           </Link>
           <nav className="hidden md:flex gap-4">
             {navigation.map((item) => {

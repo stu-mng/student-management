@@ -28,10 +28,9 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">1. 資料收集</h2>
             <p>學生管理系統收集以下資訊：</p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li>基本個人資料（姓名、學號、電子郵件、聯絡方式等）</li>
-              <li>學業相關資料（課程、成績、出勤紀錄等）</li>
+              <li>基本個人資料</li>
+              <li>學業相關資料</li>
               <li>系統使用紀錄（登入時間、操作記錄等）</li>
-              <li>Google帳戶相關資訊（用於身份驗證）</li>
             </ul>
           </section>
           
