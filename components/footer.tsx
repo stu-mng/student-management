@@ -1,7 +1,16 @@
-import { cn } from "@/lib/utils"
-import { Github } from "lucide-react"
+'use client'
+
+import { cn } from "@/lib/utils";
+import { Github } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function Footer({ className }: { className?: string }) {
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/dashboard')) {
+    return null
+  }
+
   return (
     <footer className={cn("w-full py-6 text-center text-sm text-muted-foreground bg-slate-50", className)}>
       <div className="container">

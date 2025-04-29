@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -214,11 +215,11 @@ export default function PermissionsPage() {
       // 清空表單
       setNewUserEmail("")
       setNewUserRole("teacher")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("添加用戶錯誤:", error)
 
       toast("錯誤", {
-        description: error.message || "添加用戶時發生錯誤",
+        description: error instanceof Error ? error.message : "添加用戶時發生錯誤",
       })
     } finally {
       setIsSubmitting(false)
@@ -247,11 +248,11 @@ export default function PermissionsPage() {
       toast("成功", {
         description: "用戶已成功刪除",
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("刪除用戶錯誤:", error)
 
       toast("錯誤", {
-        description: error.message || "刪除用戶時發生錯誤",
+        description: error instanceof Error ? error.message : "刪除用戶時發生錯誤",
       })
     }
   }
@@ -310,11 +311,11 @@ export default function PermissionsPage() {
       toast("成功", {
         description: "用戶角色已成功更新",
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("更新用戶角色錯誤:", error)
 
       toast("錯誤", {
-        description: error.message || "更新用戶角色時發生錯誤",
+        description: error instanceof Error ? error.message : "更新用戶角色時發生錯誤",
       })
     }
   }
@@ -486,13 +487,35 @@ export default function PermissionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">用戶權限管理</h1>
-        <p className="text-muted-foreground">管理系統中的用戶及其權限</p>
+        <p className="flex items-center text-muted-foreground">管理系統中的用戶及其權限
+          {
+            currentUserRole !== 'teacher' &&
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-1 h-5 w-5 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <path d="M12 17h.01" />
+                  </svg>
+                  <span className="sr-only">系統白名單說明</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <h4 className="font-medium">系統白名單說明</h4>
+                  <p className="text-sm text-muted-foreground">沒有被管理員加入的電子郵件，即使在系統註冊後也無法訪問任何系統資料。管理員需先將用戶添加至系統中才能授予訪問權限。</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          }
+        </p>
       </div>
       {currentUserRole !== 'teacher' &&
         <Card className="border">
           <CardHeader className="bg-muted/50">
             <CardTitle className="text-foreground">添加新用戶</CardTitle>
-            <CardDescription>添加新的用戶到系統並設置其角色</CardDescription>
+            <CardDescription>添加新的用戶到系統並設置其角色。</CardDescription> 
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleAddUser} className="flex flex-col md:flex-row gap-4">
