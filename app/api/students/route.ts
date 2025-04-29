@@ -1,4 +1,4 @@
-import { ErrorResponse, Student, StudentCreateRequest, StudentsListResponse, SuccessResponse } from '@/app/api/types';
+import { ErrorResponse, Student, StudentsListResponse, SuccessResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 獲取請求體
-    const studentData: StudentCreateRequest = await request.json();
+    const studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'> = await request.json();
     
     // 檢查必填欄位
     if (!studentData.name) {
@@ -121,12 +121,12 @@ export async function POST(request: NextRequest) {
     const { data: existingStudent } = await supabase
       .from('students')
       .select('id')
-      .eq('student_id', studentData.student_id)
+      .eq('email', studentData.email)
       .single();
 
     if (existingStudent) {
       return NextResponse.json<ErrorResponse>(
-        { error: 'Student ID already exists' },
+        { error: 'Student email already exists' },
         { status: 409 }
       );
     }
@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      console.log(error.message)
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 

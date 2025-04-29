@@ -55,16 +55,6 @@ export interface Student {
   [key: string]: any; // For additional properties
 }
 
-export interface StudentCreateRequest {
-  student_id?: string | null;
-  name: string;
-  grade?: string | null;
-  class?: string | null;
-  is_disadvantaged?: boolean;
-  student_type?: string | null;
-  [key: string]: any; // For additional properties
-}
-
 export interface StudentUpdateRequest {
   student_id?: string | null;
   name?: string;

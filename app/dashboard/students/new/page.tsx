@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import type { Student, StudentUpdateRequest } from "@/app/api/types"
+import type { StudentCreateRequest } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
@@ -11,26 +11,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
-export default function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AddStudentPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState<Partial<Student>>({
+  const [formData, setFormData] = useState<StudentCreateRequest>({
     name: "",
     gender: "",
-    grade: "1",
+    grade: "",
     class: "",
     family_background: "",
-    is_disadvantaged: false,
+    is_disadvantaged: '否',
     cultural_disadvantage_factors: "",
     personal_background_notes: "",
     registration_motivation: "",
@@ -39,53 +37,6 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
     account_password: "",
     email: "",
   })
-
-  useEffect(() => {
-    const fetchStudent = async () => {
-      try {
-        setIsLoading(true)
-        const studentId = (await params).id
-        
-        // Call the API to get student data
-        const response = await fetch(`/api/students/${studentId}`)
-        
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Failed to fetch student data')
-        }
-        
-        const student = await response.json()
-        
-        setFormData({
-          id: student.id,
-          name: student.name,
-          gender: student.gender,
-          grade: student.grade,
-          class: student.class,
-          family_background: student.family_background,
-          is_disadvantaged: student.is_disadvantaged,
-          cultural_disadvantage_factors: student.cultural_disadvantage_factors,
-          personal_background_notes: student.personal_background_notes,
-          registration_motivation: student.registration_motivation,
-          student_type: student.student_type,
-          account_username: student.account_username,
-          account_password: student.account_password,
-          email: student.email,
-        })
-      } catch (error) {
-        console.error("獲取學生數據錯誤:", error)
-        toast("錯誤", {
-          description: error instanceof Error ? error.message : "無法獲取學生資料",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    if (user) {
-      fetchStudent()
-    }
-  }, [user, router, params])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -109,10 +60,8 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
     setIsSubmitting(true)
 
     try {
-      const studentId = (await params).id
-      
       // Prepare data for API
-      const updateData: StudentUpdateRequest = {
+      const studentData: StudentCreateRequest = {
         name: formData.name,
         gender: formData.gender,
         grade: formData.grade,
@@ -127,74 +76,42 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
         account_password: formData.account_password,
       }
       
-      // Call the API to update student
-      const response = await fetch(`/api/students/${studentId}`, {
-        method: 'PUT',
+      // Call the API to create student
+      const response = await fetch('/api/students', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(studentData),
       })
       
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to update student')
+        throw new Error(error.error || 'Failed to create student')
       }
       
       toast("成功", {
-        description: "學生資料已成功更新",
+        description: "學生資料已成功新增",
       })
 
       router.push("/dashboard/students")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("更新學生錯誤:", error)
+      console.error("新增學生錯誤:", error)
 
       toast("錯誤", {
-        description: error?.message || "更新學生時發生錯誤",
+        description: error?.message || "新增學生時發生錯誤",
       })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">編輯學生</h1>
-          <p className="text-muted-foreground">更新學生的資料</p>
-        </div>
-
-        <RestrictedCard allowedRoles={["admin", "root"]}>
-          <CardHeader>
-            <CardTitle>學生資料</CardTitle>
-            <CardDescription>編輯學生的基本資料</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Skeleton className="h-10 w-20" />
-            <Skeleton className="h-10 w-24" />
-          </CardFooter>
-        </RestrictedCard>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">編輯學生</h1>
-        <p className="text-muted-foreground">更新學生的資料</p>
+        <h1 className="text-3xl font-bold tracking-tight">新增學生</h1>
+        <p className="text-muted-foreground">新增學生到系統</p>
       </div>
 
       <RestrictedCard allowedRoles={["admin", "root"]}>
@@ -203,7 +120,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>學生資料</CardTitle>
-                <CardDescription>編輯學生的基本資料</CardDescription>
+                <CardDescription>填寫新學生的資料</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -395,11 +312,11 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
             </Button>
             
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "更新中..." : "更新學生"}
+              {isSubmitting ? "新增中..." : "新增學生"}
             </Button>
           </CardFooter>
         </form>
       </RestrictedCard>
     </div>
   )
-}
+} 
