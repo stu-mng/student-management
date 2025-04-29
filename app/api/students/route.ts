@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * 
  * 根據教師權限或管理員身份返回學生列表
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json<SuccessResponse & { data: Student}>({
+    return NextResponse.json<SuccessResponse & { data: Student }>({
       success: true,
       data
     });

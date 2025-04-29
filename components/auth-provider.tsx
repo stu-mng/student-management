@@ -50,20 +50,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       if (existingUserResponse.status === 404) {
-        // Create new user
-        const createResponse = await fetch(`/api/users/me`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'teacher' }),
-        })
-        
-        if (!createResponse.ok) {
-          console.error('Failed to create user:', await createResponse.text())
-          return authUser
-        }
-        
-        return { ...authUser, ...(await createResponse.json()) }
-      } 
+        // User is not in the whitelist, redirect to blocked page
+        router.push('/blocked')
+        return authUser
+      }
       
       if (existingUserResponse.ok) {
         const existingUserData = await existingUserResponse.json()

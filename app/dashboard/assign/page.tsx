@@ -1,6 +1,6 @@
 "use client"
 
-import { bulkAssignStudentsToTeacher, fetchAssignedStudents, fetchStudents, fetchTeachers } from "@/app/services/assign"
+import { bulkAssignStudentsToTeacher, fetchAssignedStudents, fetchStudents, fetchTeachers } from "@/app/api/permissions/assign/service"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,13 +12,11 @@ import type { Student, User } from "@/lib/mock-data"
 import { toTraditionalChinese } from "@/lib/utils"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 export default function AssignStudentsPage() {
   const { user } = useAuth()
-  const router = useRouter()
   
   // 狀態管理
   const [teachers, setTeachers] = useState<User[]>([])            // 所有教師資料
@@ -151,11 +149,11 @@ export default function AssignStudentsPage() {
 
       // 更新已分配學生列表
       setAssignedStudents([...selectedStudents])
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("更新學生分配錯誤:", error)
 
       toast("錯誤", {
-        description: error.message || "更新學生分配時發生錯誤",
+        description: error instanceof Error ? error.message : "更新學生分配時發生錯誤",
       })
     } finally {
       setIsSubmitting(false)

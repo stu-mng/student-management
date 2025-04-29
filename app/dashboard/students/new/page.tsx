@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,7 +15,6 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 export default function NewStudentPage() {
-  const { user } = useAuth()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -80,15 +78,15 @@ export default function NewStudentPage() {
       const result = await response.json()
 
       toast("成功", {
-        description: "學生資料已成功新增",
+        description: `學生 ${result.data.name} 資料已成功新增`,
       })
 
       router.push("/dashboard")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("新增學生錯誤:", error)
 
       toast("錯誤", {
-        description: error.message || "新增學生時發生錯誤",
+        description: error instanceof Error ? error.message : "新增學生時發生錯誤",
       })
     } finally {
       setIsSubmitting(false)
