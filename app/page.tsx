@@ -11,7 +11,7 @@ export default function Home() {
         {/* Hero Section */}
         <div className="container flex min-h-[60vh] flex-col items-center justify-center p-4">
           <div className="w-full max-w-2xl space-y-8 text-center">
-            <h1 className="text-5xl font-bold tracking-tight">學生資料管理系統</h1>
+            <h1 className="text-5xl font-bold tracking-tight">學生管理系統</h1>
             <p className="text-xl text-muted-foreground">
               高效能、安全的學生資料管理解決方案
             </p>
