@@ -1,7 +1,7 @@
 import { RestrictedCard } from "@/components/restricted-card";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, FileSpreadsheet, Settings, Shield, Users } from "lucide-react";
+import { BarChart3, FileSpreadsheet, Shield, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -63,23 +63,12 @@ export default function Home() {
             </RestrictedCard>
 
             {/* Analytics */}
-            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["root"]}>
+            <RestrictedCard className="md:col-start-2 hover:shadow-lg transition-shadow" allowedRoles={["root"]}>
               <CardHeader>
                 <BarChart3 className="h-8 w-8 mb-2 text-primary" />
                 <CardTitle>數據分析</CardTitle>
                 <CardDescription>
-                  強大的數據分析工具，協助決策制定
-                </CardDescription>
-              </CardHeader>
-            </RestrictedCard>
-
-            {/* System Settings */}
-            <RestrictedCard className="hover:shadow-lg transition-shadow" allowedRoles={["root"]}>
-              <CardHeader>
-                <Settings className="h-8 w-8 mb-2 text-primary" />
-                <CardTitle>系統設定</CardTitle>
-                <CardDescription>
-                  靈活的系統配置選項，滿足不同需求
+                  內建系統監測，提供即時資料分析
                 </CardDescription>
               </CardHeader>
             </RestrictedCard>
