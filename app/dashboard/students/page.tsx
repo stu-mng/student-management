@@ -12,7 +12,7 @@ import type { Student } from "@/lib/mock-data"
 import { mockStudents } from "@/lib/mock-data"
 import { toTraditionalChinese } from "@/lib/utils"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronLeft, ChevronRight, Edit, Plus, Search, Trash2 } from "lucide-react"
+import { ArrowUpDown, ChevronLeft, ChevronRight, Edit, Eye, EyeOff, Plus, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -25,6 +25,7 @@ function StudentDetailsDialog({ student, open, onOpenChange, students, onStudent
   onStudentChange: (student: Student) => void
 }) {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   
   // 處理鍵盤事件 - 左右方向鍵導航
   useEffect(() => {
@@ -81,38 +82,71 @@ function StudentDetailsDialog({ student, open, onOpenChange, students, onStudent
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <span>學生詳細資料</span>
+            <Button 
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              router.push(`/dashboard/students/${student.id}`);
+            }}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            編輯資料
+          </Button>
           </DialogTitle>
           <DialogDescription>
             學生 {student.name} 的完整資料
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+        {/* 導航和編輯按鈕 - 移至頂部 */}
+        <div className="flex justify-between mb-2 gap-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => prevStudent && navigateToStudent(prevStudent)}
+            disabled={!prevStudent}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            上一個
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => nextStudent && navigateToStudent(nextStudent)}
+            disabled={!nextStudent}
+          >
+            下一個
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+          
+        </div>
+        
+        <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">姓名</div>
             <div className="col-span-3">{student.name}</div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">性別</div>
             <div className="col-span-3">{student.gender}</div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">年級</div>
             <div className="col-span-3">{`${toTraditionalChinese(Number.parseInt(student.grade))}年級`}</div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">班級</div>
             <div className="col-span-3">{`${toTraditionalChinese(Number.parseInt(student.class))}班`}</div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">電子郵件</div>
             <div className="col-span-3">{student.email}</div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <div className="font-medium">學生類型</div>
             <div className="col-span-3">
               <Badge variant="outline">{student.student_type}</Badge>
@@ -122,58 +156,47 @@ function StudentDetailsDialog({ student, open, onOpenChange, students, onStudent
             </div>
           </div>
           
-          {/* 長文本字段使用完整寬度和淺色背景 */}
-          <div className="space-y-2">
+          {/* 帳號資訊 */}
+          <div className="grid grid-cols-4 items-center gap-3">
+            <div className="font-medium">帳號</div>
+            <div className="col-span-3">{student.account_username}</div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-3">
+            <div className="font-medium">密碼</div>
+            <div className="col-span-3 flex items-center">
+              {showPassword ? student.account_password : '••••••••'}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 ml-2" 
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          
+          {/* 長文本字段使用摺疊區塊 */}
+          <div className="space-y-1">
             <div className="font-medium">家庭背景</div>
-            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-wrap">{student.family_background}</div>
+            <div className="p-2 rounded-md bg-muted/50 text-sm whitespace-pre-wrap max-h-[80px] overflow-y-auto">{student.family_background}</div>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="font-medium">文化不利因素</div>
-            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-wrap">{student.cultural_disadvantage_factors}</div>
+            <div className="p-2 rounded-md bg-muted/50 text-sm whitespace-pre-wrap max-h-[80px] overflow-y-auto">{student.cultural_disadvantage_factors}</div>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="font-medium">個人背景補充</div>
-            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-wrap">{student.personal_background_notes}</div>
+            <div className="p-2 rounded-md bg-muted/50 text-sm whitespace-pre-wrap max-h-[80px] overflow-y-auto">{student.personal_background_notes}</div>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="font-medium">報名動機</div>
-            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-wrap">{student.registration_motivation}</div>
+            <div className="p-2 rounded-md bg-muted/50 text-sm whitespace-pre-wrap max-h-[80px] overflow-y-auto">{student.registration_motivation}</div>
           </div>
           
-          {/* 導航和編輯按鈕 */}
-          <div className="flex justify-end mt-2 gap-2">
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => prevStudent && navigateToStudent(prevStudent)}
-              disabled={!prevStudent}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              上一個
-            </Button>
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => nextStudent && navigateToStudent(nextStudent)}
-              disabled={!nextStudent}
-            >
-              下一個
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                router.push(`/dashboard/students/${student.id}`);
-              }}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              編輯資料
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
