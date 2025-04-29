@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import type { StudentCreateRequest } from "@/app/api/types"
+import type { Student } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,7 @@ export default function AddStudentPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState<StudentCreateRequest>({
+  const [formData, setFormData] = useState<Omit<Student, 'id' | 'created_at' | 'updated_at'>>({
     name: "",
     gender: "",
     grade: "",
@@ -61,7 +61,7 @@ export default function AddStudentPage() {
 
     try {
       // Prepare data for API
-      const studentData: StudentCreateRequest = {
+      const studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'> = {
         name: formData.name,
         gender: formData.gender,
         grade: formData.grade,
