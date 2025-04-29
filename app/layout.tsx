@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/components/auth-provider"
+import { Footer } from "@/components/footer"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Inter } from "next/font/google"
@@ -27,6 +28,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <Toaster />
+          <Footer />
         </ThemeProvider>
       </body>
     </html>
