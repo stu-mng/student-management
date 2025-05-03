@@ -1,4 +1,4 @@
-import type { Student, User } from "@/lib/mock-data";
+import type { Student, User } from "@/lib/types";
 
 /**
  * Response interfaces for API

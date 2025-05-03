@@ -8,8 +8,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from "@/component
 import { DataTable } from "@/components/ui/data-table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Student } from "@/lib/mock-data"
-import { mockStudents } from "@/lib/mock-data"
+import type { Student } from "@/lib/types"
 import { toTraditionalChinese } from "@/lib/utils"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, ChevronLeft, ChevronRight, Edit, Eye, EyeOff, Plus, Search, Trash2 } from "lucide-react"
@@ -246,8 +245,6 @@ export default function DashboardPage() {
         setStudents(data.data || []);
       } catch (error) {
         console.error('Error fetching students:', error);
-        // 如果獲取失敗，使用模擬數據作為備用
-        setStudents(mockStudents);
       } finally {
         setIsLoading(false);
       }
@@ -453,8 +450,6 @@ export default function DashboardPage() {
 
   // 使用 useMemo 來避免不必要的重新計算
   const filterableColumns = useMemo(() => {
-    
-
     // 獲取唯一的年級列表
     const grades = Array.from(
       new Set(students.filter((student) => student.grade).map((student) => student.grade?.toString() as string)),
