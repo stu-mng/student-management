@@ -41,7 +41,7 @@ export async function GET(
     }
 
     // 如果不是管理員並且也不是查詢自己的數據，則拒絕訪問
-    if (userData.role !== 'admin' && userData.role !== 'root' && user.id !== userId) {
+    if (userData.role !== 'admin' && userData.role !== 'root' && userData.role !== 'manager' && user.id !== userId) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 

@@ -25,7 +25,7 @@ export default function DashboardHeader() {
 
   const navigation = [
     { name: "控制台", href: "/dashboard", admin: false },
-    { name: "學生管理", href: "/dashboard/students", admin: false },
+    { name: "小學伴管理", href: "/dashboard/students", admin: false },
   ]
 
   return (
@@ -34,7 +34,7 @@ export default function DashboardHeader() {
         <div className="flex items-center gap-4">
           <MobileNav />
           <Link href="/dashboard" className="font-semibold">
-            學生管理系統
+            小學伴管理系統
           </Link>
           <nav className="hidden md:flex gap-4">
             {navigation.map((item) => {

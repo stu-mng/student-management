@@ -218,8 +218,7 @@ export default function DashboardPage() {
     is_disadvantaged: false,
     student_type: false,
     email: false,
-    // class: false,
-    // grade: false,
+    region: user?.role === 'admin' || user?.role === 'root',
   }
   
   // 當對話框關閉時的處理
@@ -228,7 +227,7 @@ export default function DashboardPage() {
   };
 
   // 檢查是否為管理員
-  const isAdmin = user?.role === "admin" || user?.role === "root";
+  const isAdmin = user?.role === "admin" || user?.role === "root" || user?.role === "manager";
 
   // 查看學生詳細資料
   const viewStudentDetails = (student: Student) => {
@@ -310,6 +309,19 @@ export default function DashboardPage() {
         )
       },
       cell: ({ row }) => <div className="text-center pr-4">{row.getValue("name") || "-"}</div>,
+    },
+    {
+      accessorKey: "region",
+      header: ({ column }) => {
+        return (
+          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+            區域
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="text-center pr-4">{row.getValue("region") || "-"}</div>,
+      enableHiding: true,
     },
     {
       accessorKey: "grade",
@@ -397,10 +409,12 @@ export default function DashboardPage() {
               <Search className="h-4 w-4 mr-1" />
               查看
             </Button>
+            {isAdmin && (
             <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/students/${student.id}`)}>
               <Edit className="h-4 w-4 mr-1" />
-              編輯
-            </Button>
+                編輯
+              </Button>
+            )}
             {isAdmin && (
               <Button
                 variant="outline"
@@ -421,6 +435,10 @@ export default function DashboardPage() {
   // 使用 useMemo 來避免不必要的重新計算
   const searchableColumns = useMemo(
     () => [
+      {
+        id: "region",
+        title: "區域",
+      },
       {
         id: "name",
         title: "姓名",
@@ -457,11 +475,25 @@ export default function DashboardPage() {
         label: `${toTraditionalChinese(Number.parseInt(cls))}班`,
   }));
 
+  const regions = (Array.from(
+    new Set(students.map((student) => student.region as string)),
+  ) as string[]).map(region => ({
+    value: region,
+    label: region,
+  }))
+
+
+
     return [
       {
         id: "gender",
         title: "性別",
         options: [{ value: "男", label: "男同學" }, { value: "女", label: "女同學" }],
+      },
+      {
+        id: "region",
+        title: "區域",
+        options: regions,
       },
       {
         id: "grade",

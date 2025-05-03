@@ -29,6 +29,10 @@ interface AnalyticsData {
   studentsByType: Record<string, number>
   disadvantagedCount: number
   totalStudents: number
+  totalTeachers: number
+  totalAdmins: number
+  totalManagers: number
+  totalRoot: number
   teachersByActivity: Array<{
     name: string
     studentsCount: number
@@ -55,6 +59,7 @@ interface OnlineUsersData {
     byRole: {
       teachers: number
       admins: number
+      managers: number
       root: number
       total: number
     }
@@ -184,7 +189,7 @@ export default function AnalyticsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">系統分析</h1>
-          <p className="text-muted-foreground">學生、教師數據及使用情況分析</p>
+          <p className="text-muted-foreground">學伴、管理員數據及使用情況分析</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -218,14 +223,17 @@ export default function AnalyticsPage() {
             {onlineLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-3xl font-bold">{onlineData?.online.byRole.total || 0}</div>
+              <div className="text-3xl font-bold">
+                {onlineData?.online.byRole.total || 0} 
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalAdmins + data.totalTeachers + data.totalManagers + data.totalRoot}</span>}
+              </div>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              在線教師
+              在線大學伴
               <div className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
                 <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
@@ -236,7 +244,10 @@ export default function AnalyticsPage() {
             {onlineLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-3xl font-bold">{onlineData?.online.byRole.teachers || 0}</div>
+              <div className="text-3xl font-bold">
+                {onlineData?.online.byRole.teachers || 0}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalTeachers}</span>}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -255,7 +266,10 @@ export default function AnalyticsPage() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-3xl font-bold">
-                {(onlineData?.online.byRole.admins || 0) + (onlineData?.online.byRole.root || 0)}
+                {(onlineData?.online.byRole.admins || 0) + 
+                 (onlineData?.online.byRole.managers || 0) + 
+                 (onlineData?.online.byRole.root || 0)}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalAdmins}</span>}
               </div>
             )}
           </CardContent>
@@ -266,7 +280,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">總學生人數</CardTitle>
+            <CardTitle className="text-sm font-medium">總小學伴人數</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -352,6 +366,7 @@ export default function AnalyticsPage() {
                       <div>
                         {user.role === 'teacher' && '教師'}
                         {user.role === 'admin' && '管理員'}
+                        {user.role === 'manager' && '經理'}
                         {user.role === 'root' && '系統管理員'}
                       </div>
                       <div className="col-span-2">{getRelativeTimeString(user.last_active)}</div>

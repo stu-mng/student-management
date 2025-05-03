@@ -7,16 +7,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, Trash2 } from "lucide-react"
+import { ArrowUpDown, Check, ChevronsUpDown, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleSortKey, cn, getRoleHoverTextColor } from "@/lib/utils"
 
 type User = {
   id: string
@@ -26,74 +29,7 @@ type User = {
   avatar_url: string | null
   name: string | null
   last_active?: string
-}
-
-// 根據角色獲取背景顏色
-const getRoleBgColor = (role: string) => {
-  switch (role) {
-    case 'admin':
-      return 'bg-blue-100';
-    case 'teacher':
-      return 'bg-green-100';
-    case 'root':
-      return 'bg-red-100';
-    default:
-      return 'bg-gray-100';
-  }
-}
-
-// 根據角色獲取文字顏色
-const getRoleTextColor = (role: string) => {
-  switch (role) {
-    case 'admin':
-      return 'text-blue-800';
-    case 'teacher':
-      return 'text-green-800';
-    case 'root':
-      return 'text-red-800';
-    default:
-      return 'text-gray-800';
-  }
-}
-
-// 根據角色顯示中文
-const getRoleDisplay = (role: string) => {
-  switch (role) {
-    case 'admin':
-      return '管理員';
-    case 'teacher':
-      return '教師';
-    case 'root':
-      return '最高管理員';
-    default:
-      return role;
-  }
-}
-
-const getRoleColor = (role: string) => {
-  switch (role) {
-    case 'admin':
-      return 'bg-blue-500';
-    case 'teacher':
-      return 'bg-green-500';
-    case 'root':
-      return 'bg-red-500';
-    default:
-      return 'bg-gray-500';
-  }
-}
-
-const getRoleSortKey = (role: string) => {
-  switch (role) {
-    case 'root':
-      return 0;
-    case 'admin':
-      return 1;
-    case 'teacher':
-      return 2;
-    default:
-      return 3;
-  }
+  region?: string
 }
 
 // 檢查用戶是否在線 (15分鐘內有活動)
@@ -119,8 +55,8 @@ const formatLastActive = (lastActive?: string) => {
   const diffDays = Math.floor(diffHours / 24);
   
   // 格式化相對時間
-  if (diffSecs < 60) {
-    return `${diffSecs} 秒前`;
+  if (diffMins < 5) {
+    return `剛剛`;
   } else if (diffMins < 60) {
     return `${diffMins} 分鐘前`;
   } else if (diffHours < 24) {
@@ -142,6 +78,9 @@ export default function PermissionsPage() {
   const [newUserRole, setNewUserRole] = useState("teacher")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [newUserRegion, setNewUserRegion] = useState("")
+  const [regions, setRegions] = useState<string[]>([])
+  const [newUserRegionPopoverOpen, setNewUserRegionPopoverOpen] = useState(false)
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -191,6 +130,30 @@ export default function PermissionsPage() {
     }
   }, [user, router])
 
+  useEffect(() => {
+    const fetchRegions = async () => {
+      if (!user) return
+      
+      try {
+        const response = await fetch('/api/regions')
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || '獲取區域數據失敗')
+        }
+        
+        const data = await response.json()
+        setRegions(data.data)
+      } catch (error) {
+        console.error("獲取區域數據錯誤:", error)
+      }
+    }
+
+    if (user) {
+      fetchRegions()
+    }
+  }, [user])
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -218,7 +181,7 @@ export default function PermissionsPage() {
       // 不允許非root用戶創建root用戶
       if (newUserRole === 'root' && currentUserRole !== 'root') {
         toast("錯誤", {
-          description: "只有最高管理員可以創建其他最高管理員",
+          description: "只有系統管理員可以創建其他系統管理員",
         })
         setIsSubmitting(false)
         return
@@ -232,7 +195,8 @@ export default function PermissionsPage() {
         },
         body: JSON.stringify({
           email: newUserEmail,
-          role: newUserRole
+          role: newUserRole,
+          region: newUserRegion
         })
       })
 
@@ -253,6 +217,7 @@ export default function PermissionsPage() {
       // 清空表單
       setNewUserEmail("")
       setNewUserRole("teacher")
+      setNewUserRegion("")
     } catch (error: unknown) {
       console.error("添加用戶錯誤:", error)
 
@@ -299,33 +264,6 @@ export default function PermissionsPage() {
     // 檢查目標用戶的當前角色
     const targetUser = users.find(u => u.id === id);
     
-    // 如果當前用戶不是管理員或root，或者目標用戶是root且當前用戶不是root，則只顯示文字
-    if (
-      (currentUserRole !== 'admin' && currentUserRole !== 'root') || 
-      (targetUser?.role === 'root' && currentUserRole !== 'root')
-    ) {
-      toast("錯誤", {
-        description: "只有最高管理員可以更新其他最高管理員的角色",
-      });
-      return;
-    }
-    
-    // 如果當前用戶不是root，且嘗試設置root角色，阻止操作
-    if (newRole === 'root' && currentUserRole !== 'root') {
-      toast("錯誤", {
-        description: "只有最高管理員可以將用戶設置為最高管理員",
-      });
-      return;
-    }
-
-    // 如果當前用戶不是root，且目標用戶是admin，且嘗試降級為teacher，阻止操作
-    if (currentUserRole === 'admin' && targetUser?.role === 'admin' && newRole === 'teacher') {
-      toast("錯誤", {
-        description: "管理員不能將其他管理員降級為教師",
-      });
-      return;
-    }
-
     try {
       // 發送請求更新用戶角色
       const response = await fetch(`/api/users/${id}`, {
@@ -358,6 +296,52 @@ export default function PermissionsPage() {
     }
   }
 
+  const handleUpdateUserRegion = async (id: string, newRegion: string) => {
+    // Only admins and root users can change regions
+    if (currentUserRole !== 'admin' && currentUserRole !== 'root') {
+      toast("錯誤", {
+        description: "您沒有權限更改其他用戶的區域",
+      });
+      return;
+    }
+
+    try {
+      // 發送請求更新用戶地區
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          region: newRegion
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '更新用戶地區失敗');
+      }
+
+      // 更新用戶列表
+      setUsers(users.map((user) => (user.id === id ? { ...user, region: newRegion } : user)));
+
+      // 如果是新區域，更新區域列表
+      if (newRegion && !regions.includes(newRegion)) {
+        setRegions([...regions, newRegion]);
+      }
+
+      toast("成功", {
+        description: "用戶地區已成功更新",
+      });
+    } catch (error: unknown) {
+      console.error("更新用戶地區錯誤:", error);
+
+      toast("錯誤", {
+        description: error instanceof Error ? error.message : "更新用戶地區時發生錯誤",
+      });
+    }
+  }
+
   const columns: ColumnDef<User>[] = [
     {
       accessorKey: "status",
@@ -376,16 +360,18 @@ export default function PermissionsPage() {
       accessorKey: "name",
       header: "",
       cell: ({ row }) => {
-        const user = row.original
+        const rowUser = row.original
         return (
           <div className="flex items-center gap-4 m-0 p-0">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar_url || ""} alt={user.name || ""} />
-              <AvatarFallback className={getRoleColor(user.role)}>
-                {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+              <AvatarImage src={rowUser.avatar_url || ""} alt={rowUser.name || ""} />
+              <AvatarFallback className={getRoleBgColor(rowUser.role)}>
+                {rowUser.name ? rowUser.name.charAt(0).toUpperCase() : rowUser.email.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span>{user.name || user.email.split('@')[0]}</span>
+            <span className="text-xs">
+              {rowUser.name || rowUser.email.split('@')[0]} { rowUser.id === user?.id && '（你）' }
+            </span>
           </div>
         )
       }
@@ -401,19 +387,25 @@ export default function PermissionsPage() {
         )
       },
       cell: ({ row }) => {
-        const user = row.original
+        const rowUser = row.original
         
         // 如果當前用戶不是管理員或root，或者目標用戶是root且當前用戶不是root，則只顯示文字
         if (
-          (currentUserRole === 'admin' && user.role === 'root') || 
-          (currentUserRole === 'admin' && user.role === 'admin') || 
-          (currentUserRole === 'root' && user.role === 'root') || 
-          (currentUserRole === 'teacher')
+          (currentUserRole === 'admin' && rowUser.role === 'root') || 
+          (currentUserRole === 'admin' && rowUser.role === 'admin') || 
+          (currentUserRole === 'root' && rowUser.role === 'root') || 
+          (currentUserRole === 'teacher' || currentUserRole === 'manager' || rowUser.id === user?.id)
         ) {
           return (
             <div className="text-center pr-4 flex justify-center items-center">
-              <Badge variant="outline" className={`shadow-none px-2 py-1 text-xs font-medium rounded-full ${getRoleTextColor(user.role)} ${getRoleBgColor(user.role)}`}>
-                {getRoleDisplay(user.role)}
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  'shadow-none px-2 py-1 text-xs font-medium rounded-full',
+                  getRoleTextColor(rowUser.role), 
+                  getRoleBgColor(rowUser.role)
+              )}>
+                {getRoleDisplay(rowUser.role)}
               </Badge>
             </div>
           )
@@ -421,23 +413,27 @@ export default function PermissionsPage() {
         
         return (
           <div className="w-full pr-4 flex items-center justify-center">
-            <Select value={user.role} onValueChange={(value: string) => handleUpdateUserRole(user.id, value)}>
-              <SelectTrigger className={`w-[80px] shadow-none border focus-visible:ring-ring ${getRoleTextColor(user.role)} font-medium rounded-full text-xs px-3 py-1 h-auto`}>
+            <Select 
+              value={rowUser.role} 
+              onValueChange={(value: string) => handleUpdateUserRole(rowUser.id, value)}
+            >
+              <SelectTrigger className={`w-[100px] shadow-none border focus-visible:ring-ring ${getRoleTextColor(rowUser.role)} font-medium rounded-full text-xs px-3 py-1 h-auto`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem 
-                  value="teacher" 
-                  className={`${getRoleTextColor('teacher')} my-1 text-xs font-medium px-3 py-1 focus:text-green-900 focus:ring-0`}
-                >
-                  教師
-                </SelectItem>
-                <SelectItem 
-                  value="admin" 
-                  className={`${getRoleTextColor('admin')} my-1 text-xs font-medium px-3 py-1 focus:text-blue-900 focus:ring-0`}
-                >
-                  管理員
-                </SelectItem>
+                {['teacher', 'manager', 'admin', 'root'].map((role) => (
+                  <SelectItem 
+                    key={role}
+                    value={role}
+                    className={cn(
+                      'my-1 text-xs font-medium px-3 py-1 focus:ring-0', 
+                      getRoleTextColor(role),
+                      getRoleHoverTextColor(role)
+                    )}
+                  >
+                    {getRoleDisplay(role)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -454,6 +450,120 @@ export default function PermissionsPage() {
       header: "電子郵件",
     },
     {
+      accessorKey: "region",
+      header: ({ column }) => {
+        return (
+          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+            地區
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const user = row.original;
+        const [open, setOpen] = useState(false);
+        const [value, setValue] = useState(user.region || "");
+        
+        // Ensure each row has its own state
+        useEffect(() => {
+          setValue(user.region || "");
+        }, [user.region]);
+        
+        // If not a manager, show "不適用"
+        if (user.role !== 'manager') {
+          return <div className="pr-4 text-muted-foreground text-sm w-full text-center">不適用</div>;
+        }
+        
+        // Check if current user can edit this manager's region
+        const canEdit = currentUserRole === 'admin' || currentUserRole === 'root';
+        
+        // If can't edit, just show the region as a badge
+        if (!canEdit) {
+          return (
+            <div className="pr-4 text-center flex justify-center items-center">
+              {user.region ? (
+                <Badge 
+                  variant="outline" 
+                  className="shadow-none px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600">
+                  {user.region}
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground text-sm">未設定</span>
+              )}
+            </div>
+          );
+        }
+        
+        // For admins and roots, show the popover selector
+        return (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="pr-4 w-[160px] ... truncate h-8 justify-between font-normal"
+              >
+                {value || "選擇地區"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+              <Command>
+                <CommandInput 
+                  placeholder="搜尋或輸入新區域..." 
+                  value={value}
+                  onValueChange={setValue}
+                />
+                <CommandEmpty>
+                  <div className="py-2 text-sm text-center text-muted-foreground">
+                    沒有找到符合的區域
+                  </div>
+                  <div className="p-2 border-t">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-sm font-normal h-8"
+                      onClick={() => {
+                        setValue(value);
+                        handleUpdateUserRegion(user.id, value);
+                        setOpen(false);
+                      }}
+                    >
+                      使用「{value || ""}」
+                    </Button>
+                  </div>``
+                </CommandEmpty>
+                <CommandGroup className="max-h-[200px] overflow-y-auto">
+                  {regions.map((region) => (
+                    <CommandItem
+                      key={region}
+                      value={region}
+                      onSelect={() => {
+                        const newValue = region === value ? "" : region;
+                        setValue(newValue);
+                        handleUpdateUserRegion(user.id, newValue);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === region ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {region}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        );
+      }
+    },
+    {
       accessorKey: "last_active",
       header: "最後活動",
       cell: ({ row }) => {
@@ -467,12 +577,11 @@ export default function PermissionsPage() {
       cell: ({ row }) => {
         const currentUser = row.original
         const isCurrentUser = currentUser.id === user?.id
-        const isDeletable = !isCurrentUser && 
-                           (currentUserRole === 'root' || 
-                            (currentUserRole === 'admin' && currentUser.role === 'teacher'))
-        
-        
-        
+        if (isCurrentUser) {
+          return null;
+        }
+
+        const isDeletable = getRoleSortKey(currentUser.role) > getRoleSortKey(currentUserRole as string);
         return (
           <div className="flex space-x-2">
             <Button 
@@ -536,28 +645,84 @@ export default function PermissionsPage() {
                   <SelectValue placeholder="選擇角色" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem 
-                    value="teacher" 
-                    className={`${getRoleTextColor('teacher')} rounded-md my-1 text-xs font-medium px-3 py-1 focus:text-green-900 focus:ring-0`}
-                  >
-                    教師
-                  </SelectItem>
-                  <SelectItem 
-                    value="admin" 
-                    className={`${getRoleTextColor('admin')} rounded-md my-1 text-xs font-medium px-3 py-1 focus:text-blue-900 focus:ring-0`}
-                  >
-                    管理員
-                  </SelectItem>
-                  {currentUserRole === 'root' && (
+                  {['teacher', 'admin', 'manager', 'root'].map((role) => {
+                    if (getRoleSortKey(role) < getRoleSortKey(currentUserRole as string)) {
+                      return null;
+                    }
+                    return (
                     <SelectItem 
-                      value="root" 
-                      className={`${getRoleTextColor('root')} rounded-md my-1 text-xs font-medium px-3 py-1 focus:text-red-900 focus:ring-0`}
-                    >
-                      最高管理員
-                    </SelectItem>
-                  )}
+                      key={role}
+                      value={role}
+                      className={cn(
+                        getRoleTextColor(role), getRoleHoverTextColor(role)
+                      )}
+                    > 
+                      {getRoleDisplay(role)}
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
+              <Popover open={newUserRegionPopoverOpen} onOpenChange={setNewUserRegionPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={newUserRegionPopoverOpen}
+                    className="w-[180px] justify-between font-normal"
+                  >
+                    {newUserRegion || "選擇地區"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="搜尋或輸入新區域..." 
+                      value={newUserRegion}
+                      onValueChange={setNewUserRegion}
+                    />
+                    <CommandEmpty>
+                      <div className="py-2 text-sm text-center text-muted-foreground">
+                        沒有找到符合的區域
+                        <br />
+                        系統會自動為您新增新選項
+                      </div>
+                    </CommandEmpty>
+                    <div className="p-2 border-t">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-sm font-normal h-8"
+                        onClick={() => setNewUserRegionPopoverOpen(false)}
+                      >
+                        使用「{newUserRegion || ""}」
+                      </Button>
+                    </div>
+                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                      {regions.map((region) => (
+                        <CommandItem
+                          key={region}
+                          value={region}
+                          onSelect={() => {
+                            setNewUserRegion(region === newUserRegion ? "" : region);
+                            setNewUserRegionPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              newUserRegion === region ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {region}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Button variant='outline' type="submit" disabled={isSubmitting} size='sm'>
                 {isSubmitting ? "添加中..." : "添加用戶"}
               </Button>
@@ -589,7 +754,7 @@ export default function PermissionsPage() {
                   }
                 ],
                 columnVisibility: {
-                  actions: currentUserRole !== 'teacher'
+                  actions: (currentUserRole !== 'teacher'),
                 }
               }}
             />

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 只有管理員可以批量分配權限
-    if (userData.role !== 'admin' && userData.role !== 'root') {
+    if (userData.role !== 'admin' && userData.role !== 'root' && userData.role !== 'manager') {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 

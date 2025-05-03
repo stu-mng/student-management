@@ -1,5 +1,6 @@
 import { ErrorResponse, SuccessResponse, User } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getRoleSortKey } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -82,16 +83,11 @@ export async function PUT(
       .eq('id', user.id)
       .single();
 
-    // 只有管理員可以更新其他用戶資料
-    if (userData?.role === 'teacher' && id !== user.id) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-    }
-
     // 檢查要更新的欄位
     const updateData: Record<string, any> = {};
     
     try {
-      // 嘗試從請求體中獲取數據
+      // 從 request body 獲取參數
       const requestData = await request.json();
       
       // 處理來自前端的請求
@@ -107,70 +103,33 @@ export async function PUT(
         if (requestData.avatar_url !== undefined) {
           updateData.avatar_url = requestData.avatar_url;
         }
-        
-        if (requestData.role !== undefined) {
-          if (userData?.role !== 'root') {
-            // 獲取目標用戶的當前角色
-            const { data: targetUser, error: targetUserError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', id)
-            .single();
-            
-            // 如果當前用戶是admin而不是root
-            if (userData?.role === 'admin') {
-              // 如果目標用戶是admin，且嘗試降級為teacher，拒絕操作
-              if (targetUser?.role === 'admin' && requestData.role === 'teacher') {
-                return NextResponse.json<ErrorResponse>({ 
-                  error: '管理員不能將其他管理員降級為教師，只有最高管理員可以執行此操作' 
-                }, { status: 403 });
-              }
-              
-              // 如果嘗試將用戶升級為root，拒絕操作
-              if (requestData.role === 'root') {
-                return NextResponse.json<ErrorResponse>({ 
-                  error: '只有最高管理員可以設置其他用戶為最高管理員' 
-                }, { status: 403 });
-              }
-            } else {
-              // 非管理員用戶不能修改任何角色
-              return NextResponse.json<ErrorResponse>({ 
-                error: '只有管理員或最高管理員可以更改用戶角色' 
-              }, { status: 403 });
-            }
-          }
-          
-          // 確保角色值有效
-          if (!['admin', 'teacher', 'root'].includes(requestData.role)) {
-            return NextResponse.json<ErrorResponse>({ 
-              error: '無效的角色值。必須是 "teacher"、"admin" 或 "root"' 
-            }, { status: 400 });
-          }
-          
-          // 如果當前用戶不是root，且試圖設置root角色，拒絕操作
-          if (requestData.role === 'root' && userData?.role !== 'root') {
-            return NextResponse.json<ErrorResponse>({ 
-              error: '你不能將其他人設為最高管理員！如果需要更多最高管理員，請聯繫維護人員。'
-            }, { status: 400 });
-          }
-          
-          updateData.role = requestData.role;
-        }
 
+        if (requestData.region !== undefined) {
+          updateData.region = requestData.region;
+        }
+        
+        // 獲取目標用戶的當前角色
+        const { data: targetUser, error: targetUserError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', id)
+        .single();
+
+        if (getRoleSortKey(userData?.role as string) > getRoleSortKey(targetUser?.role as string)) {
+          return NextResponse.json<ErrorResponse>({ error: '你不能更新比自己角色權限高的用戶' }, { status: 403 });
+        }
+            
+        if (getRoleSortKey(userData?.role as string) > getRoleSortKey(requestData?.role as string)) {
+          return NextResponse.json<ErrorResponse>({ 
+            error: '你不能賦予用戶比自己更高的權限' 
+          }, { status: 403 });
+        }
+        updateData.role = requestData.role;
       }
     } catch (e) {
       return NextResponse.json<ErrorResponse>({ error: 'Invalid request body' }, { status: 400 });
     }
     
-    // 檢查用戶是否存在
-    const { data: userById, count } = await supabase
-      .from('users')
-      .select('*', { count: 'exact' })
-      .eq('id', id)
-      .maybeSingle();
-    
-    const existingUser = { count: count || 0, data: userById };
-
     const result = await supabase
       .from('users')
       .update(updateData)
@@ -184,7 +143,7 @@ export async function PUT(
     });
   } catch (error) {
     return NextResponse.json<ErrorResponse>(
-      { error: 'Failed to update user' },
+      { error: '更新用戶資料失敗' },
       { status: 500 }
     );
   }
@@ -221,15 +180,20 @@ export async function DELETE(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    // 只有管理員可以刪除用戶
-    if (userData.role === 'teacher' || user.role === 'admin' && userData.role !== 'teacher') {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+    const { data: targetUser, error: targetUserError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', id)
+      .single();
+
+    if (getRoleSortKey(userData?.role as string) > getRoleSortKey(targetUser?.role as string)) {
+      return NextResponse.json<ErrorResponse>({ error: '你不能刪除比自己角色權限高的用戶' }, { status: 403 });
     }
 
     // 不能刪除自己
     if (id === user.id) {
       return NextResponse.json<ErrorResponse>(
-        { error: 'Cannot delete your own account' },
+        { error: '你不能刪除自己的帳號' },
         { status: 400 }
       );
     }
@@ -270,9 +234,9 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error('刪除用戶失敗:', error);
     return NextResponse.json<ErrorResponse>(
-      { error: 'Failed to delete user' },
+      { error: '刪除用戶失敗' },
       { status: 500 }
     );
   }

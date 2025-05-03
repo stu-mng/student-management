@@ -1,18 +1,18 @@
-# 學生資料管理系統 API 規格
+# 小學伴資料管理系統 API 規格
 
-本文件定義了學生資料管理系統的 API 規格，遵循 OpenAPI 3.0.0 格式
+本文件定義了小學伴資料管理系統的 API 規格，遵循 OpenAPI 3.0.0 格式
 
 ## 基本資訊
 
-- **標題**：學生資料管理系統 API
-- **描述**：提供學生資料管理、用戶身份驗證與權限控制的 API
+- **標題**：小學伴資料管理系統 API
+- **描述**：提供小學伴資料管理、用戶身份驗證與權限控制的 API
 - **版本**：1.0.0
 - **聯絡方式**：API 支援團隊 (support@example.com)
 
 ## API 分類
 
 - **auth**: 身份驗證相關 API
-- **students**: 學生資料管理 API
+- **students**: 小學伴資料管理 API
 - **users**: 用戶管理 API
 - **permissions**: 權限管理 API
 
@@ -88,11 +88,11 @@ Authorization: Bearer <token>
   ```
 - `401 Unauthorized`: 未授權操作
 
-### 學生管理 API
+### 小學伴管理 API
 
 #### GET /api/students
 
-根據教師權限或管理員身份返回學生列表。
+根據教師權限或管理員身份返回小學伴列表。
 
 **請求頭**:
 - 需要認證令牌
@@ -103,10 +103,10 @@ Authorization: Bearer <token>
 - `search`: 搜尋關鍵字
 - `grade`: 依年級過濾 (1-6)
 - `is_disadvantaged`: 依弱勢生狀態過濾 ('是', '否')
-- `student_type`: 依學生類型過濾 ('新生', '舊生')
+- `student_type`: 依小學伴類型過濾 ('新生', '舊生')
 
 **回應**:
-- `200 OK`: 成功獲取學生列表
+- `200 OK`: 成功獲取小學伴列表
   ```json
   {
     "total": 總數量,
@@ -114,7 +114,7 @@ Authorization: Bearer <token>
     "limit": 每頁項目數,
     "data": [
       {
-        "id": "學生ID",
+        "id": "小學伴ID",
         "student_id": "學號",
         "name": "姓名",
         "gender": "性別",
@@ -130,7 +130,7 @@ Authorization: Bearer <token>
 
 #### POST /api/students
 
-新增一位學生資料到系統。
+新增一位小學伴資料到系統。
 
 **請求頭**:
 - 需要認證令牌
@@ -143,43 +143,43 @@ Authorization: Bearer <token>
   "grade": 年級,
   "class": "班級",
   "email": "電子郵件",
-  "student_type": "學生類型",
+  "student_type": "小學伴類型",
   "is_disadvantaged": "是否弱勢生",
   ...
 }
 ```
 
 **回應**:
-- `201 Created`: 成功創建學生
+- `201 Created`: 成功創建小學伴
 - `400 Bad Request`: 無效請求
 - `401 Unauthorized`: 未授權操作
 - `403 Forbidden`: 權限不足
 
 #### GET /api/students/{id}
 
-根據ID獲取學生的詳細資料。
+根據ID獲取小學伴的詳細資料。
 
 **請求頭**:
 - 需要認證令牌
 
 **路徑參數**:
-- `id`: 學生 ID
+- `id`: 小學伴 ID
 
 **回應**:
-- `200 OK`: 成功獲取學生資料
+- `200 OK`: 成功獲取小學伴資料
 - `401 Unauthorized`: 未授權操作
 - `403 Forbidden`: 權限不足
-- `404 Not Found`: 學生不存在
+- `404 Not Found`: 小學伴不存在
 
 #### PUT /api/students/{id}
 
-根據ID更新學生的資料。
+根據ID更新小學伴的資料。
 
 **請求頭**:
 - 需要認證令牌
 
 **路徑參數**:
-- `id`: 學生 ID
+- `id`: 小學伴 ID
 
 **請求內容**:
 ```json
@@ -191,27 +191,27 @@ Authorization: Bearer <token>
 ```
 
 **回應**:
-- `200 OK`: 成功更新學生資料
+- `200 OK`: 成功更新小學伴資料
 - `400 Bad Request`: 無效請求
 - `401 Unauthorized`: 未授權操作
 - `403 Forbidden`: 權限不足
-- `404 Not Found`: 學生不存在
+- `404 Not Found`: 小學伴不存在
 
 #### DELETE /api/students/{id}
 
-根據ID刪除學生資料。
+根據ID刪除小學伴資料。
 
 **請求頭**:
 - 需要認證令牌
 
 **路徑參數**:
-- `id`: 學生 ID
+- `id`: 小學伴 ID
 
 **回應**:
-- `204 No Content`: 成功刪除學生
+- `204 No Content`: 成功刪除小學伴
 - `401 Unauthorized`: 未授權操作
 - `403 Forbidden`: 權限不足
-- `404 Not Found`: 學生不存在
+- `404 Not Found`: 小學伴不存在
 
 ### 用戶管理 API
 
@@ -302,7 +302,7 @@ Authorization: Bearer <token>
 
 #### GET /api/permissions/assigned/students/{id}
 
-獲取指定教師可以查看的所有學生ID列表（僅限管理員或查詢本人資料）。
+獲取指定教師可以查看的所有小學伴ID列表（僅限管理員或查詢本人資料）。
 
 **請求頭**:
 - 需要認證令牌
@@ -311,9 +311,9 @@ Authorization: Bearer <token>
 - `id`: 教師 ID
 
 **回應**:
-- `200 OK`: 成功獲取學生ID列表
+- `200 OK`: 成功獲取小學伴ID列表
   ```json
-  ["學生ID1", "學生ID2", "學生ID3", ...]
+  ["小學伴ID1", "小學伴ID2", "小學伴ID3", ...]
   ```
 - `401 Unauthorized`: 未授權操作
 - `403 Forbidden`: 權限不足
@@ -321,7 +321,7 @@ Authorization: Bearer <token>
 
 #### POST /api/permissions/assign
 
-批量分配或取消分配教師對學生的權限（僅限管理員）。
+批量分配或取消分配教師對小學伴的權限（僅限管理員）。
 
 **請求頭**:
 - 需要認證令牌
@@ -330,7 +330,7 @@ Authorization: Bearer <token>
 ```json
 {
   "teacher_id": "教師ID",
-  "student_ids": ["學生ID1", "學生ID2", "學生ID3", ...]
+  "student_ids": ["小學伴ID1", "小學伴ID2", "小學伴ID3", ...]
 }
 ```
 

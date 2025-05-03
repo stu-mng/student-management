@@ -4,6 +4,7 @@ export interface Student {
   gender: string; // 性別
   grade: '1' | '2' | '3' | '4' | '5' | '6'; // 年級
   class: string; // 班級 (1-6)
+  region: string; // 區域
   family_background: string; // 家庭背景
   is_disadvantaged: '是' | '否'; // 是否弱勢生
   cultural_disadvantage_factors: string; // 文化不利因素
@@ -28,7 +29,7 @@ export interface User {
 
 export type StudentFilePreview = Omit<Omit<Omit<Student, 'id'>, 'created_at'>, 'updated_at'>;
 
-// 模擬學生數據
+// 模擬小學伴數據
 export const mockStudents: Student[] = [
   {
     id: "1",

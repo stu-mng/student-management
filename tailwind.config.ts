@@ -9,6 +9,12 @@ module.exports = {
 		{
 			pattern: /(bg|text)-(love|clubs|academics)-avatar\d-(background|text)/,
 		},
+		{
+			pattern: /(bg|text)-(blue|green|yellow|red|gray)-(100|500|800|900)/,
+		},
+		{
+			pattern: /hover:text-(blue|green|yellow|red|gray)-900/,
+		},
 	],
 	theme: {
     	container: {

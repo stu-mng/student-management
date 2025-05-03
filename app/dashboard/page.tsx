@@ -43,25 +43,25 @@ export default function DashboardPage() {
       description: "查看並管理系統用戶及其權限",
       icon: <UserCog className="h-8 w-8 text-blue-500" />,
       href: "/dashboard/admin/permissions",
-      allowedRoles: ["admin", "root"]
+      allowedRoles: ["admin", "root", 'manager']
     },
     {
-      title: "學生分配",
-      description: "為教師分配可查看的學生",
+      title: "小學伴分配",
+      description: "為大學伴分配可查看的小學伴",
       icon: <Link2 className="h-8 w-8 text-purple-500" />,
       href: "/dashboard/admin/assign",
-      allowedRoles: ["admin", "root"]
+      allowedRoles: ["admin", "root", "manager"]
     },
     {
-      title: "匯入學生資料",
-      description: "從 Excel 或 CSV 檔案批量匯入學生資料",
+      title: "匯入小學伴資料",
+      description: "從 Excel 或 CSV 檔案批量匯入小學伴資料",
       icon: <FileSpreadsheet className="h-8 w-8 text-amber-500" />,
       href: "/dashboard/admin/import",
       allowedRoles: ["admin", "root"]
     },
     {
       title: "系統分析",
-      description: "查看學生、教師數據及系統使用情況統計",
+      description: "查看學伴、教師數據及系統使用情況統計",
       icon: <BarChart3 className="h-8 w-8 text-red-500" />,
       href: "/dashboard/root/analytics",
       allowedRoles: ["root"]
@@ -70,11 +70,11 @@ export default function DashboardPage() {
   
   const teacherFeatures = [
     {
-      title: "學生管理",
-      description: "查看及管理學生資料",
+      title: "小學伴管理",
+      description: "查看及管理小學伴資料",
       icon: <Users className="h-8 w-8 text-green-500" />,
       href: "/dashboard/students",
-      allowedRoles: ["teacher", "admin", "root"]
+      allowedRoles: ["teacher", "admin", "root", "manager"]
     }
   ]
 

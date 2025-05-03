@@ -183,11 +183,31 @@ export async function GET(_request: NextRequest) {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
     
+    // Get users count by role
+    const { data: userRoleCounts, error: roleCountError } = await supabase
+      .from('users')
+      .select('role');
+    
+    if (roleCountError) {
+      console.log(roleCountError);
+      return NextResponse.json({ error: roleCountError.message }, { status: 500 });
+    }
+    
+    // Calculate counts for each role
+    const totalTeachers = userRoleCounts.filter(user => user.role === 'teacher').length;
+    const totalAdmins = userRoleCounts.filter(user => user.role === 'admin').length;
+    const totalManagers = userRoleCounts.filter(user => user.role === 'manager').length;
+    const totalRoot = userRoleCounts.filter(user => user.role === 'root').length;
+    
     return NextResponse.json({
       studentsByGrade,
       studentsByType,
       disadvantagedCount: disadvantagedCount || 0,
       totalStudents: totalStudents || 0,
+      totalTeachers,
+      totalAdmins,
+      totalManagers,
+      totalRoot,
       teachersByActivity,
       teachersStudentCounts,
       studentsOverTime

@@ -1,5 +1,6 @@
 import { ErrorResponse, SuccessResponse, User, UserCreateRequest, UsersListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getRoleSortKey } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     
     // 確保包含 last_active 欄位
-    let query = supabase.from('users').select('id, email, role, created_at, updated_at, avatar_url, name, last_active', { count: 'exact' });
+    let query = supabase.from('users').select('id, email, role, region,created_at, updated_at, avatar_url, name, last_active', { count: 'exact' });
     
     // 應用查詢過濾條件
     if (search) {
@@ -103,10 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 獲取請求體
-    const { email, name, role }: UserCreateRequest = await request.json();
+    const { email, name, role, region }: UserCreateRequest = await request.json();
 
-    // 只有管理員可以新增用戶
-    if (userData.role === 'teacher' || userData.role === 'admin' && role === 'root') {
+    // 只能新增比自己角色權限低的用戶
+    if (getRoleSortKey(userData.role) > getRoleSortKey(user?.role as string)) {
       return NextResponse.json<ErrorResponse>({ error: '錯誤：你沒有權限新增用戶' }, { status: 403 });
     }
 
@@ -119,9 +120,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 檢查角色是否有效
-    if (!['teacher', 'admin', 'root'].includes(role)) {
+    if (!['teacher', 'manager', 'admin', 'root'].includes(role)) {
       return NextResponse.json<ErrorResponse>(
-        { error: '錯誤：角色必須是 "教師 (teacher)", "管理員 (admin)", 或 "最高管理員 (root)"' },
+        { error: '錯誤：角色必須是 "大學伴 (teacher)", "區域管理員 (manager)", "全域管理員 (admin)", 或 "系統管理員 (root)"' },
         { status: 400 }
       );
     }
@@ -149,7 +150,8 @@ export async function POST(request: NextRequest) {
       .insert({
         email,
         name,
-        role
+        role,
+        region
       })
       .select()
       .single();

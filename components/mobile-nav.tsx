@@ -34,7 +34,7 @@ export function MobileNav() {
 
   const navigation = [
     { name: "控制台", href: "/dashboard", admin: false },
-    { name: "學生管理", href: "/dashboard/students", admin: false },
+    { name: "小學伴管理", href: "/dashboard/students", admin: false },
   ]
 
   const handleSignOut = () => {
@@ -52,7 +52,7 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="flex w-[280px] sm:w-[320px] p-0 flex-col">
         <SheetHeader className="px-6 border-b py-4 shrink-0">
-          <SheetTitle className="text-left">學生資料管理系統</SheetTitle>
+          <SheetTitle className="text-left">小學伴資料管理系統</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col flex-1 overflow-y-auto">
           <nav className="flex flex-col py-6 px-4 flex-1">

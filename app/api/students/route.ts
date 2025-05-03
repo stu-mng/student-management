@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
  * GET /api/students
  * 
  * 根據教師權限或管理員身份返回學生列表
+ * 
+ * 注意：需要执行數據庫遷移添加 region 欄位到 students 表:
+ * ALTER TABLE students ADD COLUMN IF NOT EXISTS region VARCHAR(255);
  */
 export async function GET() {
   try {
@@ -18,10 +21,10 @@ export async function GET() {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
+    // 獲取用戶角色和區域
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, region')
       .eq('id', user.id)
       .single();
 
@@ -31,11 +34,25 @@ export async function GET() {
     }
 
     const isAdmin = userData.role === 'admin' || userData.role === 'root';
+    const isManager = userData.role === 'manager';
     
     let query = supabase.from('students').select('*', { count: 'exact' });
     
+    // 如果是區域管理員
+    if (isManager) {
+      // 如果區域管理員的region為null，返回空陣列
+      if (!userData.region) {
+        return NextResponse.json<StudentsListResponse>({
+          total: 0,
+          data: []
+        });
+      }
+      
+      // 只獲取相同region的學生
+      query = query.eq('region', userData.region);
+    }
     // 如果不是管理員，則只獲取教師有權查看的學生
-    if (!isAdmin) {
+    else if (!isAdmin) {
       const { data: accessibleStudentIds } = await supabase
         .from('teacher_student_access')
         .select('student_id')
@@ -90,10 +107,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
+    // 獲取用戶角色和區域
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, region')
       .eq('id', user.id)
       .single();
 
@@ -129,6 +146,11 @@ export async function POST(request: NextRequest) {
         { error: 'Student email already exists' },
         { status: 409 }
       );
+    }
+
+    // 如果為區域管理員，自動設置學生的區域
+    if (userData.role === 'manager' && userData.region) {
+      studentData.region = userData.region;
     }
 
     // 插入新的學生資料

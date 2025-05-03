@@ -12,7 +12,7 @@ import type { Student, User } from "@/lib/mock-data"
 import { toTraditionalChinese } from "@/lib/utils"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 export default function AssignStudentsPage() {
@@ -45,11 +45,11 @@ export default function AssignStudentsPage() {
         setTeachers(teachersData)
         setStudents(studentsData)
         
-        console.log(`已載入 ${teachersData.length} 位教師和 ${studentsData.length} 位學生資料`)
+        console.log(`已載入 ${teachersData.length} 位大學伴和 ${studentsData.length} 位小學伴`)
       } catch (error) {
         console.error("獲取初始數據錯誤:", error)
         toast("錯誤", {
-          description: "獲取教師和學生數據失敗",
+          description: "獲取大學伴和學生數據失敗",
         })
       } finally {
         setIsLoadingInitial(false)
@@ -112,11 +112,21 @@ export default function AssignStudentsPage() {
   }
 
   // 處理全選/取消全選
-  const handleSelectAll = () => {
-    if (selectedStudents.length === students.length) {
-      setSelectedStudents([])
+  const handleSelectAll = (visibleStudents: Student[]) => {
+    const visibleStudentIds = visibleStudents.map(student => student.id)
+    
+    if (visibleStudentIds.every(id => selectedStudents.includes(id))) {
+      // 如果所有可見學生都已選取，則取消選取它們
+      setSelectedStudents(prev => prev.filter(id => !visibleStudentIds.includes(id)))
     } else {
-      setSelectedStudents(students.map((student) => student.id))
+      // 如果有部分或全部可見學生未選取，則選取所有可見學生
+      const newSelected = [...selectedStudents]
+      visibleStudentIds.forEach(id => {
+        if (!newSelected.includes(id)) {
+          newSelected.push(id)
+        }
+      })
+      setSelectedStudents(newSelected)
     }
   }
 
@@ -141,7 +151,7 @@ export default function AssignStudentsPage() {
       // 使用 API 更新學生分配
       await bulkAssignStudentsToTeacher(selectedTeacher, selectedStudents)
       
-      let message = `學生分配已成功更新：`;
+      let message = `小學伴分配已成功更新：`;
       if (studentsToBeAssigned.length > 0) {
         message = message.concat(`新增 ${studentsToBeAssigned.length} 位`);
       }
@@ -159,7 +169,7 @@ export default function AssignStudentsPage() {
       setAssignedStudents([...selectedStudents])
     } catch (error: unknown) {
       toast("錯誤", {
-        description: error instanceof Error ? error.message : "更新學生分配時發生錯誤",
+        description: error instanceof Error ? error.message : "更新小學伴分配時發生錯誤",
       })
     } finally {
       setIsSubmitting(false)
@@ -175,15 +185,21 @@ export default function AssignStudentsPage() {
   const columns: ColumnDef<Student>[] = [
     {
       id: "select",
-      header: ({ column }) => (
+      header: ({ table }) => (
         <div
           className="w-full flex items-center justify-center cursor-pointer"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           <Checkbox
             id="select-all"
-            checked={selectedStudents.length === students.length}
-            onCheckedChange={handleSelectAll}
+            checked={
+              table.getFilteredRowModel().rows.length > 0 &&
+              table.getFilteredRowModel().rows.every(row => 
+                selectedStudents.includes(row.original.id)
+              )
+            }
+            onCheckedChange={() => 
+              handleSelectAll(table.getFilteredRowModel().rows.map(row => row.original))
+            }
             />
         </div>
       ),
@@ -201,6 +217,18 @@ export default function AssignStudentsPage() {
       },
     },
     {
+      accessorKey: "gender",
+      header: ({ column }) => {
+        return (
+          <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+            性別
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="text-center pr-4">{row.getValue("gender") || "-"}</div>,
+    },
+    {
       accessorKey: "name",
       header: ({ column }) => {
         return (
@@ -213,16 +241,17 @@ export default function AssignStudentsPage() {
       cell: ({ row }) => <div className="text-center pr-4">{row.getValue("name") || "-"}</div>,
     },
     {
-      accessorKey: "gender",
+      accessorKey: "region",
       header: ({ column }) => {
         return (
           <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            性別
+            區域
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center pr-4">{row.getValue("gender") || "-"}</div>,
+      cell: ({ row }) => <div className="text-center pr-4">{row.getValue("region") || "-"}</div>,
+      enableHiding: true,
     },
     {
       accessorKey: "grade",
@@ -268,18 +297,70 @@ export default function AssignStudentsPage() {
   // 是否正在載入任何資料
   const isLoading = isLoadingInitial || isLoadingAssigned;
 
+  const filterableColumns = useMemo(() => {
+    // 獲取唯一的年級列表
+    const grades = Array.from(
+      new Set(students.filter((student) => student.grade).map((student) => student.grade?.toString() as string)),
+    )
+      .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+      .map((grade) => ({
+        value: grade,
+        label: `${toTraditionalChinese(Number.parseInt(grade))}年級`,
+      }))
+    
+    // 獲取唯一的班級列表
+    const classes = (Array.from(
+      new Set(students.map((student) => student.class as string)),
+    ) as string[])
+      .sort((a, b) => (Number.parseInt(a) - Number.parseInt(b)))
+      .map((cls) => ({
+        value: cls,
+        label: `${toTraditionalChinese(Number.parseInt(cls))}班`,
+  }));
+
+  const regions = (Array.from(
+    new Set(students.map((student) => student.region as string)),
+  ) as string[]).map(region => ({
+    value: region,
+    label: region,
+  }))
+
+    return [
+      {
+        id: "gender",
+        title: "性別",
+        options: [{ value: "男", label: "男同學" }, { value: "女", label: "女同學" }],
+      },
+      {
+        id: "region",
+        title: "區域",
+        options: regions,
+      },
+      {
+        id: "grade",
+        title: "年級",
+        options: grades,
+      },
+      {
+        id: "class",
+        title: "班次",
+        options: classes,
+      },
+    ]
+  }, [students])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">分配學生</h1>
-        <p className="text-muted-foreground">為教師分配可查看的學生</p>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">分配小學伴</h1>
+        <p className="text-muted-foreground">為大學伴分配可查看的小學伴</p>
       </div>
 
       {/* 步驟 1: 選擇教師 */}
       <Card className="border">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-foreground">選擇教師</CardTitle>
-          <CardDescription>選擇要分配學生的教師</CardDescription>
+          <CardTitle className="text-foreground">選擇大學伴</CardTitle>
+          <CardDescription>選擇要分配小學伴的大學伴</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {isLoadingInitial ? (
@@ -287,7 +368,7 @@ export default function AssignStudentsPage() {
           ) : (
             <Select value={selectedTeacher || ""} onValueChange={handleTeacherChange}>
               <SelectTrigger className="w-full max-w-sm border focus-visible:ring-ring">
-                <SelectValue placeholder="選擇教師" />
+                <SelectValue placeholder="選擇大學伴" />
               </SelectTrigger>
               <SelectContent>
                 {teachers.length === 0 ? (
@@ -350,8 +431,8 @@ export default function AssignStudentsPage() {
           {/* 已分配學生區塊 */}
           <Card className="border">
             <CardHeader className="bg-muted/50">
-              <CardTitle className="text-foreground">已分配學生</CardTitle>
-              <CardDescription>該教師可以管理表格中的學生</CardDescription>
+              <CardTitle className="text-foreground">已分配小學伴</CardTitle>
+              <CardDescription>該大學伴可以管理表格中的小學伴</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (
@@ -366,7 +447,7 @@ export default function AssignStudentsPage() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm text-muted-foreground">
-                      已分配 {selectedStudents.length} / {students.length} 名學生
+                      已分配 {selectedStudents.length} / {students.length} 名小學伴
                     </div>
                   </div>
                   <DataTable
@@ -401,6 +482,7 @@ export default function AssignStudentsPage() {
                     data={students.filter((student) => !selectedStudents.includes(student.id))}
                     initialState={{ columnVisibility: initialColumnVisibility }}
                     searchableColumns={[]}
+                    filterableColumns={filterableColumns}
                   />
                 </div>
               )}

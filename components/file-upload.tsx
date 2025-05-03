@@ -76,7 +76,7 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
       // const result = await response.json()
       
       toast.success("成功", {
-        description: `已成功上傳 ${parsedData.length} 筆學生資料`,
+        description: `已成功上傳 ${parsedData.length} 筆小學伴資料`,
       })
 
       // 重置表單
@@ -115,6 +115,10 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
       header: '性別'
     },
     {
+      accessorKey: "region",
+      header: '區域'
+    },
+    {
       accessorKey: "grade",
       header: '年級'
     },
@@ -128,7 +132,7 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
     },
     {
       accessorKey: "student_type",
-      header: '學生類型'
+      header: '小學伴類型'
     },
     {
       accessorKey: "is_disadvantaged",
@@ -139,8 +143,8 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>匯入學生資料</CardTitle>
-        <CardDescription>上傳 Excel 或 CSV 檔案以批量匯入學生資料</CardDescription>
+        <CardTitle>匯入小學伴資料</CardTitle>
+        <CardDescription>上傳 Excel 或 CSV 檔案以批量匯入小學伴資料</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {!showPreview && (
@@ -202,33 +206,29 @@ export default function FileUpload({ onSuccess }: FileUploadProps) {
                   <li>gender - 性別 (必填，限「男」或「女」)</li>
                   <li>grade - 年級 (必填)</li>
                   <li>class - 班級 (必填)</li>
-                  <li>student_type - 學生類型 (必填，限「新生」或「舊生」)</li>
-                  <li>is_disadvantaged - 是否為弱勢生 (必填，限「是」或「否」)</li>
                   <li>email - 電子郵件 (必填)</li>
+                  <li>student_type - 小學伴類型 (必填，限「新生」或「舊生」)</li>
+                  <li>is_disadvantaged - 是否弱勢生 (必填，限「是」或「否」)</li>
                 </ul>
               </div>
-
               <div>
                 <h3 className="text-lg font-medium">選填欄位</h3>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>family_background - 家庭背景描述</li>
-                  <li>cultural_disadvantage_factors - 文化不利因素描述</li>
-                  <li>personal_background_notes - 個人背景補充說明</li>
+                  <li>family_background - 家庭背景</li>
+                  <li>cultural_disadvantage_factors - 文化不利因素</li>
+                  <li>personal_background_notes - 個人背景補充</li>
                   <li>registration_motivation - 報名動機</li>
-                  <li>account_username - 系統帳號</li>
-                  <li>account_password - 系統密碼</li>
                 </ul>
               </div>
-
               <div>
                 <h3 className="text-lg font-medium">注意事項</h3>
                 <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>所有必填欄位都必須有值</li>
                   <li>性別欄位僅接受「男」或「女」</li>
-                  <li>學生類型欄位僅接受「新生」或「舊生」</li>
-                  <li>是否為弱勢生欄位僅接受「是」或「否」</li>
-                  <li>支援的檔案格式: .xlsx, .xls, .csv</li>
-                  <li>請確保第一行為欄位名稱</li>
-                  <li>如果學生電子郵件已存在，系統將更新該學生的資料</li>
+                  <li>小學伴類型欄位僅接受「新生」或「舊生」</li>
+                  <li>是否弱勢生欄位僅接受「是」或「否」</li>
+                  <li>電子郵件必須是有效的格式</li>
+                  <li>如果小學伴電子郵件已存在，系統將更新該小學伴的資料</li>
                 </ul>
               </div>
             </CardContent>

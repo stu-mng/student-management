@@ -7,14 +7,17 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Eye, EyeOff } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Check, ChevronsUpDown, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 export default function AddStudentPage() {
@@ -22,6 +25,8 @@ export default function AddStudentPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [regions, setRegions] = useState<string[]>([])
+  const [openRegion, setOpenRegion] = useState(false)
   const [formData, setFormData] = useState<Omit<Student, 'id' | 'created_at' | 'updated_at'>>({
     name: "",
     gender: "",
@@ -36,7 +41,32 @@ export default function AddStudentPage() {
     account_username: "",
     account_password: "",
     email: "",
+    region: "",
   })
+
+  useEffect(() => {
+    const fetchRegions = async () => {
+      if (!user) return
+      
+      try {
+        const response = await fetch('/api/regions')
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || '獲取區域數據失敗')
+        }
+        
+        const data = await response.json()
+        setRegions(data.data)
+      } catch (error) {
+        console.error("獲取區域數據錯誤:", error)
+      }
+    }
+
+    if (user) {
+      fetchRegions()
+    }
+  }, [user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -114,7 +144,7 @@ export default function AddStudentPage() {
         <p className="text-muted-foreground">新增學生到系統</p>
       </div>
 
-      <RestrictedCard allowedRoles={["admin", "root"]}>
+      <RestrictedCard allowedRoles={["admin", "root", "manager"]}>
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -196,6 +226,70 @@ export default function AddStudentPage() {
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="email">常用電子郵件</Label>
                   <Input id="email" name="email" type="email" value={formData.email || ""} onChange={handleChange} />
+                </div>
+                
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="region">區域</Label>
+                  <Popover open={openRegion} onOpenChange={setOpenRegion}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openRegion}
+                        className="w-full justify-between"
+                      >
+                        {formData.region || "選擇區域"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="搜尋或輸入新區域..." 
+                          value={formData.region || ""}
+                          onValueChange={(value) => handleSelectChange("region", value)}
+                        />
+                        <CommandEmpty>
+                          <div className="py-2 text-sm text-center text-muted-foreground">
+                            沒有找到符合的區域
+                          </div>
+                          <div className="p-2 border-t">
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-sm font-normal h-8"
+                              onClick={() => {
+                                setOpenRegion(false);
+                              }}
+                            >
+                              使用「{formData.region || ""}」
+                            </Button>
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup className="max-h-[200px] overflow-y-auto">
+                          {regions.map((region) => (
+                            <CommandItem
+                              key={region}
+                              value={region}
+                              onSelect={() => {
+                                handleSelectChange("region", region === formData.region ? "" : region);
+                                setOpenRegion(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.region === region ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {region}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>

@@ -13,7 +13,7 @@ export interface User {
   id: string;
   email: string;
   name: string | null;
-  role: 'admin' | 'teacher' | 'root';
+  role: 'teacher' | 'manager' | 'admin' | 'root';
   created_at: string;
   updated_at: string;
   avatar_url?: string | null;
@@ -23,8 +23,9 @@ export interface User {
 export interface UserCreateRequest {
   email: string;
   name?: string | null;
-  role: 'admin' | 'teacher' | 'root';
+  role: 'admin' | 'teacher' | 'assistant' | 'root';
   avatar_url?: string | null;
+  region?: string | null;
 }
 
 export interface UserUpdateRequest {
@@ -50,6 +51,7 @@ export interface Student {
   class?: string | null;
   is_disadvantaged?: boolean;
   student_type?: string | null;
+  region?: string | null;
   created_at: string;
   updated_at: string;
   [key: string]: any; // For additional properties
@@ -62,6 +64,7 @@ export interface StudentUpdateRequest {
   class?: string | null;
   is_disadvantaged?: boolean;
   student_type?: string | null;
+  region?: string | null;
   [key: string]: any; // For additional properties
 }
 
@@ -104,4 +107,9 @@ export interface ErrorResponse {
 // Success Response
 export interface SuccessResponse {
   success: boolean;
+}
+
+// Regions Response
+export interface RegionsResponse extends SuccessResponse {
+  data: string[];
 } 

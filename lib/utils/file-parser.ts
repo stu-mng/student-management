@@ -7,6 +7,7 @@ export interface StudentImportData {
   grade: string
   class: string
   email: string
+  region: string
   student_type: "新生" | "舊生"
   is_disadvantaged: "是" | "否"
   family_background?: string
@@ -23,8 +24,9 @@ const FIELD_MAPPINGS = {
   gender: ["gender", "性別"],
   grade: ["grade", "年級"],
   class: ["class", "班級"],
+  region: ["region", "區域"],
   email: ["email", "電子郵件", "電子信箱", "信箱"],
-  student_type: ["student_type", "studenttype", "學生類型", "類型"],
+  student_type: ["student_type", "studenttype", "小學伴類型", "類型"],
   is_disadvantaged: ["is_disadvantaged", "isdisadvantaged", "是否為弱勢生", "弱勢生", "是否弱勢"],
   family_background: ["family_background", "familybackground", "家庭背景描述", "家庭背景"],
   cultural_disadvantage_factors: ["cultural_disadvantage_factors", "culturaldisadvantagefactors", "文化不利因素描述", "文化不利因素"],
