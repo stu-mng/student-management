@@ -14,6 +14,7 @@ export interface User {
   email: string;
   name: string | null;
   role: 'teacher' | 'manager' | 'admin' | 'root';
+  region?: string | null;
   created_at: string;
   updated_at: string;
   avatar_url?: string | null;
