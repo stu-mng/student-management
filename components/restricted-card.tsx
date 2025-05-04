@@ -3,6 +3,9 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { cn, getRoleBgColor, getRoleDisplay, getRoleTextColor } from "@/lib/utils";
 import React from 'react';
 import { Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 type ChildrenFunction = (props: { 
   badgeContent: string | null; 
   badgeBgColor: string;
@@ -28,6 +31,7 @@ export function RestrictedCard({
   className,
   ...props
 }: RestrictedCardProps) {
+  const router = useRouter();
   // Determine badge content based on allowed roles
   const getCardBadgeContent = () => {
     if (allowedRoles.length === 0) {
@@ -74,13 +78,23 @@ export function RestrictedCard({
   return (
     <Card className={cn("relative", className)} {...props}>
       {badgeContent && (
-        <Badge 
-          variant="outline"
-          className={cn(`absolute top-3 right-3 z-10 shadow-none px-2 py-1 text-xs font-medium rounded-full`, getCardRoleTextColor(), getCardRoleBgColor())}
-        >
-          <Lock className="w-3 h-3 mr-1" />
-          {badgeContent}
-        </Badge>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge 
+                variant="outline"
+                className={cn(`cursor-pointer absolute top-3 right-3 z-10 shadow-none px-2 py-1 text-xs font-medium rounded-full`, getCardRoleTextColor(), getCardRoleBgColor())}
+                onClick={() => router.push('/dashboard/permissions-guide')}
+              >
+                <Lock className="w-3 h-3 mr-1" />
+                {badgeContent}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>前往查看權限說明</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
       
       {(title || description) && (
