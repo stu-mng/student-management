@@ -15,6 +15,7 @@ import { ArrowUpDown, ChevronLeft, ChevronRight, Edit, Eye, EyeOff, Plus, Search
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+
 // Student Details Dialog Component
 function StudentDetailsDialog({ student, open, onOpenChange, students, onStudentChange }: { 
   student: Student | null, 

@@ -86,7 +86,7 @@ export function RestrictedCard({
               <Badge 
                 variant="outline"
                 className={cn(`cursor-pointer absolute top-3 right-3 z-10 shadow-none px-2 py-1 text-xs font-medium rounded-full`, getCardRoleTextColor(), getCardRoleBgColor())}
-                onClick={() => router.push('/dashboard/permissions-guide')}
+                onClick={() => router.push('/dashboard/manual?tab=permissions')}
               >
                 <Lock className="w-3 h-3 mr-1" />
                 {badgeContent}

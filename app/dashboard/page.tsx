@@ -4,7 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { BarChart3, FileSpreadsheet, Link2, UserCog, Users } from "lucide-react"
+import { BarChart3, BookOpen, FileSpreadsheet, Link2, UserCog, Users } from "lucide-react"
 import Link from "next/link"
 
 // Create a styled title component for feature cards
@@ -74,6 +74,13 @@ export default function DashboardPage() {
       description: "查看及管理小學伴資料",
       icon: <Users className="h-8 w-8 text-green-500" />,
       href: "/dashboard/students",
+      allowedRoles: ["teacher", "admin", "root", "manager"]
+    },
+    {
+      title: "系統使用手冊",
+      description: "提供完整功能介紹與操作指南",
+      icon: <BookOpen className="h-8 w-8 text-cyan-500" />,
+      href: "/dashboard/manual",
       allowedRoles: ["teacher", "admin", "root", "manager"]
     }
   ]
