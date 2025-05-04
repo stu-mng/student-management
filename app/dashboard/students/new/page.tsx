@@ -27,6 +27,7 @@ export default function AddStudentPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [regions, setRegions] = useState<string[]>([])
   const [openRegion, setOpenRegion] = useState(false)
+  const [isManagerWithoutRegion, setIsManagerWithoutRegion] = useState(false)
   const [formData, setFormData] = useState<Omit<Student, 'id' | 'created_at' | 'updated_at'>>({
     name: "",
     gender: "",
@@ -45,6 +46,15 @@ export default function AddStudentPage() {
   })
 
   useEffect(() => {
+    // If user is a manager with a region, set the region and disable changing it
+    if (user && user.role === 'manager') {
+      if (user.region) {
+        setFormData(prev => ({ ...prev, region: user.region }))
+      } else {
+        setIsManagerWithoutRegion(true)
+      }
+    }
+    
     const fetchRegions = async () => {
       if (!user) return
       
@@ -86,6 +96,13 @@ export default function AddStudentPage() {
       })
       return
     }
+    
+    if (isManagerWithoutRegion) {
+      toast("錯誤", {
+        description: "您目前還沒有被指派管理區域，無法新增學生",
+      })
+      return
+    }
 
     setIsSubmitting(true)
 
@@ -104,6 +121,7 @@ export default function AddStudentPage() {
         student_type: formData.student_type,
         account_username: formData.account_username,
         account_password: formData.account_password,
+        region: user?.role === 'manager' ? user.region : formData.region,
       }
       
       // Call the API to create student
@@ -230,66 +248,77 @@ export default function AddStudentPage() {
                 
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="region">區域</Label>
-                  <Popover open={openRegion} onOpenChange={setOpenRegion}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openRegion}
-                        className="w-full justify-between"
-                      >
-                        {formData.region || "選擇區域"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput 
-                          placeholder="搜尋或輸入新區域..." 
-                          value={formData.region || ""}
-                          onValueChange={(value) => handleSelectChange("region", value)}
-                        />
-                        <CommandEmpty>
-                          <div className="py-2 text-sm text-center text-muted-foreground">
-                            沒有找到符合的區域
-                          </div>
-                          <div className="p-2 border-t">
-                            <Button 
-                              type="button" 
-                              variant="outline"
-                              size="sm"
-                              className="w-full text-sm font-normal h-8"
-                              onClick={() => {
-                                setOpenRegion(false);
-                              }}
-                            >
-                              使用「{formData.region || ""}」
-                            </Button>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                          {regions.map((region) => (
-                            <CommandItem
-                              key={region}
-                              value={region}
-                              onSelect={() => {
-                                handleSelectChange("region", region === formData.region ? "" : region);
-                                setOpenRegion(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.region === region ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {region}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  {isManagerWithoutRegion ? (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
+                      您目前還沒有被指派管理區域，無法新增學生。請聯繫管理員設定您的管理區域。
+                    </div>
+                  ) : user?.role === 'manager' && user?.region ? (
+                    <div className="p-2 border rounded-md bg-muted">
+                      {user.region}
+                      <p className="text-xs text-muted-foreground mt-1">作為區域管理員，您只能在指定區域新增學生</p>
+                    </div>
+                  ) : (
+                    <Popover open={openRegion} onOpenChange={setOpenRegion}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openRegion}
+                          className="w-full justify-between"
+                        >
+                          {formData.region || "選擇區域"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput 
+                            placeholder="搜尋或輸入新區域..." 
+                            value={formData.region || ""}
+                            onValueChange={(value) => handleSelectChange("region", value)}
+                          />
+                          <CommandEmpty>
+                            <div className="py-2 text-sm text-center text-muted-foreground">
+                              沒有找到符合的區域
+                            </div>
+                            <div className="p-2 border-t">
+                              <Button 
+                                type="button" 
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-sm font-normal h-8"
+                                onClick={() => {
+                                  setOpenRegion(false);
+                                }}
+                              >
+                                使用「{formData.region || ""}」
+                              </Button>
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup className="max-h-[200px] overflow-y-auto">
+                            {regions.map((region) => (
+                              <CommandItem
+                                key={region}
+                                value={region}
+                                onSelect={() => {
+                                  handleSelectChange("region", region === formData.region ? "" : region);
+                                  setOpenRegion(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.region === region ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {region}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
               </div>
             </div>
@@ -405,7 +434,7 @@ export default function AddStudentPage() {
               取消
             </Button>
             
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isManagerWithoutRegion}>
               {isSubmitting ? "新增中..." : "新增學生"}
             </Button>
           </CardFooter>

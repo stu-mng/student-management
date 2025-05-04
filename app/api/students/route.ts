@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // 只有管理員可以新增學生
     if (userData.role === 'teacher') {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+      return NextResponse.json<ErrorResponse>({ error: '你的權限不足' }, { status: 403 });
     }
 
     // 獲取請求體
@@ -149,6 +149,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 如果為區域管理員，自動設置學生的區域
+    if (userData.role === 'manager' && !userData.region) {
+      return NextResponse.json<ErrorResponse>({ error: '你還沒有被指派管理區域，無法新增學生' }, { status: 403 });
+    }
     if (userData.role === 'manager' && userData.region) {
       studentData.region = userData.region;
     }

@@ -269,7 +269,7 @@ export default function AnalyticsPage() {
                 {(onlineData?.online.byRole.admins || 0) + 
                  (onlineData?.online.byRole.managers || 0) + 
                  (onlineData?.online.byRole.root || 0)}
-                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalAdmins}</span>}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalAdmins + data.totalManagers + data.totalRoot}</span>}
               </div>
             )}
           </CardContent>
