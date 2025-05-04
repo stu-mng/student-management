@@ -21,10 +21,14 @@ export interface Student {
 export interface User {
     id: string;
     email: string;
-    name: string;
-    role: string;
+    name: string | null;
+    role: 'teacher' | 'manager' | 'admin' | 'root';
+    region?: string | null;
     created_at: string;
     updated_at: string;
-};
+    avatar_url?: string | null;
+    last_active?: string | null;
+  }
+  
   
 export type StudentFilePreview = Omit<Omit<Omit<Student, 'id'>, 'created_at'>, 'updated_at'>;
