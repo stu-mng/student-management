@@ -57,7 +57,7 @@ export default function DashboardPage() {
       description: "從 Excel 或 CSV 檔案批量匯入小學伴資料",
       icon: <FileSpreadsheet className="h-8 w-8 text-amber-500" />,
       href: "/dashboard/admin/import",
-      allowedRoles: ["admin", "root"]
+      allowedRoles: ["admin", "root", "manager"]
     },
     {
       title: "系統分析",
