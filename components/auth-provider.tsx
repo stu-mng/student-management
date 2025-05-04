@@ -10,6 +10,7 @@ type User = {
   id: string
   email: string
   role?: string
+  region?: string | null;
   user_metadata?: {
     avatar_url?: string
     full_name?: string
