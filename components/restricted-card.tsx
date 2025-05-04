@@ -1,3 +1,5 @@
+'use client'
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, getRoleBgColor, getRoleDisplay, getRoleTextColor } from "@/lib/utils";
