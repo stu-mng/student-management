@@ -197,19 +197,71 @@ CREATE TABLE "teacher_student_access" (
 - `sha-xxxxx`: 基於 Git commit SHA 的版本
 - `branch-xxxx`: 基於 Git 分支的版本
 
+### 環境變數配置
+
+本系統需要 Supabase 的環境變數才能正常運作。建立一個 `.env.local` 檔案設定以下變數：
+
+```
+# Supabase 專案 URL (在 Supabase 專案設定中找到)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+
+# Supabase 公開 API 金鑰 (在 Supabase 專案設定中找到)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Supabase 服務角色金鑰 (僅在後端使用，不要暴露在前端)
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+這些環境變數在構建和運行 Docker 容器時可以通過以下方式提供：
+
+#### 使用 docker-compose.yml
+
+我們提供了 docker-compose.yml 檔案簡化本地開發：
+
+```bash
+# 先設定 .env.local 檔案，然後執行：
+docker-compose up
+```
+
+#### 使用 Docker 運行命令
+
+```bash
+# 開發環境
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=your-url \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  -v $(pwd):/app \
+  ruby0322/2025cloud:dev
+
+# 生產環境
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=your-url \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  -e SUPABASE_SERVICE_ROLE_KEY=your-service-key \
+  ruby0322/2025cloud:prod
+```
+
 ### 使用 Docker 打包應用程式
 
 #### 生產版本映像檔
 生產版本映像檔針對系統部署進行了優化，包含完整的應用程式和最小化依賴。
 
-建置指令：
+建置指令 (包含環境變數)：
 ```bash
-docker build -t ruby0322/2025cloud:prod -f Dockerfile.prod .
+docker build -t ruby0322/2025cloud:prod \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=your-url \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  --build-arg SUPABASE_SERVICE_ROLE_KEY=your-service-key \
+  -f Dockerfile.prod .
 ```
 
 運行指令：
 ```bash
-docker run -p 3000:3000 ruby0322/2025cloud:prod
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=your-url \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  -e SUPABASE_SERVICE_ROLE_KEY=your-service-key \
+  ruby0322/2025cloud:prod
 ```
 
 #### 開發版本映像檔
@@ -217,12 +269,19 @@ docker run -p 3000:3000 ruby0322/2025cloud:prod
 
 建置指令：
 ```bash
-docker build -t ruby0322/2025cloud:dev -f Dockerfile.dev .
+docker build -t ruby0322/2025cloud:dev \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=your-url \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  -f Dockerfile.dev .
 ```
 
 運行指令 (支援熱重載)：
 ```bash
-docker run -p 3000:3000 -v $(pwd):/app ruby0322/2025cloud:dev
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=your-url \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key \
+  -v $(pwd):/app \
+  ruby0322/2025cloud:dev
 ```
 
 ### 自動化部署流程
@@ -255,7 +314,22 @@ docker run -p 3000:3000 -v $(pwd):/app ruby0322/2025cloud:dev
 1. `DOCKERHUB_USERNAME`: Docker Hub 的用戶名
 2. `DOCKERHUB_TOKEN`: Docker Hub 的訪問令牌 (非密碼)
 
+#### 配置 Supabase 憑證
+此外，需要在 GitHub 儲存庫的 Secrets 中添加以下 Supabase 相關密鑰：
+
+1. `NEXT_PUBLIC_SUPABASE_URL`: Supabase 專案 URL
+2. `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase 公開 API 金鑰
+3. `SUPABASE_SERVICE_ROLE_KEY`: Supabase 服務角色金鑰
+
+這些密鑰將在 GitHub Actions 工作流程中用於建置 Docker 映像檔。
+
 獲取 Docker Hub 訪問令牌的步驟：
 1. 登入 Docker Hub
 2. 進入 Account Settings > Security
 3. 創建新的訪問令牌並設置適當的權限
+
+獲取 Supabase 憑證的步驟：
+1. 登入 Supabase 控制台
+2. 選擇你的專案
+3. 前往 Project Settings > API
+4. 複製 Project URL 和 API keys

@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -13,16 +13,32 @@ COPY . .
 
 # Set Next.js to output standalone
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Build-time Supabase variables - these are used during build if needed
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_SERVICE_ROLE_KEY
+
+# Pass build arguments to environment variables for the build process
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+ENV SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
 RUN npm run build
 
 # Production image
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Runtime environment variables (can be overridden at container start)
+ENV NEXT_PUBLIC_SUPABASE_URL=""
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=""
+ENV SUPABASE_SERVICE_ROLE_KEY=""
 
 # Create non-root user for better security
 RUN addgroup --system --gid 1001 nodejs \

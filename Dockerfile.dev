@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -12,7 +12,15 @@ RUN npm install
 # Expose port
 EXPOSE 3000
 
-# Disable Next.js telemetry in development
+# Development environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Supabase configuration (will be overridden at runtime with actual values)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
+# Start the development server with host set for Docker networking
 CMD ["npm", "run", "dev"] 
