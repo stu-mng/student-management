@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies only when needed
+COPY package*.json ./
+RUN npm install
+
+# We don't need to copy the project files since we'll use volume mounting
+# This makes hot reloading work properly
+
+# Expose port
+EXPOSE 3000
+
+# Disable Next.js telemetry in development
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Start the application in development mode with host set for Docker networking
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"] 

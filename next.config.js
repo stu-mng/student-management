@@ -5,6 +5,8 @@ const nextConfig = {
 			bodySizeLimit: '4mb',
 		},
 	},
+	// Enable standalone output for Docker deployments
+	output: 'standalone',
 	images: {
 		remotePatterns: [
 			{

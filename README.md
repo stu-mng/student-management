@@ -181,3 +181,81 @@ CREATE TABLE "teacher_student_access" (
 - 針對弱勢學生的特別標記
 - 靈活的權限控制，確保資料安全
 - 即時系統監控與數據分析
+
+## Docker 部署指南
+
+本系統提供兩種 Docker 映像檔，分別用於生產環境和開發環境。
+
+### Docker Hub 儲存庫
+映像檔已發布在公開的 Docker Hub 儲存庫中：
+[https://hub.docker.com/r/your-username/2025cloud](https://hub.docker.com/r/your-username/2025cloud)
+
+### 映像檔標籤策略
+- `prod`: 生產環境優化版本
+- `dev`: 開發環境版本 (包含所有開發依賴)
+- `latest`: 始終指向最新的生產版本
+- `sha-xxxxx`: 基於 Git commit SHA 的版本
+- `branch-xxxx`: 基於 Git 分支的版本
+
+### 使用 Docker 打包應用程式
+
+#### 生產版本映像檔
+生產版本映像檔針對系統部署進行了優化，包含完整的應用程式和最小化依賴。
+
+建置指令：
+```bash
+docker build -t your-username/2025cloud:prod -f Dockerfile.prod .
+```
+
+運行指令：
+```bash
+docker run -p 3000:3000 your-username/2025cloud:prod
+```
+
+#### 開發版本映像檔
+開發版本映像檔包含所有開發依賴並支援熱重載功能，適合開發環境使用。
+
+建置指令：
+```bash
+docker build -t your-username/2025cloud:dev -f Dockerfile.dev .
+```
+
+運行指令 (支援熱重載)：
+```bash
+docker run -p 3000:3000 -v $(pwd):/app your-username/2025cloud:dev
+```
+
+### 自動化部署流程
+
+本項目使用 GitHub Actions 自動構建並推送 Docker 映像檔到 Docker Hub。自動化工作流程檔案位於: `.github/workflows/docker.yml`
+
+#### 自動化工作流程
+1. 當推送到主分支時：
+   - 同時構建生產和開發映像檔
+   - 根據標籤策略推送映像檔到 Docker Hub
+   
+2. 當創建拉取請求時：
+   - 構建映像檔以驗證構建過程
+   - 不會推送到 Docker Hub (僅驗證構建)
+
+#### 測試自動化失敗檢測
+如果想要測試自動化工作流程的失敗檢測功能，可以創建一個包含以下修改的 Pull Request：
+
+在 Dockerfile.prod 中，將基礎映像檔改為不存在的映像檔：
+```diff
+- FROM node:18-alpine AS builder
++ FROM nonexistent-image:latest AS builder
+```
+
+這將導致構建過程失敗，GitHub Actions 將會檢測到這個錯誤並標記該 PR 為失敗。
+
+#### 配置 Docker Hub 憑證
+為了讓 GitHub Actions 可以推送映像檔到 Docker Hub，需要在 GitHub 儲存庫的 Settings > Secrets and variables > Actions 中添加以下密鑰：
+
+1. `DOCKERHUB_USERNAME`: Docker Hub 的用戶名
+2. `DOCKERHUB_TOKEN`: Docker Hub 的訪問令牌 (非密碼)
+
+獲取 Docker Hub 訪問令牌的步驟：
+1. 登入 Docker Hub
+2. 進入 Account Settings > Security
+3. 創建新的訪問令牌並設置適當的權限
