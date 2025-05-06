@@ -188,7 +188,7 @@ CREATE TABLE "teacher_student_access" (
 
 ### Docker Hub 儲存庫
 映像檔已發布在公開的 Docker Hub 儲存庫中：
-[https://hub.docker.com/r/your-username/2025cloud](https://hub.docker.com/r/your-username/2025cloud)
+[https://hub.docker.com/r/ruby0322/2025cloud](https://hub.docker.com/r/ruby0322/2025cloud)
 
 ### 映像檔標籤策略
 - `prod`: 生產環境優化版本
@@ -204,12 +204,12 @@ CREATE TABLE "teacher_student_access" (
 
 建置指令：
 ```bash
-docker build -t your-username/2025cloud:prod -f Dockerfile.prod .
+docker build -t ruby0322/2025cloud:prod -f Dockerfile.prod .
 ```
 
 運行指令：
 ```bash
-docker run -p 3000:3000 your-username/2025cloud:prod
+docker run -p 3000:3000 ruby0322/2025cloud:prod
 ```
 
 #### 開發版本映像檔
@@ -217,12 +217,12 @@ docker run -p 3000:3000 your-username/2025cloud:prod
 
 建置指令：
 ```bash
-docker build -t your-username/2025cloud:dev -f Dockerfile.dev .
+docker build -t ruby0322/2025cloud:dev -f Dockerfile.dev .
 ```
 
 運行指令 (支援熱重載)：
 ```bash
-docker run -p 3000:3000 -v $(pwd):/app your-username/2025cloud:dev
+docker run -p 3000:3000 -v $(pwd):/app ruby0322/2025cloud:dev
 ```
 
 ### 自動化部署流程

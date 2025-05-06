@@ -15,5 +15,4 @@ EXPOSE 3000
 # Disable Next.js telemetry in development
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Start the application in development mode with host set for Docker networking
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"] 
+CMD ["npm", "run", "dev"] 
