@@ -6,6 +6,7 @@ import {
   CardTitle
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getRoleDisplay } from "@/lib/utils"
 import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
@@ -364,10 +365,7 @@ export default function AnalyticsPage() {
                     <div key={user.id} className="grid grid-cols-4 p-3">
                       <div>{user.name}</div>
                       <div>
-                        {user.role === 'teacher' && '教師'}
-                        {user.role === 'admin' && '管理員'}
-                        {user.role === 'manager' && '經理'}
-                        {user.role === 'root' && '系統管理員'}
+                        {getRoleDisplay(user.role)}
                       </div>
                       <div className="col-span-2">{getRelativeTimeString(user.last_active)}</div>
                     </div>
