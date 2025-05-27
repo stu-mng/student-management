@@ -4,7 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { BarChart3, BookOpen, FileSpreadsheet, Link2, UserCog, Users } from "lucide-react"
+import { BarChart3, BookOpen, FileSpreadsheet, Link2, UserCog, Users, FileText, Settings } from "lucide-react"
 import Link from "next/link"
 
 // Create a styled title component for feature cards
@@ -60,6 +60,13 @@ export default function DashboardPage() {
       allowedRoles: ["admin", "root", "manager"]
     },
     {
+      title: "表單管理",
+      description: "創建、編輯和管理系統表單",
+      icon: <Settings className="h-8 w-8 text-indigo-500" />,
+      href: "/dashboard/forms/manage",
+      allowedRoles: ["admin", "root", "project_manager"]
+    },
+    {
       title: "系統分析",
       description: "查看學伴、教師數據及系統使用情況統計",
       icon: <BarChart3 className="h-8 w-8 text-red-500" />,
@@ -75,6 +82,13 @@ export default function DashboardPage() {
       icon: <Users className="h-8 w-8 text-green-500" />,
       href: "/dashboard/students",
       allowedRoles: ["teacher", "admin", "root", "manager"]
+    },
+    {
+      title: "表單填寫",
+      description: "查看並填寫可用的表單",
+      icon: <FileText className="h-8 w-8 text-orange-500" />,
+      href: "/dashboard/forms",
+      allowedRoles: ["student", "teacher", "admin", "root", "manager", "project_manager"]
     },
     {
       title: "系統使用手冊",

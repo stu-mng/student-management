@@ -9,6 +9,323 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      form_field_options: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          field_id: string
+          id: string
+          is_active: boolean | null
+          option_label: string
+          option_value: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          field_id: string
+          id?: string
+          is_active?: boolean | null
+          option_label: string
+          option_value: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          field_id?: string
+          id?: string
+          is_active?: boolean | null
+          option_label?: string
+          option_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_options_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_field_responses: {
+        Row: {
+          created_at: string | null
+          field_id: string
+          field_value: string | null
+          field_values: Json | null
+          id: string
+          response_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_id: string
+          field_value?: string | null
+          field_values?: Json | null
+          id?: string
+          response_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_id?: string
+          field_value?: string | null
+          field_values?: Json | null
+          id?: string
+          response_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_responses_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_responses_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_fields: {
+        Row: {
+          auto_populate_from: string | null
+          conditional_logic: Json | null
+          created_at: string | null
+          default_value: string | null
+          display_order: number
+          field_label: string
+          field_name: string
+          field_type: string
+          form_id: string
+          help_text: string | null
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          max_length: number | null
+          min_length: number | null
+          pattern: string | null
+          placeholder: string | null
+          student_field_mapping: string | null
+          updated_at: string | null
+          validation_rules: Json | null
+        }
+        Insert: {
+          auto_populate_from?: string | null
+          conditional_logic?: Json | null
+          created_at?: string | null
+          default_value?: string | null
+          display_order?: number
+          field_label: string
+          field_name: string
+          field_type: string
+          form_id: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          max_length?: number | null
+          min_length?: number | null
+          pattern?: string | null
+          placeholder?: string | null
+          student_field_mapping?: string | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Update: {
+          auto_populate_from?: string | null
+          conditional_logic?: Json | null
+          created_at?: string | null
+          default_value?: string | null
+          display_order?: number
+          field_label?: string
+          field_name?: string
+          field_type?: string
+          form_id?: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          max_length?: number | null
+          min_length?: number | null
+          pattern?: string | null
+          placeholder?: string | null
+          student_field_mapping?: string | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          created_at: string | null
+          form_id: string
+          id: string
+          metadata: Json | null
+          respondent_id: string | null
+          respondent_type: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          submission_status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          form_id: string
+          id?: string
+          metadata?: Json | null
+          respondent_id?: string | null
+          respondent_type: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submission_status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          metadata?: Json | null
+          respondent_id?: string | null
+          respondent_type?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submission_status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system_template: boolean | null
+          name: string
+          template_data: Json
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system_template?: boolean | null
+          name: string
+          template_data: Json
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system_template?: boolean | null
+          name?: string
+          template_data?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          allow_multiple_submissions: boolean | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          form_type: string
+          id: string
+          is_required: boolean | null
+          status: string | null
+          submission_deadline: string | null
+          target_role: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          allow_multiple_submissions?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          form_type: string
+          id?: string
+          is_required?: boolean | null
+          status?: string | null
+          submission_deadline?: string | null
+          target_role: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          allow_multiple_submissions?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          form_type?: string
+          id?: string
+          is_required?: boolean | null
+          status?: string | null
+          submission_deadline?: string | null
+          target_role?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           account_password: string | null
@@ -25,6 +342,7 @@ export type Database = {
           is_disadvantaged: string
           name: string
           personal_background_notes: string | null
+          region: string | null
           registration_motivation: string | null
           student_type: string
           updated_at: string
@@ -44,6 +362,7 @@ export type Database = {
           is_disadvantaged: string
           name: string
           personal_background_notes?: string | null
+          region?: string | null
           registration_motivation?: string | null
           student_type: string
           updated_at?: string
@@ -63,6 +382,7 @@ export type Database = {
           is_disadvantaged?: string
           name?: string
           personal_background_notes?: string | null
+          region?: string | null
           registration_motivation?: string | null
           student_type?: string
           updated_at?: string
@@ -105,13 +425,73 @@ export type Database = {
           },
         ]
       }
+      user_form_access: {
+        Row: {
+          access_type: string | null
+          expires_at: string | null
+          form_id: string
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          is_active: boolean | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_type?: string | null
+          expires_at?: string | null
+          form_id: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_type?: string | null
+          expires_at?: string | null
+          form_id?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_form_access_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_form_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_form_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
           created_at: string
           email: string
-          id: string
+          id: string | null
+          last_active: string | null
           name: string | null
+          region: string | null
           role: string
           updated_at: string
         }
@@ -119,8 +499,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email: string
-          id?: string
+          id?: string | null
+          last_active?: string | null
           name?: string | null
+          region?: string | null
           role: string
           updated_at?: string
         }
@@ -128,8 +510,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string
-          id?: string
+          id?: string | null
+          last_active?: string | null
           name?: string | null
+          region?: string | null
           role?: string
           updated_at?: string
         }
@@ -261,19 +645,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-
-// Student table type aliases
-export type StudentTable = Tables<'students'>;
-export type StudentInsert = TablesInsert<'students'>;
-export type StudentUpdate = TablesUpdate<'students'>;
-
-// User table type aliases
-export type UserTable = Tables<'users'>;
-export type UserInsert = TablesInsert<'users'>;
-export type UserUpdate = TablesUpdate<'users'>;
-
-// Teacher-Student access table type aliases
-export type TeacherStudentAccessTable = Tables<'teacher_student_access'>;
-export type TeacherStudentAccessInsert = TablesInsert<'teacher_student_access'>;
-export type TeacherStudentAccessUpdate = TablesUpdate<'teacher_student_access'>; 

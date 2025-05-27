@@ -3,9 +3,15 @@
 import { cn } from "@/lib/utils";
 import { Github } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function Footer({ className }: { className?: string }) {
   const pathname = usePathname();
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   if (pathname.startsWith('/dashboard')) {
     return null
@@ -15,7 +21,7 @@ export function Footer({ className }: { className?: string }) {
     <footer className={cn("w-full py-6 text-center text-sm text-muted-foreground bg-slate-50", className)}>
       <div className="container">
         <p className="flex items-center justify-center gap-2">
-            © {new Date().getFullYear()} 小學伴資料管理系統. All rights reserved.
+            © {currentYear || 2024} 小學伴資料管理系統. All rights reserved.
         </p>
         
         <div className="mt-2 flex items-center justify-center gap-1">

@@ -54,7 +54,7 @@ export async function GET(_request: NextRequest) {
     }
 
     // 計算在線使用者
-    const currentTime = Date.now();
+    const currentTime = new Date().getTime();
     const onlineUsers = activeUsers.filter(u => {
       if (!u.last_active) return false;
       const lastActiveTime = new Date(u.last_active).getTime();

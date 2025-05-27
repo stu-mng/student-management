@@ -157,3 +157,48 @@ export function toTraditionalChinese(num: number) {
 
   return result;
 }
+
+// 通用的日期格式化函數，避免 hydration 錯誤
+export function formatDate(dateString: string | null): string {
+  if (!dateString) return '無期限'
+  const date = new Date(dateString)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}/${month}/${day}`
+}
+
+// 格式化相對時間，避免 hydration 錯誤
+export function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return '從未登入';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  // 轉換為秒、分鐘、小時、天
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  
+  // 格式化相對時間
+  if (diffSecs < 60) {
+    return `${diffSecs} 秒前`;
+  } else if (diffMins < 60) {
+    return `${diffMins} 分鐘前`;
+  } else if (diffHours < 24) {
+    return `${diffHours} 小時前`;
+  } else if (diffDays < 7) {
+    return `${diffDays} 天前`;
+  } else if (diffWeeks < 4) {
+    return `${diffWeeks} 週前`;
+  } else if (diffMonths < 12) {
+    return `${diffMonths} 個月前`;
+  } else {
+    // 如果超過一年，顯示日期
+    return formatDate(dateString);
+  }
+}

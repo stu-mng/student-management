@@ -19,7 +19,7 @@ import { ArrowUpDown, Check, ChevronsUpDown, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleSortKey, cn, getRoleHoverTextColor } from "@/lib/utils"
+import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleSortKey, cn, getRoleHoverTextColor, formatRelativeTime } from "@/lib/utils"
 
 type User = {
   id: string
@@ -36,37 +36,8 @@ type User = {
 const isUserOnline = (lastActive?: string) => {
   if (!lastActive) return false;
   const lastActiveTime = new Date(lastActive).getTime();
-  const currentTime = Date.now();
+  const currentTime = new Date().getTime();
   return (currentTime - lastActiveTime) < 15 * 60 * 1000; // 15分鐘閾值
-}
-
-// 格式化最後活動時間為相對時間
-const formatLastActive = (lastActive?: string) => {
-  if (!lastActive) return '從未登入';
-  
-  const lastActiveDate = new Date(lastActive);
-  const now = new Date();
-  const diffMs = now.getTime() - lastActiveDate.getTime();
-  
-  // 轉換為秒、分鐘、小時、天
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  
-  // 格式化相對時間
-  if (diffMins < 5) {
-    return `剛剛`;
-  } else if (diffMins < 60) {
-    return `${diffMins} 分鐘前`;
-  } else if (diffHours < 24) {
-    return `${diffHours} 小時前`;
-  } else if (diffDays < 30) {
-    return `${diffDays} 天前`;
-  } else {
-    // 如果超過30天，顯示日期
-    return lastActiveDate.toLocaleDateString('zh-TW');
-  }
 }
 
 export default function PermissionsPage() {
@@ -568,7 +539,7 @@ export default function PermissionsPage() {
       header: "最後活動",
       cell: ({ row }) => {
         const user = row.original
-        return formatLastActive(user.last_active)
+        return formatRelativeTime(user.last_active || null)
       }
     },
     {

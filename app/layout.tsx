@@ -21,19 +21,26 @@ export default function RootLayout({
     <html lang="zh-TW" suppressHydrationWarning>
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-S6QMCYNM83"></script>
-        <script>
-          {
-            `window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', 'G-S6QMCYNM83');`
-          }
-        </script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-S6QMCYNM83');
+            `,
+          }}
+        />
         <link rel="icon" href="/logo.png" sizes="any" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="light" 
+          enableSystem 
+          disableTransitionOnChange
+          storageKey="theme"
+        >
           <AuthProvider>
             {children}
           </AuthProvider>

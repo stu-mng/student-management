@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Bookmark, Info, Shield, User, UserCog, Users } from "lucide-react"
+import { BookOpen, Bookmark, Info, Shield, User, UserCog, Users, History } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getRoleTextColor, getRoleBgColor } from "@/lib/utils"
@@ -77,6 +77,13 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             <UserCog className="h-4 w-4 mr-1" /> 系統管理員指南
           </Button>
         )}
+        <Button 
+          variant={activeTab === "history" ? "default" : "ghost"} 
+          onClick={() => handleTabChange("history")}
+          className="rounded-sm px-3 py-1.5 text-sm"
+        >
+          <History className="h-4 w-4 mr-1" /> 系統日誌
+        </Button>
       </div>
       
       {/* 系統概述 */}
@@ -476,6 +483,130 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+      
+      {/* 系統日誌 */}
+      {activeTab === "history" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-6 w-6 text-primary" />
+                系統日誌
+              </CardTitle>
+              <CardDescription>記錄各版本的重大功能更新與系統發展歷程</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* 版本 2.0.0 - 最新版本 */}
+              <div className="border-l-4 border-primary pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-primary">v1.6.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月底 - 最新版本</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Docker 容器化與部署優化</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增 Docker 支援，實現容器化部署</li>
+                  <li>• 建立 GitHub Actions 自動化工作流程</li>
+                  <li>• 優化生產環境配置與環境變數管理</li>
+                  <li>• 新增 Google Analytics 追蹤功能</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.5.0 */}
+              <div className="border-l-4 border-blue-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-blue-500 text-blue-600">v1.5.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">區域管理員功能與權限系統重構</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增「區域管理員」角色，實現分區管理</li>
+                  <li>• 為學生和用戶新增區域屬性</li>
+                  <li>• 實現區域管理員的學生新增規則</li>
+                  <li>• 允許區域管理員訪問匯入功能</li>
+                  <li>• 優化權限指南頁面，開放公開訪問</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.4.0 */}
+              <div className="border-l-4 border-green-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-green-500 text-green-600">v1.4.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">使用者手冊與介面優化</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增完整的使用者手冊頁面</li>
+                  <li>• 修復標籤頁面的 Suspense 組件問題</li>
+                  <li>• 優化學生資訊對話框，新增缺失欄位</li>
+                  <li>• 新增學生刪除操作的提示訊息</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.3.0 */}
+              <div className="border-l-4 border-purple-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-purple-500 text-purple-600">v1.3.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">主題系統與用戶體驗提升</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增深色/淺色主題切換功能</li>
+                  <li>• 修復新增學生頁面的類型錯誤</li>
+                  <li>• 優化品牌名稱顯示</li>
+                  <li>• 移除冗餘的功能卡片</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.2.0 */}
+              <div className="border-l-4 border-orange-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-orange-500 text-orange-600">v1.2.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">系統分析與監控功能</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增用戶在線狀態顯示</li>
+                  <li>• 建立儀表板面板與分析頁面</li>
+                  <li>• 實現前端與後端的數據分析功能</li>
+                  <li>• 優化分析頁面的角色顯示</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.1.0 */}
+              <div className="border-l-4 border-red-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-red-500 text-red-600">v1.1.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">網站架構與安全性建立</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增首頁、隱私政策和服務條款頁面</li>
+                  <li>• 建立頁尾版權聲明</li>
+                  <li>• 實現白名單機制，移除受保護路由</li>
+                  <li>• 設定公開頁面的訪問權限</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.0.0 */}
+              <div className="border-l-4 border-gray-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-gray-500 text-gray-600">v1.0.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 4 月</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">系統初始版本</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 建立基礎的學生管理系統架構</li>
+                  <li>• 實現基本的用戶認證與授權</li>
+                  <li>• 建立學生資料的 CRUD 操作</li>
+                  <li>• 設定初始的資料庫結構</li>
+                </ul>
+              </div>
+
+            </CardContent>
+          </Card>
+        </div>
       )}
     </>
   )

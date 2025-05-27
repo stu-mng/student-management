@@ -6,7 +6,7 @@ import {
   CardTitle
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getRoleDisplay } from "@/lib/utils"
+import { getRoleDisplay, formatRelativeTime } from "@/lib/utils"
 import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
@@ -150,40 +150,6 @@ export default function AnalyticsPage() {
     const [year, monthNum] = month.split('-');
     return `${year}/${monthNum}`;
   }
-  
-  // Format relative time for display
-  const getRelativeTimeString = (dateString: string | null): string => {
-    if (!dateString) return '從未登入';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    // Convert to seconds, minutes, hours, days
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    
-    // Format the relative time string
-    if (diffSecs < 60) {
-      return `${diffSecs} 秒前`;
-    } else if (diffMins < 60) {
-      return `${diffMins} 分鐘前`;
-    } else if (diffHours < 24) {
-      return `${diffHours} 小時前`;
-    } else if (diffDays < 7) {
-      return `${diffDays} 天前`;
-    } else if (diffWeeks < 4) {
-      return `${diffWeeks} 週前`;
-    } else if (diffMonths < 12) {
-      return `${diffMonths} 個月前`;
-    } else {
-      // If more than a year, show the date
-      return date.toLocaleDateString('zh-TW');
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -367,7 +333,7 @@ export default function AnalyticsPage() {
                       <div>
                         {getRoleDisplay(user.role)}
                       </div>
-                      <div className="col-span-2">{getRelativeTimeString(user.last_active)}</div>
+                      <div className="col-span-2">{formatRelativeTime(user.last_active)}</div>
                     </div>
                   ))}
                 </div>
@@ -540,7 +506,7 @@ export default function AnalyticsPage() {
                     <div className="flex flex-col">
                       <span className="font-medium">{teacher.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        最後活動: {getRelativeTimeString(teacher.lastActive)}
+                        最後活動: {formatRelativeTime(teacher.lastActive)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
