@@ -502,7 +502,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
               <div className="border-l-4 border-purple-500 pl-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="default" className="bg-purple-500 text-white">v2.0.0</Badge>
-                  <span className="text-sm text-muted-foreground">2025 年 5 月 29 日</span>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月 29 日 - 最新版本</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">〔重大更新〕RBAC 系統升級與表單功能</h3>
                 <ul className="space-y-1 text-sm">
@@ -518,7 +518,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
               <div className="border-l-4 border-primary pl-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="border-primary text-primary">v1.6.0</Badge>
-                  <span className="text-sm text-muted-foreground">2025 年 5 月底 - 最新版本</span>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月底</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Docker 容器化與部署優化</h3>
                 <ul className="space-y-1 text-sm">
