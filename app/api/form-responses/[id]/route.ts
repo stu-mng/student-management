@@ -163,7 +163,7 @@ export async function PUT(
     }
 
     // 檢查權限：只有回應者本人可以修改
-    if (existingResponse.respondent_id !== user.id && user.role?.order < 3) {
+    if (existingResponse.respondent_id !== user.id) {
       return NextResponse.json<ErrorResponse>(
         { error: 'Permission denied' },
         { status: 403 }
