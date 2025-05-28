@@ -498,7 +498,23 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               
-              {/* 版本 2.0.0 - 最新版本 */}
+              {/* 版本 2.0.0 - 新增 */}
+              <div className="border-l-4 border-purple-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-purple-500 text-purple-600">v2.0.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月 29 日</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">〔重大更新〕RBAC 系統升級與表單功能</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 實作完整的 RBAC (Role-Based Access Control) 權限系統</li>
+                  <li>• 新增用戶角色權限層級管理</li>
+                  <li>• 新增表單系統，支援多種回應類型</li>
+                  <li>• 新增表單權限控制與存取管理</li>
+                  <li>• 實作表單回應編輯與更新功能</li>
+                </ul>
+              </div>
+
+              {/* 版本 1.6.0 - 最新版本 */}
               <div className="border-l-4 border-primary pl-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="default" className="bg-primary">v1.6.0</Badge>
