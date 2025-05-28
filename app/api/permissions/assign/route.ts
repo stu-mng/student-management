@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -31,7 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 只有管理員可以批量分配權限
-    if (userData.role !== 'admin' && userData.role !== 'root' && userData.role !== 'manager') {
+    const userRole = (userData.role as any)?.name;
+    if (userRole !== 'admin' && userRole !== 'root' && userRole !== 'manager') {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -47,17 +50,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 檢查教師是否存在且是教師角色
-    const { count: teacherCount, error: teacherError } = await supabase
+    const { data: teacherData, error: teacherError } = await supabase
       .from('users')
-      .select('*', { count: 'exact', head: true })
+      .select(`
+        id,
+        role:roles(name)
+      `)
       .eq('id', teacher_id)
-      .eq('role', 'teacher');
+      .single();
 
     if (teacherError) {
       return NextResponse.json<ErrorResponse>({ error: teacherError.message }, { status: 500 });
     }
 
-    if (teacherCount === 0) {
+    const teacherRole = (teacherData?.role as any)?.name;
+    if (!teacherData || teacherRole !== 'teacher') {
       return NextResponse.json<ErrorResponse>(
         { error: 'Teacher not found or user is not a teacher' },
         { status: 404 }

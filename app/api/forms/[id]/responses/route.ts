@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse } from '@/app/api/types';
+import { 
+  ErrorResponse,
+  FormResponseCreateRequest, 
+  FormResponseDetailResponse 
+} from '@/app/api/types';
 
 interface FormResponsesResponse {
   success: boolean;
@@ -27,7 +31,9 @@ export async function GET(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -58,7 +64,8 @@ export async function GET(
     }
 
     // 檢查權限：只有表單創建者、管理員或 root 可以查看回應
-    const hasPermission = form.created_by === user.id || ['admin', 'root'].includes(userData.role);
+    const userRole = (userData.role as any)?.name;
+    const hasPermission = form.created_by === user.id || ['admin', 'root'].includes(userRole);
     
     if (!hasPermission) {
       return NextResponse.json<ErrorResponse>(
@@ -82,7 +89,15 @@ export async function GET(
         respondent:users!form_responses_respondent_id_fkey(id, name, email),
         field_responses:form_field_responses(
           *,
-          field:form_fields(id, field_label, field_type)
+          field:form_fields(
+            id, 
+            field_label, 
+            field_type,
+            form_field_options(
+              option_value,
+              option_label
+            )
+          )
         )
       `, { count: 'exact' })
       .eq('form_id', id)
@@ -97,9 +112,59 @@ export async function GET(
       );
     }
 
+    // 創建選項值到標籤的映射函數
+    const createOptionMap = (options: any[]) => {
+      const map = new Map<string, string>();
+      options.forEach(option => {
+        map.set(option.option_value, option.option_label);
+      });
+      return map;
+    };
+
+    // 轉換選項值為標籤
+    const convertValueToLabel = (value: string | string[] | null, optionMap: Map<string, string>): string | string[] | null => {
+      if (!value) return null;
+      
+      if (Array.isArray(value)) {
+        return value.map(v => optionMap.get(v) || v);
+      } else {
+        return optionMap.get(value) || value;
+      }
+    };
+
+    // 處理回應數據，轉換選項值為標籤
+    const processedResponses = responses?.map(response => ({
+      ...response,
+      field_responses: response.field_responses.map((fieldResponse: any) => {
+        const optionMap = createOptionMap(fieldResponse.field?.form_field_options || []);
+        
+        let displayValue: string | null = null;
+        let displayValues: string[] | null = null;
+        
+        if (fieldResponse.field_values) {
+          const converted = convertValueToLabel(fieldResponse.field_values, optionMap);
+          displayValues = Array.isArray(converted) ? converted : null;
+        } else if (fieldResponse.field_value) {
+          const converted = convertValueToLabel(fieldResponse.field_value, optionMap);
+          displayValue = typeof converted === 'string' ? converted : null;
+        }
+        
+        return {
+          ...fieldResponse,
+          field_value: displayValue,
+          field_values: displayValues,
+          field: {
+            id: fieldResponse.field.id,
+            field_label: fieldResponse.field.field_label,
+            field_type: fieldResponse.field.field_type
+          }
+        };
+      })
+    })) || [];
+
     return NextResponse.json<FormResponsesResponse>({
       success: true,
-      data: responses || [],
+      data: processedResponses,
       total: count || 0,
       page,
       limit,
@@ -107,6 +172,149 @@ export async function GET(
 
   } catch (error) {
     console.error('Error in GET /api/forms/[id]/responses:', error);
+    return NextResponse.json<ErrorResponse>(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient();
+    
+    // 獲取當前用戶
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id: form_id } = await params;
+    const body: FormResponseCreateRequest = await request.json();
+    const {
+      respondent_id,
+      respondent_type = 'user',
+      submission_status = 'draft',
+      field_responses = [],
+      metadata
+    } = body;
+
+    // 檢查表單是否存在
+    const { data: form, error: formError } = await supabase
+      .from('forms')
+      .select('id, status, allow_multiple_submissions')
+      .eq('id', form_id)
+      .single();
+
+    if (formError) {
+      if (formError.code === 'PGRST116') {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Form not found' },
+          { status: 404 }
+        );
+      }
+      console.error('Error checking form:', formError);
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to check form' },
+        { status: 500 }
+      );
+    }
+
+    // 檢查表單狀態
+    if (form.status !== 'active') {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Form is not active' },
+        { status: 400 }
+      );
+    }
+
+    // 如果不允許多次提交，檢查是否已有回應
+    if (!form.allow_multiple_submissions && respondent_id) {
+      const { data: existingResponse, error: checkError } = await supabase
+        .from('form_responses')
+        .select('id')
+        .eq('form_id', form_id)
+        .eq('respondent_id', respondent_id)
+        .eq('respondent_type', respondent_type)
+        .single();
+
+      if (existingResponse) {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Multiple submissions not allowed for this form' },
+          { status: 400 }
+        );
+      }
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing response:', checkError);
+      }
+    }
+
+    // 創建表單回應
+    const responseData: any = {
+      form_id,
+      respondent_type,
+      submission_status,
+      metadata
+    };
+
+    if (respondent_id) {
+      responseData.respondent_id = respondent_id;
+    }
+
+    if (submission_status === 'submitted') {
+      responseData.submitted_at = new Date().toISOString();
+    }
+
+    const { data: formResponse, error: responseError } = await supabase
+      .from('form_responses')
+      .insert(responseData)
+      .select()
+      .single();
+
+    if (responseError) {
+      console.error('Error creating form response:', responseError);
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to create form response' },
+        { status: 500 }
+      );
+    }
+
+    // 創建欄位回應
+    if (field_responses.length > 0) {
+      const fieldResponsesData = field_responses.map((fieldResponse: any) => ({
+        response_id: formResponse.id,
+        field_id: fieldResponse.field_id,
+        field_value: fieldResponse.field_value,
+        field_values: fieldResponse.field_values,
+      }));
+
+      const { error: fieldResponsesError } = await supabase
+        .from('form_field_responses')
+        .insert(fieldResponsesData);
+
+      if (fieldResponsesError) {
+        console.error('Error creating field responses:', fieldResponsesError);
+        // 如果欄位回應創建失敗，刪除已創建的表單回應
+        await supabase.from('form_responses').delete().eq('id', formResponse.id);
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Failed to create field responses' },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json<FormResponseDetailResponse>({
+      success: true,
+      data: formResponse,
+    });
+
+  } catch (error) {
+    console.error('Error in POST /api/forms/[id]/responses:', error);
     return NextResponse.json<ErrorResponse>(
       { error: 'Internal server error' },
       { status: 500 }

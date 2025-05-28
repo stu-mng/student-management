@@ -218,7 +218,7 @@ export default function DashboardPage() {
     is_disadvantaged: false,
     student_type: false,
     email: false,
-    region: user?.role === 'admin' || user?.role === 'root',
+    region: user?.role?.name === 'admin' || user?.role?.name === 'root',
   }
   
   // 當對話框關閉時的處理
@@ -227,7 +227,7 @@ export default function DashboardPage() {
   };
 
   // 檢查是否為管理員
-  const isAdmin = user?.role === "admin" || user?.role === "root" || user?.role === "manager";
+  const isAdmin = user?.role?.name === "admin" || user?.role?.name === "root" || user?.role?.name === "manager";
 
   // 查看學生詳細資料
   const viewStudentDetails = (student: Student) => {

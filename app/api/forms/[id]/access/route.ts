@@ -27,7 +27,15 @@ export async function GET(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -40,7 +48,7 @@ export async function GET(
     // 檢查表單是否存在
     const { data: form, error: formError } = await supabase
       .from('forms')
-      .select('id, target_role, created_by')
+      .select('id, created_by')
       .eq('id', id)
       .single();
 
@@ -57,6 +65,9 @@ export async function GET(
       );
     }
 
+    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRoleId = (userData.role as any)?.id;
+
     // 檢查用戶是否為表單創建者
     if (form.created_by === user.id) {
       return NextResponse.json<AccessResponse>({
@@ -68,46 +79,8 @@ export async function GET(
       });
     }
 
-    // 檢查 user_form_access 表中的權限
-    const { data: accessData, error: accessError } = await supabase
-      .from('user_form_access')
-      .select('access_type')
-      .eq('form_id', id)
-      .eq('role', userData.role)
-      .single();
-
-    if (accessError && accessError.code !== 'PGRST116') {
-      console.error('Error checking form access:', accessError);
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to check access' },
-        { status: 500 }
-      );
-    }
-
-    // 如果在 user_form_access 中找到權限記錄
-    if (accessData) {
-      return NextResponse.json<AccessResponse>({
-        success: true,
-        data: {
-          hasAccess: true,
-          accessType: accessData.access_type as 'read' | 'edit'
-        }
-      });
-    }
-
-    // 檢查是否為目標角色（基本讀取權限）
-    if (form.target_role === userData.role || form.target_role === 'all') {
-      return NextResponse.json<AccessResponse>({
-        success: true,
-        data: {
-          hasAccess: true,
-          accessType: 'read'
-        }
-      });
-    }
-
     // 管理員和 root 用戶有完整權限
-    if (['admin', 'root'].includes(userData.role)) {
+    if (['admin', 'root'].includes(currentUserRole)) {
       return NextResponse.json<AccessResponse>({
         success: true,
         data: {
@@ -115,6 +88,35 @@ export async function GET(
           accessType: 'edit'
         }
       });
+    }
+
+    // 檢查 user_form_access 表中的權限
+    if (currentUserRoleId) {
+      const { data: accessData, error: accessError } = await supabase
+        .from('user_form_access')
+        .select('access_type')
+        .eq('form_id', id)
+        .eq('role_id', currentUserRoleId)
+        .single();
+
+      if (accessError && accessError.code !== 'PGRST116') {
+        console.error('Error checking form access:', accessError);
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Failed to check access' },
+          { status: 500 }
+        );
+      }
+
+      // 如果在 user_form_access 中找到權限記錄
+      if (accessData) {
+        return NextResponse.json<AccessResponse>({
+          success: true,
+          data: {
+            hasAccess: true,
+            accessType: accessData.access_type as 'read' | 'edit'
+          }
+        });
+      }
     }
 
     // 沒有權限

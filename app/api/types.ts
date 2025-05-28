@@ -8,12 +8,21 @@ export interface LoginResponse {
   user: User;
 }
 
+// Role Types
+export interface Role {
+  id: number;
+  name: string;
+  display_name: string | null;
+  color: string | null;
+  order: number;
+}
+
 // User Types
 export interface User {
   id: string;
   email: string;
   name: string | null;
-  role: 'teacher' | 'manager' | 'admin' | 'root';
+  role?: Role; // 完整角色資料
   region?: string | null;
   created_at: string;
   updated_at: string;
@@ -24,7 +33,7 @@ export interface User {
 export interface UserCreateRequest {
   email: string;
   name?: string | null;
-  role: 'admin' | 'teacher' | 'assistant' | 'root';
+  role: 'admin' | 'teacher' | 'manager' | 'root';
   avatar_url?: string | null;
   region?: string | null;
 }
@@ -34,6 +43,8 @@ export interface UserUpdateRequest {
   email?: string;
   name?: string | null;
   picture?: string | null;
+  role?: string;
+  region?: string | null;
 }
 
 export interface UsersListResponse {
@@ -100,13 +111,18 @@ export interface BulkAssignPermissionResponse {
   message?: string;
 }
 
+// Form Permission Types
+export interface RolePermission {
+  role: Role;
+  access_type: 'read' | 'edit' | null;
+}
+
 // Form Types
 export interface Form {
   id: string;
   title: string;
   description?: string | null;
   form_type: string;
-  target_role: string;
   status?: string | null;
   is_required?: boolean | null;
   allow_multiple_submissions?: boolean | null;
@@ -116,6 +132,14 @@ export interface Form {
   updated_at?: string | null;
   fields?: FormField[];
   access_type?: 'read' | 'edit' | null;
+  permissions?: RolePermission[];
+  submitted?: boolean;
+  owner?: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatar_url?: string | null;
+  };
 }
 
 export interface FormField {
@@ -197,7 +221,6 @@ export interface FormCreateRequest {
   title: string;
   description?: string;
   form_type: string;
-  target_role: string;
   status?: string;
   is_required?: boolean;
   allow_multiple_submissions?: boolean;
@@ -236,7 +259,6 @@ export interface FormUpdateRequest {
   title?: string;
   description?: string;
   form_type?: string;
-  target_role?: string;
   status?: string;
   is_required?: boolean;
   allow_multiple_submissions?: boolean;

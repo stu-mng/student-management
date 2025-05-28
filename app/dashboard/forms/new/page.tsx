@@ -12,15 +12,17 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { ArrowLeft, Plus, Trash2, GripVertical, Save, Send, Eye, CalendarIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, Plus, Trash2, GripVertical, Save, Send, Eye, CalendarIcon, Shield } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { FormCreateRequest, FormFieldCreateRequest, FormFieldOptionCreateRequest } from "@/app/api/types"
 import { toast } from "sonner"
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from "@hello-pangea/dnd"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { hasFormManagePermission } from "@/lib/utils"
 
 interface FormFieldWithId extends FormFieldCreateRequest {
   tempId: string
@@ -29,6 +31,11 @@ interface FormFieldWithId extends FormFieldCreateRequest {
 
 interface FormFieldOptionWithId extends FormFieldOptionCreateRequest {
   tempId: string
+}
+
+interface RolePermission {
+  role: string
+  access_type: 'read' | 'edit' | null
 }
 
 const FIELD_TYPES = [
@@ -49,14 +56,95 @@ const FORM_TYPES = [
   { value: 'application', label: '申請表' },
 ]
 
-const TARGET_ROLES = [
-  { value: 'teacher', label: '大學伴' },
-  { value: 'manager', label: '區域管理員' },
-  { value: 'admin', label: '全域管理員' },
-  { value: 'all', label: '所有用戶' },
+const ACCESS_TYPES = [
+  { value: null, label: '無權限' },
+  { value: 'read', label: '檢視' },
+  { value: 'edit', label: '編輯' },
 ]
 
-export default function FormEditPage() {
+function PermissionsModal({ permissions, onPermissionsChange, roles }: { 
+  permissions: RolePermission[]
+  onPermissionsChange: (permissions: RolePermission[]) => void
+  roles: { value: string; label: string }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [localPermissions, setLocalPermissions] = useState<RolePermission[]>(permissions)
+
+  useEffect(() => {
+    setLocalPermissions(permissions)
+  }, [permissions])
+
+  const updatePermission = (role: string, accessType: 'read' | 'edit' | null) => {
+    setLocalPermissions(prev => 
+      prev.map(p => 
+        p.role === role ? { ...p, access_type: accessType } : p
+      )
+    )
+  }
+
+  const savePermissions = () => {
+    onPermissionsChange(localPermissions)
+    setOpen(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full">
+          <Shield className="h-4 w-4 mr-2" />
+          權限設定
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>權限設定</DialogTitle>
+          <DialogDescription>
+            設定表單的角色權限
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {localPermissions.map((permission) => {
+            const roleLabel = roles.find(r => r.value === permission.role)?.label || permission.role
+            return (
+              <div key={permission.role} className="flex items-center justify-between">
+                <Label className="text-sm font-medium">{roleLabel}</Label>
+                <Select
+                  value={permission.access_type || 'null'}
+                  onValueChange={(value) => 
+                    updatePermission(permission.role, value === 'null' ? null : value as 'read' | 'edit')
+                  }
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACCESS_TYPES.map((type) => (
+                      <SelectItem key={type.value || 'null'} value={type.value || 'null'}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          })}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
+          <Button onClick={savePermissions}>
+            確定
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export default function FormCreatePage() {
   const { user } = useAuth()
   const router = useRouter()
   
@@ -64,10 +152,11 @@ export default function FormEditPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [formType, setFormType] = useState('')
-  const [targetRole, setTargetRole] = useState('')
   const [isRequired, setIsRequired] = useState(false)
   const [allowMultipleSubmissions, setAllowMultipleSubmissions] = useState(false)
   const [submissionDeadline, setSubmissionDeadline] = useState<Date | undefined>(undefined)
+  const [permissions, setPermissions] = useState<RolePermission[]>([])
+  const [roles, setRoles] = useState<{ value: string; label: string }[]>([])
   
   // 表單欄位
   const [fields, setFields] = useState<FormFieldWithId[]>([])
@@ -76,19 +165,70 @@ export default function FormEditPage() {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
-  const [isCreating, setIsCreating] = useState(true)
+
+  // 載入角色列表
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const response = await fetch('/api/roles')
+        if (response.ok) {
+          const result = await response.json()
+          const rolesList = result.data.map((role: any) => ({
+            value: role.name,
+            label: role.display_name || role.name
+          }))
+          setRoles(rolesList)
+          setPermissions(rolesList.map((role: any) => ({
+            role: role.value,
+            access_type: null
+          })))
+        }
+      } catch (err) {
+        console.error('Failed to load roles:', err)
+        // 使用預設角色作為後備
+        const defaultRoles = [
+          { value: 'teacher', label: '大學伴' },
+          { value: 'manager', label: '區域管理員' },
+          { value: 'admin', label: '全域管理員' },
+          { value: 'root', label: '系統管理員' }
+        ]
+        setRoles(defaultRoles)
+        setPermissions(defaultRoles.map(role => ({
+          role: role.value,
+          access_type: null
+        })))
+      }
+    }
+
+    loadRoles()
+  }, [])
 
   // 檢查用戶權限
-  const hasCreatePermission = user && user.role && ['admin', 'root', 'manager'].includes(user.role)
+  const hasCreatePermission = hasFormManagePermission(user?.role)
 
-  useEffect(() => {
-    if (!hasCreatePermission) {
-      router.push('/dashboard/forms')
-    }
-  }, [hasCreatePermission, router])
+  if (!hasCreatePermission) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">新增表單</h1>
+          <p className="text-muted-foreground mt-2">建立新的表單</p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-red-600">
+              <p>您沒有權限建立表單</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // 生成臨時 ID
   const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // 生成隨機選項值
+  const generateRandomOptionValue = () => `option_${Math.random().toString(36).substr(2, 6)}`
 
   // 添加新欄位
   const addField = () => {
@@ -123,7 +263,7 @@ export default function FormEditPage() {
   const addOption = (fieldTempId: string) => {
     const newOption: FormFieldOptionWithId = {
       tempId: generateTempId(),
-      option_value: '',
+      option_value: generateRandomOptionValue(),
       option_label: '',
       display_order: 0,
       is_active: true
@@ -182,10 +322,6 @@ export default function FormEditPage() {
       toast.error('請選擇表單類型')
       return false
     }
-    if (!targetRole) {
-      toast.error('請選擇目標對象')
-      return false
-    }
 
     // 驗證欄位
     for (const field of fields) {
@@ -209,9 +345,7 @@ export default function FormEditPage() {
             toast.error(`欄位「${field.field_label}」的所有選項都必須有標籤`)
             return false
           }
-          if (!option.option_value.trim()) {
-            option.option_value = option.option_label
-          }
+          // 選項值已經自動生成，不需要驗證
         }
       }
     }
@@ -219,58 +353,83 @@ export default function FormEditPage() {
     return true
   }
 
-  // 保存草稿
-  const saveDraft = async () => {
-    if (!validateForm()) return
+  // 創建表單的通用函數
+  const createForm = async (status: 'draft' | 'active') => {
+    if (!validateForm()) return null
 
-    setSaving(true)
-    try {
-      const formData: FormCreateRequest = {
-        title,
-        description,
-        form_type: formType,
-        target_role: targetRole,
-        status: 'draft',
-        is_required: isRequired,
-        allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
-        fields: fields.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required,
-          is_active: field.is_active,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          options: field.options?.map((option, index) => ({
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: index,
-            is_active: option.is_active
-          }))
+    const formData: FormCreateRequest = {
+      title,
+      description,
+      form_type: formType,
+      status,
+      is_required: isRequired,
+      allow_multiple_submissions: allowMultipleSubmissions,
+      submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
+      fields: fields.map(field => ({
+        field_name: field.field_name,
+        field_label: field.field_label,
+        field_type: field.field_type,
+        display_order: field.display_order,
+        is_required: field.is_required,
+        is_active: field.is_active,
+        placeholder: field.placeholder,
+        help_text: field.help_text,
+        default_value: field.default_value,
+        min_length: field.min_length,
+        max_length: field.max_length,
+        pattern: field.pattern,
+        options: field.options?.map((option, index) => ({
+          option_value: option.option_value,
+          option_label: option.option_label,
+          display_order: index,
+          is_active: option.is_active
         }))
-      }
+      }))
+    }
 
-      const response = await fetch('/api/forms', {
-        method: 'POST',
+    const response = await fetch('/api/forms', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create form')
+    }
+
+    const result = await response.json()
+    const formId = result.data.id
+
+    // 設定權限
+    const validPermissions = permissions.filter(p => p.access_type !== null)
+    if (validPermissions.length > 0) {
+      const permissionsResponse = await fetch(`/api/forms/${formId}/permissions`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ permissions }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to save draft')
+      if (!permissionsResponse.ok) {
+        console.warn('Failed to set permissions, but form was created')
       }
+    }
 
-      const result = await response.json()
-      toast.success('草稿已保存')
-      router.push(`/dashboard/forms/edit/${result.data.id}`)
+    return formId
+  }
+
+  // 保存草稿
+  const saveDraft = async () => {
+    setSaving(true)
+    try {
+      const formId = await createForm('draft')
+      if (formId) {
+        toast.success('草稿已保存')
+        router.push(`/dashboard/forms/${formId}/edit`)
+      }
     } catch (err) {
       toast.error('保存草稿時發生錯誤')
       console.error('Error saving draft:', err)
@@ -281,56 +440,13 @@ export default function FormEditPage() {
 
   // 發布表單
   const publishForm = async () => {
-    if (!validateForm()) return
-
     setPublishing(true)
     try {
-      const formData: FormCreateRequest = {
-        title,
-        description,
-        form_type: formType,
-        target_role: targetRole,
-        status: 'active',
-        is_required: isRequired,
-        allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
-        fields: fields.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required,
-          is_active: field.is_active,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          options: field.options?.map((option, index) => ({
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: index,
-            is_active: option.is_active
-          }))
-        }))
+      const formId = await createForm('active')
+      if (formId) {
+        toast.success('表單已發布')
+        router.push(`/dashboard/forms/${formId}`)
       }
-
-      const response = await fetch('/api/forms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to publish form')
-      }
-
-      const result = await response.json()
-      toast.success('表單已發布')
-      router.push(`/dashboard/forms/${result.data.id}`)
     } catch (err) {
       toast.error('發布表單時發生錯誤')
       console.error('Error publishing form:', err)
@@ -455,12 +571,6 @@ export default function FormEditPage() {
                           placeholder="選項標籤"
                           className="flex-1"
                         />
-                        <Input
-                          value={option.option_value}
-                          onChange={(e) => updateOption(field.tempId, option.tempId, { option_value: e.target.value })}
-                          placeholder="選項值"
-                          className="flex-1"
-                        />
                         <Button
                           type="button"
                           variant="ghost"
@@ -482,10 +592,6 @@ export default function FormEditPage() {
     )
   }
 
-  if (!hasCreatePermission) {
-    return null
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -496,8 +602,8 @@ export default function FormEditPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">{isCreating ? '建立表單' : '編輯表單'}</h1>
-            <p className="text-muted-foreground mt-2">設計並{isCreating ? '建立' : '編輯'}表單</p>
+            <h1 className="text-3xl font-bold">新增表單</h1>
+            <p className="text-muted-foreground mt-2">建立新的表單</p>
           </div>
         </div>
         
@@ -575,19 +681,12 @@ export default function FormEditPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="target-role">目標對象 *</Label>
-                  <Select value={targetRole} onValueChange={setTargetRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="請選擇目標對象" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TARGET_ROLES.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>權限設定</Label>
+                  <PermissionsModal 
+                    permissions={permissions}
+                    onPermissionsChange={setPermissions}
+                    roles={roles}
+                  />
                 </div>
 
                 <div>
@@ -685,66 +784,68 @@ export default function FormEditPage() {
         /* 預覽模式 */
         <Card>
           <CardHeader>
-            <CardTitle>{title || '未命名表單'}</CardTitle>
-            {description && <CardDescription>{description}</CardDescription>}
+            <CardTitle className="text-2xl">{title || '未命名表單'}</CardTitle>
+            {description && <CardDescription className="text-lg mt-2">{description}</CardDescription>}
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             {fields.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p>表單尚未新增任何欄位</p>
+                <p className="text-lg">表單尚未新增任何欄位</p>
               </div>
             ) : (
               fields.map((field) => (
-                <div key={field.tempId} className="space-y-2">
-                  <Label>
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {field.help_text && (
-                    <p className="text-sm text-muted-foreground">{field.help_text}</p>
-                  )}
-                  
-                  {/* 根據欄位類型渲染預覽 */}
-                  {field.field_type === 'text' && (
-                    <Input placeholder={field.placeholder} disabled />
-                  )}
-                  {field.field_type === 'textarea' && (
-                    <Textarea placeholder={field.placeholder} disabled rows={3} />
-                  )}
-                  {field.field_type === 'email' && (
-                    <Input type="email" placeholder={field.placeholder} disabled />
-                  )}
-                  {field.field_type === 'number' && (
-                    <Input type="number" placeholder={field.placeholder} disabled />
-                  )}
-                  {field.field_type === 'select' && (
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder={field.placeholder || '請選擇'} />
-                      </SelectTrigger>
-                    </Select>
-                  )}
-                  {field.field_type === 'radio' && (
-                    <div className="space-y-2">
-                      {field.options?.map((option) => (
-                        <div key={option.tempId} className="flex items-center space-x-2">
-                          <input type="radio" disabled />
-                          <Label>{option.option_label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {field.field_type === 'checkbox' && (
-                    <div className="space-y-2">
-                      {field.options?.map((option) => (
-                        <div key={option.tempId} className="flex items-center space-x-2">
-                          <input type="checkbox" disabled />
-                          <Label>{option.option_label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Card key={field.tempId} className="p-4">
+                  <div className="space-y-3">
+                    <Label className="text-lg font-medium">
+                      {field.field_label}
+                      {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {field.help_text && (
+                      <p className="text-base text-muted-foreground">{field.help_text}</p>
+                    )}
+                    
+                    {/* 根據欄位類型渲染預覽 */}
+                    {field.field_type === 'text' && (
+                      <Input placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'textarea' && (
+                      <Textarea placeholder={field.placeholder} disabled rows={3} className="text-base" />
+                    )}
+                    {field.field_type === 'email' && (
+                      <Input type="email" placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'number' && (
+                      <Input type="number" placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'select' && (
+                      <Select disabled>
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder={field.placeholder || '請選擇'} />
+                        </SelectTrigger>
+                      </Select>
+                    )}
+                    {field.field_type === 'radio' && (
+                      <div className="space-y-3">
+                        {field.options?.map((option) => (
+                          <div key={option.tempId} className="flex items-center space-x-3">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <Label className="text-base">{option.option_label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {field.field_type === 'checkbox' && (
+                      <div className="space-y-3">
+                        {field.options?.map((option) => (
+                          <div key={option.tempId} className="flex items-center space-x-3">
+                            <input type="checkbox" disabled className="w-4 h-4" />
+                            <Label className="text-base">{option.option_label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
               ))
             )}
           </CardContent>

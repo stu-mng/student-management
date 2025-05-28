@@ -18,11 +18,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 從資料庫獲取用戶的完整資料
+    // 從資料庫獲取用戶的完整資料，並 join roles 表
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('*')
-      .eq('email', user.email)
+      .select(`
+        id,
+        email,
+        name,
+        region,
+        created_at,
+        updated_at,
+        avatar_url,
+        last_active,
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
+      .eq('id', user.id)
       .single();
 
     if (userError) {
@@ -33,7 +49,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    return NextResponse.json<User>(userData);
+    // 格式化回傳資料
+    const formattedUser: User = {
+      ...userData,
+      role: Array.isArray(userData.role) ? userData.role[0] : userData.role
+    };
+
+    return NextResponse.json<User>(formattedUser);
   } catch (error) {
     console.error('Get current user error:', error);
     return NextResponse.json<ErrorResponse>(
@@ -63,7 +85,7 @@ export async function POST(request: NextRequest) {
     const { count, error: countError } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true })
-      .eq('email', user.email);
+      .eq('id', user.id);
 
     if (countError) {
       return NextResponse.json<ErrorResponse>({ error: countError.message }, { status: 500 });
@@ -83,6 +105,20 @@ export async function POST(request: NextRequest) {
     const name = user.user_metadata?.name || user.user_metadata?.full_name;
     const avatar_url = user.user_metadata?.picture || user.user_metadata?.avatar_url;
 
+    // 獲取角色 ID
+    const { data: roleInfo, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', role)
+      .single();
+
+    if (roleError || !roleInfo) {
+      return NextResponse.json<ErrorResponse>(
+        { error: '錯誤：無效的角色' },
+        { status: 400 }
+      );
+    }
+
     // 創建新用戶
     const { data: newUser, error } = await supabase
       .from('users')
@@ -90,16 +126,31 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name,
         avatar_url,
-        role
+        role_id: roleInfo.id
       })
-      .select()
+      .select(`
+        *,
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .single();
 
     if (error) {
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json<User>(newUser, { status: 201 });
+    // 格式化回傳資料
+    const formattedUser: User = {
+      ...newUser,
+      role: Array.isArray(newUser.role) ? newUser.role[0] : newUser.role
+    };
+
+    return NextResponse.json<User>(formattedUser, { status: 201 });
   } catch (error) {
     console.error('Create user error:', error);
     return NextResponse.json<ErrorResponse>(
@@ -141,15 +192,30 @@ export async function PUT(request: NextRequest) {
         updated_at: now,
         last_active: now
       })
-      .eq('email', user.email)
-      .select()
+      .eq('id', user.id)
+      .select(`
+        *,
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .single();
 
     if (error) {
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json<User>(updatedUser);
+    // 格式化回傳資料
+    const formattedUser: User = {
+      ...updatedUser,
+      role: Array.isArray(updatedUser.role) ? updatedUser.role[0] : updatedUser.role
+    };
+
+    return NextResponse.json<User>(formattedUser);
   } catch (error) {
     console.error('Update user error:', error);
     return NextResponse.json<ErrorResponse>(

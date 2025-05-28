@@ -376,7 +376,7 @@ export default function AssignStudentsPage() {
                     沒有可用的教師
                   </SelectItem>
                 ) : (
-                  teachers.filter(teacher => teacher.role === "teacher").map((teacher) => (
+                  teachers.filter(teacher => teacher.role?.name === "teacher").map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name} ({teacher.email})
                     </SelectItem>

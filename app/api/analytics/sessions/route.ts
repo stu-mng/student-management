@@ -19,7 +19,9 @@ export async function GET(_request: NextRequest) {
     // 從用戶表中獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name, order)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -28,14 +30,22 @@ export async function GET(_request: NextRequest) {
     }
 
     // 檢查用戶是否有 admin 或 root 角色
-    if (userData.role !== 'admin' && userData.role !== 'root') {
+    const userRole = (userData.role as any)?.name;
+    if (userRole !== 'admin' && userRole !== 'root') {
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
     
     // 取得所有用戶的最後活動時間
     const { data: activeUsers, error: activeError } = await supabase
       .from('users')
-      .select('id, name, email, role, updated_at, last_active')
+      .select(`
+        id, 
+        name, 
+        email, 
+        updated_at, 
+        last_active,
+        role:roles(name, order)
+      `)
       .order('last_active', { ascending: false });
     
     if (activeError) {
@@ -63,9 +73,9 @@ export async function GET(_request: NextRequest) {
 
     // 按角色分組
     const usersByRole = {
-      teachers: onlineUsers.filter(u => u.role === 'teacher').length,
-      admins: onlineUsers.filter(u => u.role === 'admin').length,
-      root: onlineUsers.filter(u => u.role === 'root').length,
+      teachers: onlineUsers.filter(u => (u.role as any)?.order === 3).length,
+      admins: onlineUsers.filter(u => (u.role as any)?.order === 1).length,
+      root: onlineUsers.filter(u => (u.role as any)?.order === 0).length,
       total: onlineUsers.length
     };
 
@@ -75,7 +85,7 @@ export async function GET(_request: NextRequest) {
         users: onlineUsers.map(u => ({
           id: u.id,
           name: u.name || u.email?.split('@')[0] || 'Unknown',
-          role: u.role,
+          role: (u.role as any)?.name || 'unknown',
           last_active: u.last_active
         })),
         byRole: usersByRole

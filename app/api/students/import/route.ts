@@ -17,11 +17,14 @@ export async function POST(request: Request) {
     // 檢查用戶是否為管理員
     const { data: userData } = await supabase
       .from("users")
-      .select("role")
+      .select(`
+        role:roles(name)
+      `)
       .eq("id", user.id)
       .single()
 
-    if (!userData || (userData.role !== "admin" && userData.role !== "root")) {
+    const userRole = (userData?.role as any)?.name;
+    if (!userData || (userRole !== "admin" && userRole !== "root")) {
       return new NextResponse("錯誤：您沒有權限進行此操作", { status: 403 })
     }
 

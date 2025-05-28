@@ -19,7 +19,7 @@ export default function UserManualPage() {
   const router = useRouter()
   
   // Is user an admin
-  const isAdmin = user?.role === "admin" || user?.role === "root" || user?.role === "manager"
+  const isAdmin = user?.role?.name === "admin" || user?.role?.name === "root" || user?.role?.name === "manager"
   
   return (
     <div className="space-y-6">

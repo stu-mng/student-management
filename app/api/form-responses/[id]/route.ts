@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/database/supabase/server';
 import { 
-  FormResponseUpdateRequest, 
-  FormResponseDetailResponse, 
   ErrorResponse,
-  SuccessResponse 
+  SuccessResponse,
+  FormFieldResponseCreateRequest
 } from '@/app/api/types';
+
+interface UpdateFormResponseRequest {
+  field_responses: FormFieldResponseCreateRequest[];
+  submission_status?: 'draft' | 'submitted';
+}
+
+interface FormResponseUpdateResponse {
+  success: boolean;
+  data: any;
+}
 
 export async function GET(
   request: NextRequest,
@@ -21,10 +30,49 @@ export async function GET(
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
+    const { id: responseId } = await params;
+
+    // 獲取回應數據
+    const { data: response, error: responseError } = await supabase
+      .from('form_responses')
+      .select(`
+        *,
+        respondent:users!form_responses_respondent_id_fkey(id, name, email),
+        field_responses:form_field_responses(
+          *,
+          field:form_fields(
+            id, 
+            field_label, 
+            field_type,
+            form_field_options(
+              option_value,
+              option_label
+            )
+          )
+        )
+      `)
+      .eq('id', responseId)
+      .single();
+
+    if (responseError) {
+      if (responseError.code === 'PGRST116') {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Response not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to fetch response' },
+        { status: 500 }
+      );
+    }
+
+    // 檢查權限：只有回應者本人或有編輯權限的用戶可以查看
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -32,82 +80,31 @@ export async function GET(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    const { id } = await params;
-
-    // 獲取表單回應基本資訊
-    const { data: response, error: responseError } = await supabase
-      .from('form_responses')
-      .select(`
-        *,
-        forms (
-          id,
-          title,
-          description,
-          form_type,
-          target_role
-        )
-      `)
-      .eq('id', id)
+    // 獲取表單信息以檢查創建者權限
+    const { data: form, error: formError } = await supabase
+      .from('forms')
+      .select('created_by')
+      .eq('id', response.form_id)
       .single();
 
-    if (responseError) {
-      if (responseError.code === 'PGRST116') {
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Form response not found' },
-          { status: 404 }
-        );
-      }
-      console.error('Error fetching form response:', responseError);
+    if (formError) {
+      return NextResponse.json<ErrorResponse>({ error: 'Failed to fetch form' }, { status: 500 });
+    }
+
+    const isOwner = user.id === response.respondent_id;
+    const userRole = (userData.role as any)?.name;
+    const hasEditPermission = form.created_by === user.id || ['admin', 'root'].includes(userRole);
+    
+    if (!isOwner && !hasEditPermission) {
       return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to fetch form response' },
-        { status: 500 }
+        { error: 'Permission denied' },
+        { status: 403 }
       );
     }
 
-    // 檢查用戶是否有權限查看此回應
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
-      if (response.respondent_id !== user.id) {
-        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-      }
-    }
-
-    // 獲取欄位回應
-    const { data: fieldResponses, error: fieldResponsesError } = await supabase
-      .from('form_field_responses')
-      .select(`
-        *,
-        form_fields (
-          id,
-          field_name,
-          field_label,
-          field_type,
-          display_order,
-          is_required,
-          form_field_options (
-            id,
-            option_value,
-            option_label,
-            display_order
-          )
-        )
-      `)
-      .eq('response_id', id)
-      .order('form_fields(display_order)');
-
-    if (fieldResponsesError) {
-      console.error('Error fetching field responses:', fieldResponsesError);
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to fetch field responses' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json<FormResponseDetailResponse>({
+    return NextResponse.json<FormResponseUpdateResponse>({
       success: true,
-      data: {
-        ...response,
-        field_responses: fieldResponses || [],
-      },
+      data: response,
     });
 
   } catch (error) {
@@ -133,117 +130,95 @@ export async function PUT(
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const { id: responseId } = await params;
+    const body: UpdateFormResponseRequest = await request.json();
+    const { field_responses, submission_status = 'draft' } = body;
 
-    if (userError) {
-      return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
-    }
-
-    const { id } = await params;
-    const body: FormResponseUpdateRequest = await request.json();
-    const {
-      submission_status,
-      field_responses = [],
-      review_notes,
-      reviewed_by,
-      metadata
-    } = body;
-
-    // 檢查表單回應是否存在
-    const { data: existingResponse, error: checkError } = await supabase
+    // 檢查回應是否存在並獲取相關信息
+    const { data: existingResponse, error: responseError } = await supabase
       .from('form_responses')
-      .select('id, submission_status, form_id, respondent_id')
-      .eq('id', id)
+      .select(`
+        *,
+        form:forms(
+          id,
+          created_by,
+          allow_multiple_submissions,
+          status
+        )
+      `)
+      .eq('id', responseId)
       .single();
 
-    if (checkError) {
-      if (checkError.code === 'PGRST116') {
+    if (responseError) {
+      if (responseError.code === 'PGRST116') {
         return NextResponse.json<ErrorResponse>(
-          { error: 'Form response not found' },
+          { error: 'Response not found' },
           { status: 404 }
         );
       }
-      console.error('Error checking form response existence:', checkError);
       return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to check form response' },
+        { error: 'Failed to fetch response' },
         { status: 500 }
       );
     }
 
-    // 檢查用戶是否有權限更新此回應
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
-      if (existingResponse.respondent_id !== user.id) {
-        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-      }
+    // 檢查權限：只有回應者本人可以修改
+    if (existingResponse.respondent_id !== user.id) {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Permission denied' },
+        { status: 403 }
+      );
     }
 
-    // 準備更新資料
-    const updateData: any = {};
-    
-    if (submission_status !== undefined) {
-      updateData.submission_status = submission_status;
-      
-      // 如果狀態變為 submitted，設定提交時間
-      if (submission_status === 'submitted' && existingResponse.submission_status !== 'submitted') {
-        updateData.submitted_at = new Date().toISOString();
-      }
-      
-      // 如果狀態變為 reviewed、approved 或 rejected，設定審核時間
-      if (['reviewed', 'approved', 'rejected'].includes(submission_status)) {
-        updateData.reviewed_at = new Date().toISOString();
-        if (reviewed_by) {
-          updateData.reviewed_by = reviewed_by;
-        }
-      }
+    // 檢查表單狀態
+    if (existingResponse.form.status !== 'active') {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Form is not active' },
+        { status: 400 }
+      );
     }
-    
-    if (review_notes !== undefined) updateData.review_notes = review_notes;
-    if (reviewed_by !== undefined) updateData.reviewed_by = reviewed_by;
-    if (metadata !== undefined) updateData.metadata = metadata;
 
-    // 更新表單回應
+    // 更新回應狀態
     const { data: updatedResponse, error: updateError } = await supabase
       .from('form_responses')
-      .update(updateData)
-      .eq('id', id)
+      .update({
+        submission_status,
+        submitted_at: submission_status === 'submitted' ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', responseId)
       .select()
       .single();
 
     if (updateError) {
       console.error('Error updating form response:', updateError);
       return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to update form response' },
+        { error: 'Failed to update response' },
         { status: 500 }
       );
     }
 
-    // 如果提供了欄位回應資料，更新欄位回應
-    if (field_responses.length > 0) {
-      // 先刪除現有的欄位回應
-      const { error: deleteError } = await supabase
-        .from('form_field_responses')
-        .delete()
-        .eq('response_id', id);
+    // 刪除現有的字段回應
+    const { error: deleteError } = await supabase
+      .from('form_field_responses')
+      .delete()
+      .eq('response_id', responseId);
 
-      if (deleteError) {
-        console.error('Error deleting existing field responses:', deleteError);
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to update field responses' },
-          { status: 500 }
-        );
-      }
+    if (deleteError) {
+      console.error('Error deleting existing field responses:', deleteError);
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to update field responses' },
+        { status: 500 }
+      );
+    }
 
-      // 創建新的欄位回應
-      const fieldResponsesData = field_responses.map((fieldResponse) => ({
-        response_id: id,
-        field_id: fieldResponse.field_id,
-        field_value: fieldResponse.field_value,
-        field_values: fieldResponse.field_values,
+    // 創建新的字段回應
+    if (field_responses && field_responses.length > 0) {
+      const fieldResponsesData = field_responses.map(fr => ({
+        response_id: responseId,
+        field_id: fr.field_id,
+        field_value: fr.field_value || null,
+        field_values: fr.field_values || null,
       }));
 
       const { error: insertError } = await supabase
@@ -253,15 +228,45 @@ export async function PUT(
       if (insertError) {
         console.error('Error inserting field responses:', insertError);
         return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to update field responses' },
+          { error: 'Failed to save field responses' },
           { status: 500 }
         );
       }
     }
 
-    return NextResponse.json<FormResponseDetailResponse>({
+    // 獲取更新後的完整回應數據
+    const { data: finalResponse, error: finalError } = await supabase
+      .from('form_responses')
+      .select(`
+        *,
+        respondent:users!form_responses_respondent_id_fkey(id, name, email),
+        field_responses:form_field_responses(
+          *,
+          field:form_fields(
+            id, 
+            field_label, 
+            field_type,
+            form_field_options(
+              option_value,
+              option_label
+            )
+          )
+        )
+      `)
+      .eq('id', responseId)
+      .single();
+
+    if (finalError) {
+      console.error('Error fetching updated response:', finalError);
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to fetch updated response' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json<FormResponseUpdateResponse>({
       success: true,
-      data: updatedResponse,
+      data: finalResponse,
     });
 
   } catch (error) {
@@ -290,7 +295,9 @@ export async function DELETE(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -322,7 +329,8 @@ export async function DELETE(
     }
 
     // 檢查用戶是否有權限刪除此回應
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
+    const userRole = (userData.role as any)?.name;
+    if (!['admin', 'root', 'project_manager'].includes(userRole)) {
       if (existingResponse.respondent_id !== user.id) {
         return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
       }

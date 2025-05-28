@@ -10,6 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { isAdmin } from "@/lib/utils"
 import { Menu } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -21,7 +22,7 @@ export function MobileNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
-  const isAdmin = user?.role === "admin" || user?.role === "root"
+  const isAdminUser = isAdmin(user?.role)
   
   const avatarUrl = user?.user_metadata?.avatar_url || 
                     user?.user_metadata?.picture || 
@@ -57,7 +58,7 @@ export function MobileNav() {
         <div className="flex flex-col flex-1 overflow-y-auto">
           <nav className="flex flex-col py-6 px-4 flex-1">
             {navigation.map((item) => {
-              if (item.admin && !isAdmin) return null
+              if (item.admin && !isAdminUser) return null
 
               return (
                 <SheetClose asChild key={item.name}>

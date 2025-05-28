@@ -4,7 +4,9 @@ import {
   FormCreateRequest, 
   FormsListResponse, 
   FormDetailResponse, 
-  ErrorResponse 
+  ErrorResponse,
+  Role,
+  RolePermission
 } from '@/app/api/types';
 
 export async function POST(request: NextRequest) {
@@ -21,7 +23,15 @@ export async function POST(request: NextRequest) {
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -30,7 +40,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 只有管理員和計畫主持可以創建表單
-    if (!['admin', 'root', 'manager'].includes(userData.role)) {
+    const currentUserRole = (userData.role as any)?.name;
+    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -39,7 +50,6 @@ export async function POST(request: NextRequest) {
       title,
       description,
       form_type,
-      target_role,
       status = 'draft',
       is_required = false,
       allow_multiple_submissions = false,
@@ -48,9 +58,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 驗證必要欄位
-    if (!title || !form_type || !target_role) {
+    if (!title || !form_type) {
       return NextResponse.json<ErrorResponse>(
-        { error: 'Missing required fields: title, form_type, target_role' },
+        { error: 'Missing required fields: title, form_type' },
         { status: 400 }
       );
     }
@@ -62,7 +72,6 @@ export async function POST(request: NextRequest) {
         title,
         description,
         form_type,
-        target_role,
         status,
         is_required,
         allow_multiple_submissions,
@@ -142,23 +151,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 創建基於角色的存取權限
-    const accessPermissions = [
-      { form_id: form.id, role: 'admin', access_type: 'edit' },
-      { form_id: form.id, role: 'manager', access_type: 'edit' },
-    ];
+    // 創建基於角色的存取權限 - 預設給予 admin 和 manager 編輯權限
+    const { data: rolesData, error: rolesError } = await supabase
+      .from('roles')
+      .select('id, name, order')
+      .in('name', ['admin', 'manager']);
 
-    // 如果目標角色是 student，給予讀取權限
-    if (target_role === 'student') {
-      accessPermissions.push({ form_id: form.id, role: 'student', access_type: 'read' });
-    }
+    if (rolesError) {
+      console.error('Error fetching roles for permissions:', rolesError);
+    } else if (rolesData) {
+      const accessPermissions = [];
+      
+      // 獲取角色資訊以進行權限檢查
+      const adminRole = rolesData.find(r => r.order === 1); // admin role
+      const managerRole = rolesData.find(r => r.order === 2); // manager role
+      
+      if (adminRole) {
+        accessPermissions.push({ form_id: form.id, role_id: adminRole.id, access_type: 'edit' });
+      }
+      if (managerRole) {
+        accessPermissions.push({ form_id: form.id, role_id: managerRole.id, access_type: 'edit' });
+      }
 
-    const { error: accessError } = await supabase
-      .from('user_form_access')
-      .insert(accessPermissions);
+      if (accessPermissions.length > 0) {
+        const { error: accessError } = await supabase
+          .from('user_form_access')
+          .insert(accessPermissions);
 
-    if (accessError) {
-      console.error('Error creating form access permissions:', accessError);
+        if (accessError) {
+          console.error('Error creating form access permissions:', accessError);
+        }
+      }
     }
 
     return NextResponse.json<FormDetailResponse>({
@@ -189,7 +212,15 @@ export async function GET(request: NextRequest) {
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -202,16 +233,39 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
     const form_type = searchParams.get('form_type');
-    const target_role = searchParams.get('target_role');
 
     let query = supabase
       .from('forms')
-      .select('*', { count: 'exact' });
+      .select(`
+        *,
+        owner:users!forms_created_by_fkey(
+          id,
+          name,
+          email,
+          avatar_url
+        )
+      `, { count: 'exact' });
 
     // 根據用戶角色過濾表單
-    if (!['admin', 'root', 'manager'].includes(userData.role)) {
-      // 一般用戶只能看到針對其角色的表單
-      query = query.eq('target_role', userData.role);
+    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRoleId = (userData.role as any)?.id;
+    
+    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
+      // 一般用戶需要檢查權限設定
+      const { data: userAccessForms } = await supabase
+        .from('user_form_access')
+        .select('form_id')
+        .eq('role_id', currentUserRoleId)
+        .not('access_type', 'is', null);
+
+      const accessibleFormIds = userAccessForms?.map(access => access.form_id) || [];
+
+      if (accessibleFormIds.length > 0) {
+        query = query.in('id', accessibleFormIds);
+      } else {
+        // 如果沒有任何權限，返回空結果
+        query = query.eq('id', 'non-existent-id');
+      }
     }
 
     // 應用篩選條件
@@ -220,9 +274,6 @@ export async function GET(request: NextRequest) {
     }
     if (form_type) {
       query = query.eq('form_type', form_type);
-    }
-    if (target_role) {
-      query = query.eq('target_role', target_role);
     }
 
     // 應用分頁
@@ -243,10 +294,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 為每個表單檢查 canSubmit 狀態
+    // 為每個表單檢查 submitted 狀態
     const formsWithSubmitStatus = await Promise.all(
       (forms || []).map(async (form) => {
-        let canSubmit = false;
+        let submitted = false;
         let accessType: 'read' | 'edit' | null = null;
 
         // 檢查用戶的存取權限
@@ -255,51 +306,81 @@ export async function GET(request: NextRequest) {
           accessType = 'edit';
         }
         // 2. 如果是 admin 或 root，給予編輯權限
-        else if (['admin', 'root'].includes(userData.role)) {
+        else if (['admin', 'root'].includes(currentUserRole)) {
           accessType = 'edit';
         }
         // 3. 檢查 user_form_access 表
-        else {
+        else if (currentUserRoleId) {
           const { data: userAccess, error: accessError } = await supabase
             .from('user_form_access')
             .select('access_type')
             .eq('form_id', form.id)
-            .eq('role', userData.role)
+            .eq('role_id', currentUserRoleId)
             .single();
 
           if (!accessError && userAccess) {
             accessType = userAccess.access_type as 'read' | 'edit';
           }
-          // 4. 如果目標角色匹配，給予讀取權限
-          else if (form.target_role === userData.role) {
-            accessType = 'read';
-          }
         }
 
-        // 只有啟用的表單才能提交
-        if (form.status === 'active' && accessType) {
-          // 檢查用戶是否已經提交過回應
+        // 檢查用戶是否已經提交過回應
+        if (accessType) {
           const { data: existingResponse, error: responseError } = await supabase
             .from('form_responses')
-            .select('id')
+            .select('id, submission_status')
             .eq('form_id', form.id)
             .eq('respondent_id', user.id)
+            .eq('submission_status', 'submitted')
             .single();
 
           if (responseError && responseError.code !== 'PGRST116') {
             console.error('Error checking form response:', responseError);
           }
 
-          // 如果沒有提交過，或者表單允許多次提交，則可以提交
-          if (!existingResponse || form.allow_multiple_submissions) {
-            canSubmit = true;
+          // 如果已經提交過，則 submitted = true
+          if (existingResponse) {
+            submitted = true;
+          }
+        }
+
+        // 獲取表單權限設定（只有編輯權限的用戶才能看到）
+        let permissions: RolePermission[] = [];
+        if (accessType === 'edit') {
+          // 使用 role_id 來 join roles 表
+          const { data: permissionsData, error: permissionsError } = await supabase
+            .from('user_form_access')
+            .select(`
+              access_type,
+              role:roles!user_form_access_role_id_fkey(
+                id,
+                name,
+                display_name,
+                color,
+                order
+              )
+            `)
+            .eq('form_id', form.id)
+            .not('role_id', 'is', null);
+
+          if (!permissionsError && permissionsData) {
+            permissions = permissionsData
+              .filter(p => p.role) // 確保有角色資料
+              .map(p => {
+                // 處理可能的數組或對象結構
+                const roleData = Array.isArray(p.role) ? p.role[0] : p.role;
+                return {
+                  role: roleData as Role,
+                  access_type: p.access_type
+                };
+              });
           }
         }
 
         return {
           ...form,
-          canSubmit,
-          access_type: accessType
+          submitted,
+          access_type: accessType,
+          permissions: permissions
         };
       })
     );

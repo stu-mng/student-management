@@ -1,5 +1,6 @@
 import { ErrorResponse, RegionsResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { hasUserManagePermission } from '@/lib/utils';
 import { NextResponse } from 'next/server';
 
 /**
@@ -21,7 +22,10 @@ export async function GET() {
     // 獲取用戶角色和區域
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, region')
+      .select(`
+        region,
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -30,7 +34,8 @@ export async function GET() {
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    if (userData.role === 'teacher') {
+    const userRoleObj = Array.isArray(userData.role) ? userData.role[0] : userData.role;
+    if (!hasUserManagePermission(userRoleObj)) {
       return NextResponse.json<ErrorResponse>({ error: '大學伴無法查看區域列表' }, { status: 403 });
     }
 

@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
+import { hasAdminPermission, hasFormManagePermission, hasManagerPermission, isRoot } from "@/lib/utils"
 import { BarChart3, BookOpen, FileSpreadsheet, Link2, UserCog, Users, FileText, Settings } from "lucide-react"
 import Link from "next/link"
 
@@ -99,10 +100,17 @@ export default function DashboardPage() {
     }
   ]
 
-  // Check if user has permission for a specific feature
+  // Check if user has permission for a specific feature using utility functions
   const hasPermission = (allowedRoles: string[]) => {
-    if (!user || !user.role) return false;
-    return allowedRoles.includes(user.role);
+    if (!user?.role?.name) return false;
+    
+    // Use utility functions for common permission checks
+    if (allowedRoles.includes('admin') && hasAdminPermission(user.role)) return true;
+    if (allowedRoles.includes('manager') && hasManagerPermission(user.role)) return true;
+    if (allowedRoles.includes('root') && isRoot(user.role)) return true;
+    
+    // Fallback to direct role name check for other roles
+    return allowedRoles.includes(user.role.name);
   }
 
   return (

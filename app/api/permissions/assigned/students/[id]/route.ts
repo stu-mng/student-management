@@ -32,7 +32,9 @@ export async function GET(
     // 檢查當前用戶的角色，只有管理員或本人可以檢視分配的學生
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -41,7 +43,8 @@ export async function GET(
     }
 
     // 如果不是管理員並且也不是查詢自己的數據，則拒絕訪問
-    if (userData.role !== 'admin' && userData.role !== 'root' && userData.role !== 'manager' && user.id !== userId) {
+    const userRole = (userData.role as any)?.name;
+    if (userRole !== 'admin' && userRole !== 'root' && userRole !== 'manager' && user.id !== userId) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 

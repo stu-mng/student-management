@@ -19,12 +19,18 @@ import { ArrowUpDown, Check, ChevronsUpDown, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleSortKey, cn, getRoleHoverTextColor, formatRelativeTime } from "@/lib/utils"
+import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleOrder, cn, getRoleHoverTextColor, formatRelativeTime, hasHigherPermission, canDeleteUser, hasUserManagePermission, canEditUser, hasEqualOrHigherPermission } from "@/lib/utils"
 
 type User = {
   id: string
   email: string
-  role: string
+  role: {
+    id: number
+    name: string
+    display_name: string
+    color: string | null
+    order: number
+  }
   created_at: string
   avatar_url: string | null
   name: string | null
@@ -48,10 +54,11 @@ export default function PermissionsPage() {
   const [newUserEmail, setNewUserEmail] = useState("")
   const [newUserRole, setNewUserRole] = useState("teacher")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<{name: string, order?: number} | null>(null)
   const [newUserRegion, setNewUserRegion] = useState("")
   const [regions, setRegions] = useState<string[]>([])
   const [newUserRegionPopoverOpen, setNewUserRegionPopoverOpen] = useState(false)
+  const [roles, setRoles] = useState<{name: string, display_name: string, order?: number}[]>([])
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -69,6 +76,37 @@ export default function PermissionsPage() {
     }
 
     fetchCurrentUser()
+  }, [user])
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      if (!user) return
+      
+      try {
+        const response = await fetch('/api/roles')
+        
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || '獲取角色數據失敗')
+        }
+        
+        const data = await response.json()
+        setRoles(data.data)
+      } catch (error) {
+        console.error("獲取角色數據錯誤:", error)
+        // 使用預設角色作為後備
+        setRoles([
+          { name: 'teacher', display_name: '大學伴', order: 3 },
+          { name: 'manager', display_name: '區域管理員', order: 2 },
+          { name: 'admin', display_name: '全域管理員', order: 1 },
+          { name: 'root', display_name: '系統管理員', order: 0 }
+        ])
+      }
+    }
+
+    if (user) {
+      fetchRoles()
+    }
   }, [user])
 
   useEffect(() => {
@@ -150,7 +188,7 @@ export default function PermissionsPage() {
       }
 
       // 不允許非root用戶創建root用戶
-      if (newUserRole === 'root' && currentUserRole !== 'root') {
+      if (newUserRole === 'root' && currentUserRole?.name !== 'root') {
         toast("錯誤", {
           description: "只有系統管理員可以創建其他系統管理員",
         })
@@ -253,7 +291,7 @@ export default function PermissionsPage() {
       }
 
       // 更新用戶列表
-      setUsers(users.map((user) => (user.id === id ? { ...user, role: newRole } : user)))
+      setUsers(users.map((user) => (user.id === id ? { ...user, role: { ...user.role, name: newRole } } : user)))
 
       toast("成功", {
         description: "用戶角色已成功更新",
@@ -269,7 +307,7 @@ export default function PermissionsPage() {
 
   const handleUpdateUserRegion = async (id: string, newRegion: string) => {
     // Only admins and root users can change regions
-    if (currentUserRole !== 'admin' && currentUserRole !== 'root') {
+    if (currentUserRole?.name !== 'admin' && currentUserRole?.name !== 'root') {
       toast("錯誤", {
         description: "您沒有權限更改其他用戶的區域",
       });
@@ -336,7 +374,7 @@ export default function PermissionsPage() {
           <div className="flex items-center gap-4 m-0 p-0">
             <Avatar className="h-8 w-8">
               <AvatarImage src={rowUser.avatar_url || ""} alt={rowUser.name || ""} />
-              <AvatarFallback className={getRoleBgColor(rowUser.role)}>
+              <AvatarFallback className={getRoleBgColor(rowUser.role.name)}>
                 {rowUser.name ? rowUser.name.charAt(0).toUpperCase() : rowUser.email.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -362,10 +400,9 @@ export default function PermissionsPage() {
         
         // 如果當前用戶不是管理員或root，或者目標用戶是root且當前用戶不是root，則只顯示文字
         if (
-          (currentUserRole === 'admin' && rowUser.role === 'root') || 
-          (currentUserRole === 'admin' && rowUser.role === 'admin') || 
-          (currentUserRole === 'root' && rowUser.role === 'root') || 
-          (currentUserRole === 'teacher' || currentUserRole === 'manager' || rowUser.id === user?.id)
+          !hasUserManagePermission(currentUserRole) ||
+          !canEditUser(currentUserRole, rowUser.role) ||
+          rowUser.id === user?.id
         ) {
           return (
             <div className="text-center pr-4 flex justify-center items-center">
@@ -373,10 +410,10 @@ export default function PermissionsPage() {
                 variant="outline" 
                 className={cn(
                   'shadow-none px-2 py-1 text-xs font-medium rounded-full',
-                  getRoleTextColor(rowUser.role), 
-                  getRoleBgColor(rowUser.role)
+                  getRoleTextColor(rowUser.role.name), 
+                  getRoleBgColor(rowUser.role.name)
               )}>
-                {getRoleDisplay(rowUser.role)}
+                {rowUser.role.display_name}
               </Badge>
             </div>
           )
@@ -385,34 +422,40 @@ export default function PermissionsPage() {
         return (
           <div className="w-full pr-4 flex items-center justify-center">
             <Select 
-              value={rowUser.role} 
+              value={rowUser.role.name} 
               onValueChange={(value: string) => handleUpdateUserRole(rowUser.id, value)}
             >
-              <SelectTrigger className={`w-[100px] shadow-none border focus-visible:ring-ring ${getRoleTextColor(rowUser.role)} font-medium rounded-full text-xs px-3 py-1 h-auto`}>
+              <SelectTrigger className={`w-[100px] shadow-none border focus-visible:ring-ring ${getRoleTextColor(rowUser.role.name)} font-medium rounded-full text-xs px-3 py-1 h-auto`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {['teacher', 'manager', 'admin', 'root'].map((role) => (
+                {roles.map((role) => {
+                  // 只顯示當前用戶權限等級或以下的角色
+                  if (!hasEqualOrHigherPermission(currentUserRole, role)) {
+                    return null;
+                  }
+                  return (
                   <SelectItem 
-                    key={role}
-                    value={role}
+                    key={role.name}
+                    value={role.name}
                     className={cn(
                       'my-1 text-xs font-medium px-3 py-1 focus:ring-0', 
-                      getRoleTextColor(role),
-                      getRoleHoverTextColor(role)
+                      getRoleTextColor(role.name),
+                      getRoleHoverTextColor(role.name)
                     )}
                   >
-                    {getRoleDisplay(role)}
-                  </SelectItem>
-                ))}
+                    {role.display_name}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
         )
       },
       sortingFn: (a, b) => {
-        const aRole = getRoleSortKey(a.getValue("role"))
-        const bRole = getRoleSortKey(b.getValue("role"))
+        const aRole = getRoleOrder(a.original.role)
+        const bRole = getRoleOrder(b.original.role)
         return aRole - bRole
       },
     },
@@ -441,12 +484,12 @@ export default function PermissionsPage() {
         }, [user.region]);
         
         // If not a manager, show "不適用"
-        if (user.role !== 'manager') {
+        if (user.role.name !== 'manager' && user.role.name !== 'subject-teacher') {
           return <div className="pr-4 text-muted-foreground text-sm w-full text-center">不適用</div>;
         }
         
         // Check if current user can edit this manager's region
-        const canEdit = currentUserRole === 'admin' || currentUserRole === 'root';
+        const canEdit = currentUserRole?.name === 'admin' || currentUserRole?.name === 'root';
         
         // If can't edit, just show the region as a badge
         if (!canEdit) {
@@ -552,7 +595,7 @@ export default function PermissionsPage() {
           return null;
         }
 
-        const isDeletable = getRoleSortKey(currentUser.role) > getRoleSortKey(currentUserRole as string);
+        const isDeletable = canDeleteUser(currentUserRole, currentUser.role);
         return (
           <div className="flex space-x-2">
             <Button 
@@ -575,7 +618,7 @@ export default function PermissionsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">用戶權限管理</h1>
         <p className="flex items-center text-muted-foreground">管理系統中的用戶及其權限
           {
-            currentUserRole !== 'teacher' &&
+            currentUserRole?.name !== 'teacher' &&
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="ml-1 h-5 w-5 rounded-full">
@@ -612,7 +655,7 @@ export default function PermissionsPage() {
           </Button>
         </div>
       </div>
-      {currentUserRole !== 'teacher' &&
+      {currentUserRole?.name !== 'teacher' &&
         <Card className="border">
           <CardHeader className="bg-muted/50">
             <CardTitle className="text-foreground">添加新用戶</CardTitle>
@@ -631,19 +674,19 @@ export default function PermissionsPage() {
                   <SelectValue placeholder="選擇角色" />
                 </SelectTrigger>
                 <SelectContent>
-                  {['teacher', 'admin', 'manager', 'root'].map((role) => {
-                    if (getRoleSortKey(role) < getRoleSortKey(currentUserRole as string)) {
+                  {roles.map((role) => {
+                    if (!hasEqualOrHigherPermission(currentUserRole, role)) {
                       return null;
                     }
                     return (
                     <SelectItem 
-                      key={role}
-                      value={role}
+                      key={role.name}
+                      value={role.name}
                       className={cn(
-                        getRoleTextColor(role), getRoleHoverTextColor(role)
+                        getRoleTextColor(role.name), getRoleHoverTextColor(role.name)
                       )}
                     > 
-                      {getRoleDisplay(role)}
+                      {role.display_name}
                       </SelectItem>
                     )
                   })}
@@ -740,7 +783,7 @@ export default function PermissionsPage() {
                   }
                 ],
                 columnVisibility: {
-                  actions: (currentUserRole !== 'teacher'),
+                  actions: (currentUserRole?.name !== 'teacher'),
                 }
               }}
             />

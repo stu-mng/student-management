@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      features: {
+        Row: {
+          display_name: string | null
+          id: number
+          name: string | null
+          uri: string | null
+        }
+        Insert: {
+          display_name?: string | null
+          id?: number
+          name?: string | null
+          uri?: string | null
+        }
+        Update: {
+          display_name?: string | null
+          id?: number
+          name?: string | null
+          uri?: string | null
+        }
+        Relationships: []
+      }
       form_field_options: {
         Row: {
           created_at: string | null
@@ -221,6 +242,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "form_responses_respondent_id_fkey"
+            columns: ["respondent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "form_responses_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
@@ -284,7 +312,6 @@ export type Database = {
           is_required: boolean | null
           status: string | null
           submission_deadline: string | null
-          target_role: string
           title: string
           updated_at: string | null
         }
@@ -298,7 +325,6 @@ export type Database = {
           is_required?: boolean | null
           status?: string | null
           submission_deadline?: string | null
-          target_role: string
           title: string
           updated_at?: string | null
         }
@@ -312,7 +338,6 @@ export type Database = {
           is_required?: boolean | null
           status?: string | null
           submission_deadline?: string | null
-          target_role?: string
           title?: string
           updated_at?: string | null
         }
@@ -325,6 +350,56 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permissions: {
+        Row: {
+          access_type: string
+          feature_id: number | null
+          role_id: number | null
+        }
+        Insert: {
+          access_type?: string
+          feature_id?: number | null
+          role_id?: number | null
+        }
+        Update: {
+          access_type?: string
+          feature_id?: number | null
+          role_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          color: string | null
+          display_name: string | null
+          id: number
+          name: string
+          order: number
+        }
+        Insert: {
+          color?: string | null
+          display_name?: string | null
+          id?: number
+          name: string
+          order?: number
+        }
+        Update: {
+          color?: string | null
+          display_name?: string | null
+          id?: number
+          name?: string
+          order?: number
+        }
+        Relationships: []
       }
       students: {
         Row: {
@@ -434,7 +509,7 @@ export type Database = {
           granted_by: string | null
           id: string
           is_active: boolean | null
-          role: string | null
+          role_id: number | null
           user_id: string | null
         }
         Insert: {
@@ -445,7 +520,7 @@ export type Database = {
           granted_by?: string | null
           id?: string
           is_active?: boolean | null
-          role?: string | null
+          role_id?: number | null
           user_id?: string | null
         }
         Update: {
@@ -456,7 +531,7 @@ export type Database = {
           granted_by?: string | null
           id?: string
           is_active?: boolean | null
-          role?: string | null
+          role_id?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -472,6 +547,13 @@ export type Database = {
             columns: ["granted_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_form_access_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
           {
@@ -492,7 +574,7 @@ export type Database = {
           last_active: string | null
           name: string | null
           region: string | null
-          role: string
+          role_id: number | null
           updated_at: string
         }
         Insert: {
@@ -503,7 +585,7 @@ export type Database = {
           last_active?: string | null
           name?: string | null
           region?: string | null
-          role: string
+          role_id?: number | null
           updated_at?: string
         }
         Update: {
@@ -514,10 +596,18 @@ export type Database = {
           last_active?: string | null
           name?: string | null
           region?: string | null
-          role?: string
+          role_id?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

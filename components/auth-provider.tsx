@@ -9,7 +9,13 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 type User = {
   id: string
   email: string
-  role?: string
+  role?: {
+    id: number
+    name: string
+    display_name: string | null
+    color: string | null
+    order: number
+  }
   region?: string | null;
   user_metadata?: {
     avatar_url?: string

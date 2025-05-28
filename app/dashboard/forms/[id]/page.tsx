@@ -4,411 +4,441 @@ import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ArrowLeft, Edit, Save, Calendar, Clock, Users, MessageSquare } from "lucide-react"
+import { Save, Calendar, Clock, Users, Edit, Plus, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import { Form, FormField, FormFieldOption } from "@/app/api/types"
+import { useState, useEffect } from "react"
+import { FormField } from "@/app/api/types"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
+import { useFormContext, FormFieldComponent } from "@/components/forms"
 
 export default function FormDetailPage() {
   const { user } = useAuth()
-  const params = useParams()
-  const formId = params.id as string
+  const { form, loading, error } = useFormContext()
   
-  const [form, setForm] = useState<Form | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [saving, setSaving] = useState(false)
+  const [userResponses, setUserResponses] = useState<any[]>([])
+  const [loadingResponses, setLoadingResponses] = useState(false)
+  const [editingResponseId, setEditingResponseId] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
 
+  // 載入用戶的回應
   useEffect(() => {
-    const fetchForm = async () => {
+    const fetchUserResponses = async () => {
+      if (!form || !user) return
+
+      setLoadingResponses(true)
       try {
-        const response = await fetch(`/api/forms/${formId}`)
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch form')
+        const response = await fetch(`/api/forms/${form.id}/responses/users/${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setUserResponses(data.data || [])
         }
-
-        const formData = await response.json()
-        setForm(formData.data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error('Error fetching user responses:', err)
       } finally {
-        setLoading(false)
+        setLoadingResponses(false)
       }
     }
 
-    if (formId) {
-      fetchForm()
+    fetchUserResponses()
+  }, [form, user])
+
+  // 載入編輯回應的數據
+  useEffect(() => {
+    const loadEditingResponse = async () => {
+      if (!editingResponseId) return
+
+      try {
+        const response = await fetch(`/api/form-responses/${editingResponseId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const responseData = data.data
+          
+          // 將回應數據轉換為表單數據格式
+          const newFormData: Record<string, any> = {}
+          responseData.field_responses.forEach((fieldResponse: any) => {
+            if (fieldResponse.field_values) {
+              newFormData[fieldResponse.field_id] = fieldResponse.field_values
+            } else if (fieldResponse.field_value) {
+              newFormData[fieldResponse.field_id] = fieldResponse.field_value
+            }
+          })
+          
+          setFormData(newFormData)
+          setShowForm(true)
+        }
+      } catch (err) {
+        console.error('Error loading response for editing:', err)
+        toast.error('載入回應數據失敗')
+      }
     }
-  }, [formId])
+
+    loadEditingResponse()
+  }, [editingResponseId])
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
     }))
+    
+    // 如果用戶填寫了有錯誤的字段，清除該字段的錯誤狀態
+    if (validationErrors.has(fieldId)) {
+      const newErrors = new Set(validationErrors)
+      newErrors.delete(fieldId)
+      setValidationErrors(newErrors)
+    }
   }
 
   const handleSaveResponse = async () => {
-    if (!form) return
+    if (!user) {
+      toast.error('請先登入')
+      return
+    }
+
+    if (!form) {
+      toast.error('表單資料載入中')
+      return
+    }
+
+    // 驗證必填字段
+    const missingFields: string[] = []
+    const errorFieldIds = new Set<string>()
+    
+    form.fields?.forEach(field => {
+      if (field.is_required) {
+        const value = formData[field.id]
+        if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')) {
+          missingFields.push(field.field_label)
+          errorFieldIds.add(field.id)
+        }
+      }
+    })
+
+    // 更新驗證錯誤狀態
+    setValidationErrors(errorFieldIds)
+
+    // 如果有未填寫的必填字段，顯示錯誤並阻止提交
+    if (missingFields.length > 0) {
+      toast.error(`請填寫以下必填字段：${missingFields.join('、')}`)
+      return
+    }
 
     setSaving(true)
     try {
       const fieldResponses = Object.entries(formData).map(([fieldId, value]) => ({
         field_id: fieldId,
-        field_value: typeof value === 'string' ? value : null,
-        field_values: typeof value !== 'string' ? value : null,
+        field_value: Array.isArray(value) ? null : value,
+        field_values: Array.isArray(value) ? value : null,
       }))
 
-      const response = await fetch('/api/form-responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          form_id: form.id,
-          respondent_type: 'user',
-          respondent_id: user?.id,
-          submission_status: 'submitted',
-          field_responses: fieldResponses,
-        }),
-      })
+      let response
+      if (editingResponseId) {
+        // 更新現有回應
+        response = await fetch(`/api/form-responses/${editingResponseId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            field_responses: fieldResponses,
+            submission_status: 'submitted',
+          }),
+        })
+      } else {
+        // 創建新回應 - 使用新的 API 端點
+        response = await fetch(`/api/forms/${form.id}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            respondent_id: user.id,
+            submission_status: 'submitted',
+            field_responses: fieldResponses,
+          }),
+        })
+      }
 
       if (!response.ok) {
         throw new Error('Failed to save response')
       }
 
-      toast.success('表單回應已成功提交')
+      toast.success(editingResponseId ? '表單回應已成功更新' : '表單回應已成功提交')
+      
+      // 重新載入用戶回應
+      window.location.reload()
     } catch (err) {
-      toast.error('提交表單時發生錯誤')
+      toast.error(editingResponseId ? '更新表單時發生錯誤' : '提交表單時發生錯誤')
       console.error('Error saving response:', err)
     } finally {
       setSaving(false)
     }
   }
 
-  const renderField = (field: FormField) => {
-    const value = formData[field.id] || field.default_value || ''
+  const handleEditResponse = (responseId: string) => {
+    setEditingResponseId(responseId)
+    setFormData({})
+    setValidationErrors(new Set())
+  }
 
-    switch (field.field_type) {
-      case 'text':
-      case 'email':
-        return (
-          <Input
-            type={field.field_type}
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || ''}
-            required={field.is_required || false}
-          />
-        )
+  const handleNewResponse = () => {
+    setEditingResponseId(null)
+    setFormData({})
+    setShowForm(true)
+    setValidationErrors(new Set())
+  }
 
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || ''}
-            required={field.is_required || false}
-          />
-        )
-
-      case 'textarea':
-        return (
-          <Textarea
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || ''}
-            required={field.is_required || false}
-            rows={4}
-          />
-        )
-
-      case 'select':
-        return (
-          <Select
-            value={value}
-            onValueChange={(val) => handleFieldChange(field.id, val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={field.placeholder || '請選擇'} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.form_field_options?.map((option: FormFieldOption) => (
-                <SelectItem key={option.id} value={option.option_value}>
-                  {option.option_label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )
-
-      case 'radio':
-        return (
-          <RadioGroup
-            value={value}
-            onValueChange={(val) => handleFieldChange(field.id, val)}
-          >
-            {field.form_field_options?.map((option: FormFieldOption) => (
-              <div key={option.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={option.option_value} id={option.id} />
-                <Label htmlFor={option.id}>{option.option_label}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        )
-
-      case 'checkbox':
-        const checkboxValues = Array.isArray(value) ? value : []
-        return (
-          <div className="space-y-2">
-            {field.form_field_options?.map((option: FormFieldOption) => (
-              <div key={option.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={option.id}
-                  checked={checkboxValues.includes(option.option_value)}
-                  onCheckedChange={(checked) => {
-                    const newValues = checked
-                      ? [...checkboxValues, option.option_value]
-                      : checkboxValues.filter(v => v !== option.option_value)
-                    handleFieldChange(field.id, newValues)
-                  }}
-                />
-                <Label htmlFor={option.id}>{option.option_label}</Label>
-              </div>
-            ))}
-          </div>
-        )
-
-      default:
-        return (
-          <Input
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || ''}
-            required={field.is_required || false}
-          />
-        )
-    }
+  const handleCancelEdit = () => {
+    setEditingResponseId(null)
+    setFormData({})
+    setShowForm(false)
+    setValidationErrors(new Set())
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-500">啟用中</Badge>
+        return <Badge className="bg-green-100 hover:bg-green-100 text-green-800">已發布</Badge>
       case 'draft':
         return <Badge variant="secondary">草稿</Badge>
-      case 'inactive':
-        return <Badge variant="outline">停用</Badge>
       case 'archived':
-        return <Badge variant="destructive">已封存</Badge>
+        return <Badge variant="outline">已封存</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
   const getFormTypeBadge = (formType: string) => {
-    switch (formType) {
-      case 'registration':
-        return <Badge variant="outline" className="text-blue-600 border-blue-600">報名表</Badge>
-      case 'profile':
-        return <Badge variant="outline" className="text-purple-600 border-purple-600">個人資料</Badge>
-      case 'survey':
-        return <Badge variant="outline" className="text-orange-600 border-orange-600">問卷調查</Badge>
-      case 'feedback':
-        return <Badge variant="outline" className="text-green-600 border-green-600">意見回饋</Badge>
-      case 'application':
-        return <Badge variant="outline" className="text-red-600 border-red-600">申請表</Badge>
+    const typeMap: Record<string, string> = {
+      'registration': '報名表',
+      'profile': '個人資料',
+      'survey': '問卷調查',
+      'feedback': '意見回饋',
+      'application': '申請表',
+    }
+    return <Badge variant="outline">{typeMap[formType] || formType}</Badge>
+  }
+
+  const getSubmissionStatusBadge = (status: string) => {
+    switch (status) {
+      case 'submitted':
+        return <Badge variant="default" className="bg-green-500">已提交</Badge>
+      case 'draft':
+        return <Badge variant="secondary">草稿</Badge>
       default:
-        return <Badge variant="outline">{formType}</Badge>
+        return <Badge variant="secondary">{status}</Badge>
     }
   }
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10" />
-          <div className="flex-1">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96 mt-2" />
-          </div>
-        </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-full" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return null // Layout 會處理載入狀態
   }
 
-  if (error || !form || !form.access_type) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/forms">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">表單詳情</h1>
-            <p className="text-muted-foreground mt-2">查看表單詳細資訊</p>
-          </div>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-red-600">
-              <p>{error || (!form?.access_type ? '您沒有權限查看此表單' : '找不到表單')}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  if (error) {
+    return null // Layout 會處理錯誤狀態
   }
+
+  if (!form) {
+    return null
+  }
+
+  // 基於 API 返回的 submitted 字段來決定是否顯示已提交狀態
+  // 只有在已提交且不允許多次提交且不在編輯模式時才顯示已提交狀態
+  const shouldShowSubmittedState = form.submitted && !form.allow_multiple_submissions && !showForm
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/forms">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{form.title}</h1>
-            <p className="text-muted-foreground mt-2">填寫表單</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {form.access_type === 'edit' && (
-            <>
-              <Link href={`/dashboard/forms/${formId}/edit`}>
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  編輯表單
-                </Button>
-              </Link>
-              <Link href={`/dashboard/forms/${formId}/responses`}>
-                <Button variant="outline">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  查看回應
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* 表單資訊 */}
+      <div className="lg:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              表單資訊
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-muted-foreground">建立時間</Label>
+              <p className="text-sm">{form.created_at ? formatDate(form.created_at) : '未知'}</p>
+            </div>
+            
+            {form.submission_deadline && (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">截止時間</Label>
+                <p className="text-sm flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {formatDate(form.submission_deadline)}
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">設定</Label>
+              <div className="flex items-center gap-1">
+                  {form.status && getStatusBadge(form.status)}
+                  {form.form_type && getFormTypeBadge(form.form_type)}
+              </div>
+              <div className="space-y-1">
+                  <p className="text-sm">
+                      • {form.is_required ? '必填表單' : '非必填表單'}
+                  </p>
+                  <p className="text-sm">
+                      • {form.allow_multiple_submissions ? '允許多次提交' : '只允許一次提交'}
+                  </p>
+              </div>
+            </div>
+
+            {/* 用戶回應狀態 */}
+            {form.access_type === 'read' && !loadingResponses && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">您的回應</Label>
+                {form.submitted ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-green-700">已提交</span>
+                    </div>
+                    {userResponses.length > 1 && (
+                      <div className="space-y-2">
+                        {userResponses.map((response, index) => (
+                          <div key={response.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">回應 #{index + 1}</span>
+                              {getSubmissionStatusBadge(response.submission_status)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatDate(response.created_at)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">尚未提交回應</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 表單資訊 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className="text-xl">{form.title}</CardTitle>
-              {form.description && (
-                <CardDescription className="mt-2 text-base">
-                  {form.description}
-                </CardDescription>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-4">
-            {getStatusBadge(form.status || 'draft')}
-            {getFormTypeBadge(form.form_type)}
-            {form.is_required && (
-              <Badge variant="destructive" className="text-xs">必填</Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground mt-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span>目標對象：{form.target_role}</span>
-            </div>
-            {form.submission_deadline && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>截止日期：{formatDate(form.submission_deadline)}</span>
-              </div>
-            )}
-            {form.created_at && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>建立時間：{formatDate(form.created_at)}</span>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
-
       {/* 表單內容 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>表單內容</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {form.fields && form.fields.length > 0 ? (
-            form.fields
-              .sort((a, b) => a.display_order - b.display_order)
-              .map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.id} className="text-base font-medium">
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {field.help_text && (
-                    <p className="text-sm text-muted-foreground">{field.help_text}</p>
+      <div className="lg:col-span-3">
+        {shouldShowSubmittedState ? (
+          /* 已提交狀態 */
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                表單已提交
+              </CardTitle>
+              <CardDescription className="text-base">
+                您已成功提交此表單
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center py-8">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">感謝您的提交！</h3>
+                <p className="text-muted-foreground mb-6">
+                  您的回應已成功記錄，我們會盡快處理。
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {/* 編輯回覆按鈕 */}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // 找到最新的已提交回應
+                      const submittedResponse = userResponses.find(r => r.submission_status === 'submitted')
+                      if (submittedResponse) {
+                        handleEditResponse(submittedResponse.id)
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    編輯回覆
+                  </Button>
+                  
+                  {/* 再次填寫按鈕（只在允許多次提交時顯示） */}
+                  {form.allow_multiple_submissions && (
+                    <Button
+                      onClick={handleNewResponse}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      再次填寫
+                    </Button>
                   )}
-                  {renderField(field)}
                 </div>
-              ))
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <p>此表單尚未設定任何欄位</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 操作按鈕 */}
-      {form.status === 'active' && form.fields && form.fields.length > 0 && (
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSaveResponse}
-            disabled={saving}
-            size="lg"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? '提交中...' : '提交表單'}
-          </Button>
-        </div>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* 表單填寫 */
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Users className="h-5 w-5" />
+                {editingResponseId ? '編輯回覆' : '填寫表單'}
+              </CardTitle>
+              <CardDescription className="text-base whitespace-pre-line text-sm">
+                {form.description}
+              </CardDescription>
+              {editingResponseId && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                    取消編輯
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {form.fields && form.fields.length > 0 ? (
+                <>
+                  {form.fields
+                    .sort((a, b) => a.display_order - b.display_order)
+                    .map((field) => (
+                      <FormFieldComponent
+                        key={field.id}
+                        field={field}
+                        value={formData[field.id]}
+                        onChange={handleFieldChange}
+                        hasError={validationErrors.has(field.id)}
+                      />
+                    ))}
+                  
+                  {/* 只在表單為 active 狀態時顯示提交按鈕 */}
+                  {form.status === 'active' && (
+                    <div className="pt-4 border-t">
+                      <Button 
+                        onClick={handleSaveResponse}
+                        disabled={saving}
+                        className="w-full text-base py-6"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? (editingResponseId ? '更新中...' : '提交中...') : (editingResponseId ? '更新回覆' : '提交表單')}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-lg">此表單尚未設定任何欄位</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 } 

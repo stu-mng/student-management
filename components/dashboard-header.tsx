@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { MobileNav } from "@/components/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { isAdmin } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -12,7 +13,7 @@ export default function DashboardHeader() {
   const { user, signOut } = useAuth()
   const pathname = usePathname()
 
-  const isAdmin = user?.role === "admin" || user?.role === "root";
+  const isAdminUser = isAdmin(user?.role);
   
   const avatarUrl = user?.user_metadata?.avatar_url || 
                     user?.user_metadata?.picture || 
@@ -38,7 +39,7 @@ export default function DashboardHeader() {
           </Link>
           <nav className="hidden md:flex gap-4">
             {navigation.map((item) => {
-              if (item.admin && !isAdmin) return null
+              if (item.admin && !isAdminUser) return null
 
               return (
                 <Link

@@ -36,12 +36,13 @@ export default function ProtectedRoute({
         console.log('No user found, redirecting to login')
         router.replace("/login")
       } else if (
-        allowedRoles.length > 0 && 
-        (!user.role || !allowedRoles.includes(user.role))
+        allowedRoles.length > 0 &&
+        (!user.role?.name || !allowedRoles.includes(user.role.name))
       ) {
         // User doesn't have required role, redirect to dashboard
         console.log('User lacks required role, redirecting to dashboard')
-        router.replace("/dashboard")
+        router.replace('/dashboard')
+        return
       }
     }
   }, [user, isLoading, router, allowedRoles, hasCheckedAuth])
@@ -58,8 +59,8 @@ export default function ProtectedRoute({
 
   // Check role-based access after loading is complete
   if (
-    allowedRoles.length > 0 && 
-    (!user.role || !allowedRoles.includes(user.role))
+    allowedRoles.length > 0 &&
+    (!user.role?.name || !allowedRoles.includes(user.role.name))
   ) {
     return null
   }

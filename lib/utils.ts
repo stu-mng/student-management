@@ -202,3 +202,123 @@ export function formatRelativeTime(dateString: string | null): string {
     return formatDate(dateString);
   }
 }
+
+// ===== Role Utility Functions =====
+
+// 角色權限檢查函數 - 使用 order 比較，數字越小權力越大
+export function isAdmin(role?: { name: string; order?: number } | null): boolean {
+  // 保持向後兼容性，同時支援 order 比較
+  if (role?.order !== undefined) {
+    return role.order <= 1; // admin 和 root 的 order 通常是 0 和 1
+  }
+  return role?.name === 'admin' || role?.name === 'root';
+}
+
+export function isRoot(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 0; // root 通常是最高權限，order = 0
+  }
+  return role?.name === 'root';
+}
+
+export function isManager(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 2; // manager 通常是 order = 2
+  }
+  return role?.name === 'manager';
+}
+
+export function isTeacher(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 3; // teacher 通常是 order = 3
+  }
+  return role?.name === 'teacher';
+}
+
+export function isStudent(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 4; // student 通常是 order = 4
+  }
+  return role?.name === 'student';
+}
+
+// 檢查是否有管理權限（admin 或 root）
+export function hasAdminPermission(role?: { name: string; order?: number } | null): boolean {
+  return isAdmin(role);
+}
+
+// 檢查是否有管理員級別權限（admin, root, manager）
+export function hasManagerPermission(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order <= 2; // admin(1), root(0), manager(2)
+  }
+  return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
+}
+
+// 檢查是否有表單管理權限
+export function hasFormManagePermission(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order <= 2; // admin(1), root(0), manager(2)
+  }
+  return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
+}
+
+// 檢查是否有用戶管理權限
+export function hasUserManagePermission(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order <= 2; // admin(1), root(0), manager(2)
+  }
+  return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
+}
+
+// 檢查角色權限等級比較 - 使用 order 比較
+export function hasHigherPermission(userRole?: { name: string; order?: number } | null, targetRole?: { name: string; order?: number } | null): boolean {
+  if (!userRole || !targetRole) return false;
+  
+  // 優先使用 order 比較
+  if (userRole.order !== undefined && targetRole.order !== undefined) {
+    return userRole.order < targetRole.order; // 數字越小權力越大
+  }
+  
+  // 向後兼容性：使用舊的 name 比較
+  if (!userRole.name || !targetRole.name) return false;
+  return getRoleSortKey(userRole.name) < getRoleSortKey(targetRole.name);
+}
+
+export function hasEqualOrHigherPermission(userRole?: { name: string; order?: number } | null, targetRole?: { name: string; order?: number } | null): boolean {
+  if (!userRole || !targetRole) return false;
+  
+  // 優先使用 order 比較
+  if (userRole.order !== undefined && targetRole.order !== undefined) {
+    return userRole.order <= targetRole.order; // 數字越小權力越大
+  }
+  
+  // 向後兼容性：使用舊的 name 比較
+  if (!userRole.name || !targetRole.name) return false;
+  return getRoleSortKey(userRole.name) <= getRoleSortKey(targetRole.name);
+}
+
+// 檢查是否可以編輯目標用戶
+export function canEditUser(currentUserRole?: { name: string; order?: number } | null, targetUserRole?: { name: string; order?: number } | null): boolean {
+  return hasEqualOrHigherPermission(currentUserRole, targetUserRole);
+}
+
+// 檢查是否可以刪除目標用戶
+export function canDeleteUser(currentUserRole?: { name: string; order?: number } | null, targetUserRole?: { name: string; order?: number } | null): boolean {
+  return hasHigherPermission(currentUserRole, targetUserRole);
+}
+
+// 獲取角色名稱（安全版本）
+export function getRoleName(role?: { name: string } | null): string {
+  return role?.name || 'unknown';
+}
+
+// 獲取角色排序鍵 - 支援 order 屬性
+export function getRoleOrder(role?: { name: string; order?: number } | null): number {
+  if (role?.order !== undefined) {
+    return role.order;
+  }
+  
+  // 向後兼容性：使用舊的 name 映射
+  return getRoleSortKey(role?.name || '');
+}

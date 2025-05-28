@@ -1,5 +1,6 @@
-import { ErrorResponse, Student, SuccessResponse } from '@/app/api/types';
+import { ErrorResponse, Student, StudentUpdateRequest, SuccessResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { hasUserManagePermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -24,7 +25,15 @@ export async function GET(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -32,7 +41,9 @@ export async function GET(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    const isAdmin = userData.role === 'admin' || userData.role === 'root';
+    const currentUserRole = (userData?.role as any)?.name;
+    const userRoleObj = Array.isArray(userData?.role) ? userData.role[0] : userData.role;
+    const hasManagePermission = hasUserManagePermission(userRoleObj);
     
     // 創建查詢
     let query = supabase
@@ -42,7 +53,7 @@ export async function GET(
       .single();
     
     // 如果不是管理員，檢查是否有權訪問該學生
-    if (!isAdmin) {
+    if (!hasManagePermission) {
       // 檢查老師是否有權訪問該學生
       const { data: accessCheck, error: accessError } = await supabase
         .from('teacher_student_access')
@@ -103,7 +114,15 @@ export async function PUT(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -112,7 +131,10 @@ export async function PUT(
     }
 
     // 只有管理員可以更新學生資料
-    if (userData.role !== 'admin' && userData.role !== 'root') {
+    const currentUserRole = (userData?.role as any)?.name;
+    const userRoleObj = Array.isArray(userData?.role) ? userData.role[0] : userData.role;
+    const hasManagePermission = hasUserManagePermission(userRoleObj);
+    if (!hasManagePermission) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -163,7 +185,15 @@ export async function DELETE(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -172,7 +202,10 @@ export async function DELETE(
     }
 
     // 只有管理員可以刪除學生
-    if (userData.role !== 'admin' && userData.role !== 'root') {
+    const currentUserRole = (userData?.role as any)?.name;
+    const userRoleObj = Array.isArray(userData?.role) ? userData.role[0] : userData.role;
+    const hasManagePermission = hasUserManagePermission(userRoleObj);
+    if (!hasManagePermission) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 

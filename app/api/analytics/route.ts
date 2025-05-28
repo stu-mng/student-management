@@ -13,10 +13,12 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's role from the users table
+    // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -25,7 +27,8 @@ export async function GET(_request: NextRequest) {
     }
 
     // Check if user has admin or root role
-    if (userData.role !== 'admin' && userData.role !== 'root') {
+    const userRole = (userData.role as any)?.name;
+    if (userRole !== 'admin' && userRole !== 'root') {
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
     
@@ -96,11 +99,11 @@ export async function GET(_request: NextRequest) {
         id, 
         name, 
         email,
-        role,
         last_active,
+        role:roles(name),
         teacher_student_access(count)
       `)
-      .eq('role', 'teacher')
+      .eq('role.name', 'teacher')
       .not('last_active', 'is', null)
       .order('last_active', { ascending: false })
       .limit(5);
@@ -124,9 +127,10 @@ export async function GET(_request: NextRequest) {
         id,
         name,
         email,
+        role:roles(name),
         teacher_student_access(count)
       `)
-      .eq('role', 'teacher');
+      .eq('role.name', 'teacher');
     
     if (allTeachersError) {
       console.log(allTeachersError);
@@ -186,18 +190,20 @@ export async function GET(_request: NextRequest) {
     // Get users count by role
     const { data: userRoleCounts, error: roleCountError } = await supabase
       .from('users')
-      .select('role');
-    
+      .select(`
+        role:roles(name)
+      `);
+
     if (roleCountError) {
       console.log(roleCountError);
       return NextResponse.json({ error: roleCountError.message }, { status: 500 });
     }
     
     // Calculate counts for each role
-    const totalTeachers = userRoleCounts.filter(user => user.role === 'teacher').length;
-    const totalAdmins = userRoleCounts.filter(user => user.role === 'admin').length;
-    const totalManagers = userRoleCounts.filter(user => user.role === 'manager').length;
-    const totalRoot = userRoleCounts.filter(user => user.role === 'root').length;
+    const totalTeachers = userRoleCounts.filter(user => (user.role as any)?.order === 3).length;
+    const totalAdmins = userRoleCounts.filter(user => (user.role as any)?.order === 1).length;
+    const totalManagers = userRoleCounts.filter(user => (user.role as any)?.order === 2).length;
+    const totalRoot = userRoleCounts.filter(user => (user.role as any)?.order === 0).length;
     
     return NextResponse.json({
       studentsByGrade,

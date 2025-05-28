@@ -1,5 +1,6 @@
 import { ErrorResponse, Student, StudentsListResponse, SuccessResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { hasUserManagePermission, isManager } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -24,7 +25,10 @@ export async function GET() {
     // 獲取用戶角色和區域
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, region')
+      .select(`
+        region,
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -33,13 +37,15 @@ export async function GET() {
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    const isAdmin = userData.role === 'admin' || userData.role === 'root';
-    const isManager = userData.role === 'manager';
+    const userRole = (userData.role as any)?.name;
+    const userRoleObj = Array.isArray(userData.role) ? userData.role[0] : userData.role;
+    const hasManagePermission = hasUserManagePermission(userRoleObj);
+    const isManagerRole = isManager(userRoleObj);
     
     let query = supabase.from('students').select('*', { count: 'exact' });
     
     // 如果是區域管理員
-    if (isManager) {
+    if (isManager(userRoleObj)) {
       // 如果區域管理員的region為null，返回空陣列
       if (!userData.region) {
         return NextResponse.json<StudentsListResponse>({
@@ -52,7 +58,7 @@ export async function GET() {
       query = query.eq('region', userData.region);
     }
     // 如果不是管理員，則只獲取教師有權查看的學生
-    else if (!isAdmin) {
+    else if (!hasManagePermission) {
       const { data: accessibleStudentIds } = await supabase
         .from('teacher_student_access')
         .select('student_id')
@@ -110,7 +116,10 @@ export async function POST(request: NextRequest) {
     // 獲取用戶角色和區域
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role, region')
+      .select(`
+        region,
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -119,7 +128,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 只有管理員可以新增學生
-    if (userData.role === 'teacher') {
+    const userRole = (userData.role as any)?.name;
+    const userRoleObj = Array.isArray(userData.role) ? userData.role[0] : userData.role;
+    if (!hasUserManagePermission(userRoleObj)) {
       return NextResponse.json<ErrorResponse>({ error: '你的權限不足' }, { status: 403 });
     }
 
@@ -148,11 +159,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 如果為區域管理員，自動設置學生的區域
-    if (userData.role === 'manager' && !userData.region) {
-      return NextResponse.json<ErrorResponse>({ error: '你還沒有被指派管理區域，無法新增學生' }, { status: 403 });
+    // 如果為區域管理員，只能新增自己區域的學生
+    if (isManager(userRoleObj) && !userData.region) {
+      return NextResponse.json<ErrorResponse>({ error: '區域管理員必須設定區域' }, { status: 403 });
     }
-    if (userData.role === 'manager' && userData.region) {
+    if (isManager(userRoleObj) && userData.region) {
       studentData.region = userData.region;
     }
 

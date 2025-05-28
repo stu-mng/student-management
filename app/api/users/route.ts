@@ -1,6 +1,6 @@
 import { ErrorResponse, SuccessResponse, User, UserCreateRequest, UsersListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { getRoleSortKey } from '@/lib/utils';
+import { hasEqualOrHigherPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -19,10 +19,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
+    // 獲取用戶角色（包含 role）
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -35,21 +43,40 @@ export async function GET(request: NextRequest) {
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 100);
     const search = url.searchParams.get('search') || '';
-    const role = url.searchParams.get('role');
+    const roleFilter = url.searchParams.get('role');
     
     // 計算分頁的起始位置
     const offset = (page - 1) * limit;
     
-    // 確保包含 last_active 欄位
-    let query = supabase.from('users').select('id, email, role, region,created_at, updated_at, avatar_url, name, last_active', { count: 'exact' });
+    // 查詢用戶列表，包含 role 資料
+    let query = supabase
+      .from('users')
+      .select(`
+        id,
+        email,
+        region,
+        created_at,
+        updated_at,
+        avatar_url,
+        name,
+        last_active,
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `, { count: 'exact' });
     
     // 應用查詢過濾條件
     if (search) {
       query = query.or(`name.ilike.%${search}%, email.ilike.%${search}%`);
     }
     
-    if (role) {
-      query = query.eq('role', role);
+    if (roleFilter) {
+      // 通過 roles 表的 name 來過濾
+      query = query.eq('role.name', roleFilter);
     }
     
     // 進行分頁
@@ -61,11 +88,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 500 });
     }
     
+    // 格式化回傳資料
+    const formattedUsers: User[] = (data || []).map(userData => ({
+      ...userData,
+      role: Array.isArray(userData.role) ? userData.role[0] : userData.role
+    }));
+    
     return NextResponse.json<UsersListResponse>({
       total: count || 0,
       page,
       limit,
-      data: data || []
+      data: formattedUsers
     });
   } catch (error) {
     console.error('Get users error:', error);
@@ -95,7 +128,9 @@ export async function POST(request: NextRequest) {
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(name)
+      `)
       .eq('id', user.id)
       .single();
 
@@ -104,11 +139,28 @@ export async function POST(request: NextRequest) {
     }
 
     // 獲取請求體
-    const { email, name, role, region }: UserCreateRequest = await request.json();
+    const requestBody: UserCreateRequest = await request.json();
+    const { email, name, role, region } = requestBody;
 
-    // 只能新增比自己角色權限低的用戶
-    if (getRoleSortKey(userData.role) > getRoleSortKey(user?.role as string)) {
-      return NextResponse.json<ErrorResponse>({ error: '錯誤：你沒有權限新增用戶' }, { status: 403 });
+    // 獲取目標角色資訊
+    const { data: targetRoleInfo, error: targetRoleError } = await supabase
+      .from('roles')
+      .select('id, name, order')
+      .eq('name', role)
+      .single();
+
+    if (targetRoleError || !targetRoleInfo) {
+      return NextResponse.json<ErrorResponse>(
+        { error: '錯誤：無效的角色' },
+        { status: 400 }
+      );
+    }
+
+    // 只能新增比自己角色權限低或相等的用戶
+    const currentUserRole = Array.isArray(userData.role) ? userData.role[0] : userData.role;
+    
+    if (!hasEqualOrHigherPermission(currentUserRole, targetRoleInfo)) {
+      return NextResponse.json<ErrorResponse>({ error: '錯誤：你沒有權限新增此角色的用戶' }, { status: 403 });
     }
 
     // 檢查必填欄位
@@ -119,10 +171,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 獲取所有有效角色
+    const { data: validRoles, error: rolesError } = await supabase
+      .from('roles')
+      .select('name');
+
+    if (rolesError) {
+      return NextResponse.json<ErrorResponse>({ error: rolesError.message }, { status: 500 });
+    }
+
+    const validRoleNames = validRoles?.map(r => r.name) || [];
+
     // 檢查角色是否有效
-    if (!['teacher', 'manager', 'admin', 'root'].includes(role)) {
+    if (!validRoleNames.includes(role)) {
       return NextResponse.json<ErrorResponse>(
-        { error: '錯誤：角色必須是 "大學伴 (teacher)", "區域管理員 (manager)", "全域管理員 (admin)", 或 "系統管理員 (root)"' },
+        { error: `錯誤：角色必須是有效的角色名稱` },
         { status: 400 }
       );
     }
@@ -150,18 +213,33 @@ export async function POST(request: NextRequest) {
       .insert({
         email,
         name,
-        role,
+        role_id: targetRoleInfo.id,
         region
       })
-      .select()
+      .select(`
+        *,
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .single();
 
     if (error) {
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 
+    // 格式化回傳資料
+    const formattedUser: User = {
+      ...newUser,
+      role: Array.isArray(newUser.role) ? newUser.role[0] : newUser.role
+    };
+
     return NextResponse.json<{ data: User } & SuccessResponse>({
-      data: newUser,
+      data: formattedUser,
       success: true
     }, { status: 201 });
   } catch (error) {

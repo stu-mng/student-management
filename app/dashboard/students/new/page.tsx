@@ -47,7 +47,7 @@ export default function AddStudentPage() {
 
   useEffect(() => {
     // If user is a manager with a region, set the region and disable changing it
-    if (user && user.role === 'manager') {
+    if (user && user.role?.name === 'manager') {
       if (user.region) {
         setFormData(prev => ({ ...prev, region: user.region }))
       } else {
@@ -121,7 +121,7 @@ export default function AddStudentPage() {
         student_type: formData.student_type,
         account_username: formData.account_username,
         account_password: formData.account_password,
-        region: user?.role === 'manager' ? user.region : formData.region,
+        region: user?.role?.name === 'manager' ? user.region : formData.region,
       }
       
       // Call the API to create student
@@ -252,7 +252,7 @@ export default function AddStudentPage() {
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
                       您目前還沒有被指派管理區域，無法新增學生。請聯繫管理員設定您的管理區域。
                     </div>
-                  ) : user?.role === 'manager' && user?.region ? (
+                  ) : user?.role?.name === 'manager' && user?.region ? (
                     <div className="p-2 border rounded-md bg-muted">
                       {user.region}
                       <p className="text-xs text-muted-foreground mt-1">作為區域管理員，您只能在指定區域新增學生</p>

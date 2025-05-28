@@ -4,7 +4,9 @@ import {
   FormUpdateRequest, 
   FormDetailResponse, 
   ErrorResponse,
-  SuccessResponse 
+  SuccessResponse,
+  RolePermission,
+  Role
 } from '@/app/api/types';
 
 export async function GET(
@@ -24,7 +26,15 @@ export async function GET(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -37,7 +47,15 @@ export async function GET(
     // 獲取表單基本資訊
     const { data: form, error: formError } = await supabase
       .from('forms')
-      .select('*')
+      .select(`
+        *,
+        owner:users!forms_created_by_fkey(
+          id,
+          name,
+          email,
+          avatar_url
+        )
+      `)
       .eq('id', id)
       .single();
 
@@ -55,11 +73,36 @@ export async function GET(
       );
     }
 
-    // 檢查用戶是否有權限查看此表單
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
-      if (form.target_role !== userData.role) {
-        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+    // 檢查用戶的存取權限
+    let accessType: 'read' | 'edit' | null = null;
+    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRoleId = (userData.role as any)?.id;
+
+    // 1. 如果是表單創建者，給予編輯權限
+    if (form.created_by === user.id) {
+      accessType = 'edit';
+    }
+    // 2. 如果是 admin 或 root，給予編輯權限
+    else if (['admin', 'root'].includes(currentUserRole)) {
+      accessType = 'edit';
+    }
+    // 3. 檢查 user_form_access 表
+    else if (currentUserRoleId) {
+      const { data: userAccess, error: accessError } = await supabase
+        .from('user_form_access')
+        .select('access_type')
+        .eq('form_id', form.id)
+        .eq('role_id', currentUserRoleId)
+        .single();
+
+      if (!accessError && userAccess) {
+        accessType = userAccess.access_type as 'read' | 'edit';
       }
+    }
+
+    // 如果沒有任何權限，拒絕存取
+    if (!accessType) {
+      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
     // 獲取表單欄位
@@ -87,17 +130,70 @@ export async function GET(
       );
     }
 
+    // 獲取表單權限設定（只有編輯權限的用戶才能看到）
+    let permissions: RolePermission[] = [];
+    if (accessType === 'edit') {
+      // 使用 role_id 來 join roles 表
+      const { data: permissionsData, error: permissionsError } = await supabase
+        .from('user_form_access')
+        .select(`
+          access_type,
+          role:roles!user_form_access_role_id_fkey(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+        `)
+        .eq('form_id', id)
+        .not('role_id', 'is', null);
+
+      if (permissionsError) {
+        console.error('Error fetching form permissions:', permissionsError);
+      } else if (permissionsData) {
+        console.log('Permissions data structure:', JSON.stringify(permissionsData, null, 2));
+        permissions = permissionsData
+          .filter(p => p.role) // 確保有角色資料
+          .map(p => {
+            // 處理可能的數組或對象結構
+            const roleData = Array.isArray(p.role) ? p.role[0] : p.role;
+            return {
+              role: roleData as Role,
+              access_type: p.access_type
+            };
+          });
+      }
+    }
+
     // 整理欄位資料，將選項排序
     const formattedFields = fields?.map(field => ({
       ...field,
       form_field_options: field.form_field_options?.sort((a: any, b: any) => a.display_order - b.display_order)
     })) || [];
 
+    // 檢查當前用戶是否已經提交回應
+    let submitted = false;
+    const { data: existingResponse, error: responseError } = await supabase
+      .from('form_responses')
+      .select('id, submission_status')
+      .eq('form_id', id)
+      .eq('respondent_id', user.id)
+      .eq('submission_status', 'submitted')
+      .single();
+
+    if (!responseError && existingResponse) {
+      submitted = true;
+    }
+
     return NextResponse.json<FormDetailResponse>({
       success: true,
       data: {
         ...form,
         fields: formattedFields,
+        access_type: accessType,
+        permissions: permissions,
+        submitted: submitted,
       },
     });
 
@@ -116,6 +212,7 @@ export async function PUT(
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await params;
     
     // 獲取當前用戶
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -127,7 +224,15 @@ export async function PUT(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -135,18 +240,62 @@ export async function PUT(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    // 只有管理員和計畫主持可以更新表單
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
+    // 檢查用戶是否有編輯權限
+    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRoleId = (userData.role as any)?.id;
+    let hasEditPermission = false;
+
+    // 1. 如果是表單創建者，給予編輯權限
+    const { data: formData, error: formCheckError } = await supabase
+      .from('forms')
+      .select('created_by')
+      .eq('id', id)
+      .single();
+
+    if (formCheckError) {
+      if (formCheckError.code === 'PGRST116') {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Form not found' },
+          { status: 404 }
+        );
+      }
+      console.error('Error checking form existence:', formCheckError);
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Failed to check form' },
+        { status: 500 }
+      );
+    }
+
+    if (formData.created_by === user.id) {
+      hasEditPermission = true;
+    }
+    // 2. 如果是 admin 或 root，給予編輯權限
+    else if (['admin', 'root'].includes(currentUserRole)) {
+      hasEditPermission = true;
+    }
+    // 3. 檢查 user_form_access 表中該角色的權限設定
+    else if (currentUserRoleId) {
+      const { data: userAccess, error: accessError } = await supabase
+        .from('user_form_access')
+        .select('access_type')
+        .eq('form_id', id)
+        .eq('role_id', currentUserRoleId)
+        .single();
+
+      if (!accessError && userAccess && userAccess.access_type === 'edit') {
+        hasEditPermission = true;
+      }
+    }
+
+    if (!hasEditPermission) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { id } = await params;
     const body: FormUpdateRequest = await request.json();
     const {
       title,
       description,
       form_type,
-      target_role,
       status,
       is_required,
       allow_multiple_submissions,
@@ -154,33 +303,11 @@ export async function PUT(
       fields = []
     } = body;
 
-    // 檢查表單是否存在
-    const { data: existingForm, error: checkError } = await supabase
-      .from('forms')
-      .select('id')
-      .eq('id', id)
-      .single();
-
-    if (checkError) {
-      if (checkError.code === 'PGRST116') {
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Form not found' },
-          { status: 404 }
-        );
-      }
-      console.error('Error checking form existence:', checkError);
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to check form' },
-        { status: 500 }
-      );
-    }
-
     // 更新表單基本資訊
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (form_type !== undefined) updateData.form_type = form_type;
-    if (target_role !== undefined) updateData.target_role = target_role;
     if (status !== undefined) updateData.status = status;
     if (is_required !== undefined) updateData.is_required = is_required;
     if (allow_multiple_submissions !== undefined) updateData.allow_multiple_submissions = allow_multiple_submissions;
@@ -319,6 +446,7 @@ export async function DELETE(
 ) {
   try {
     const supabase = await createClient();
+    const { id } = await params;
     
     // 獲取當前用戶
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -330,7 +458,15 @@ export async function DELETE(
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role:roles(
+          id,
+          name,
+          display_name,
+          color,
+          order
+        )
+      `)
       .eq('id', user.id)
       .single();
 
@@ -338,32 +474,56 @@ export async function DELETE(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    // 只有管理員和計畫主持可以刪除表單
-    if (!['admin', 'root', 'project_manager'].includes(userData.role)) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-    }
+    // 檢查用戶是否有刪除權限
+    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRoleId = (userData.role as any)?.id;
+    let hasDeletePermission = false;
 
-    const { id } = await params;
-
-    // 檢查表單是否存在
-    const { data: existingForm, error: checkError } = await supabase
+    // 檢查表單是否存在並獲取創建者資訊
+    const { data: formData, error: formCheckError } = await supabase
       .from('forms')
-      .select('id')
+      .select('created_by')
       .eq('id', id)
       .single();
 
-    if (checkError) {
-      if (checkError.code === 'PGRST116') {
+    if (formCheckError) {
+      if (formCheckError.code === 'PGRST116') {
         return NextResponse.json<ErrorResponse>(
           { error: 'Form not found' },
           { status: 404 }
         );
       }
-      console.error('Error checking form existence:', checkError);
+      console.error('Error checking form existence:', formCheckError);
       return NextResponse.json<ErrorResponse>(
         { error: 'Failed to check form' },
         { status: 500 }
       );
+    }
+
+    // 1. 如果是表單創建者，給予刪除權限
+    if (formData.created_by === user.id) {
+      hasDeletePermission = true;
+    }
+    // 2. 如果是 admin 或 root，給予刪除權限
+    else if (['admin', 'root'].includes(currentUserRole)) {
+      hasDeletePermission = true;
+    }
+    // 3. 檢查 user_form_access 表中該角色的權限設定
+    else if (currentUserRoleId) {
+      const { data: userAccess, error: accessError } = await supabase
+        .from('user_form_access')
+        .select('access_type')
+        .eq('form_id', id)
+        .eq('role_id', currentUserRoleId)
+        .single();
+
+      if (!accessError && userAccess && userAccess.access_type === 'edit') {
+        hasDeletePermission = true;
+      }
+    }
+
+    if (!hasDeletePermission) {
+      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
     // 刪除表單（CASCADE 會自動刪除相關的欄位、選項、回應等）
