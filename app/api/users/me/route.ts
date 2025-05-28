@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           order
         )
       `)
-      .eq('id', user.id)
+      .eq('email', user.email)
       .single();
 
     if (userError) {
@@ -192,7 +192,7 @@ export async function PUT(request: NextRequest) {
         updated_at: now,
         last_active: now
       })
-      .eq('id', user.id)
+      .eq('email', user.email)
       .select(`
         *,
         role:roles(

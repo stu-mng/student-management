@@ -89,7 +89,7 @@ export default function DashboardPage() {
       description: "查看並填寫可用的表單",
       icon: <FileText className="h-8 w-8 text-orange-500" />,
       href: "/dashboard/forms",
-      allowedRoles: ["student", "teacher", "admin", "root", "manager", "project_manager"]
+      allowedRoles: ["student", "teacher", "admin", "root", "manager", "candidate"]
     },
     {
       title: "系統使用手冊",
