@@ -14,12 +14,14 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UserAvatar } from "@/components/user-avatar"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, Check, ChevronsUpDown, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleOrder, cn, getRoleHoverTextColor, formatRelativeTime, hasHigherPermission, canDeleteUser, hasUserManagePermission, canEditUser, hasEqualOrHigherPermission } from "@/lib/utils"
+import Link from "next/link"
 
 type User = {
   id: string
@@ -36,14 +38,6 @@ type User = {
   name: string | null
   last_active?: string
   region?: string
-}
-
-// 檢查用戶是否在線 (15分鐘內有活動)
-const isUserOnline = (lastActive?: string) => {
-  if (!lastActive) return false;
-  const lastActiveTime = new Date(lastActive).getTime();
-  const currentTime = new Date().getTime();
-  return (currentTime - lastActiveTime) < 15 * 60 * 1000; // 15分鐘閾值
 }
 
 export default function PermissionsPage() {
@@ -353,31 +347,15 @@ export default function PermissionsPage() {
 
   const columns: ColumnDef<User>[] = [
     {
-      accessorKey: "status",
-      header: "",
-      cell: ({ row }) => {
-        const user = row.original
-        const online = isUserOnline(user.last_active)
-        return (
-          <div className="flex items-center pl-4">
-            <div className={`h-2.5 w-2.5 rounded-full mr-2 ${online ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-          </div>
-        )
-      }
-    },
-    {
       accessorKey: "name",
       header: "",
       cell: ({ row }) => {
         const rowUser = row.original
         return (
-          <div className="flex items-center gap-4 m-0 p-0">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={rowUser.avatar_url || ""} alt={rowUser.name || ""} />
-              <AvatarFallback className={getRoleBgColor(rowUser.role.name)}>
-                {rowUser.name ? rowUser.name.charAt(0).toUpperCase() : rowUser.email.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex items-center gap-4 m-0 p-0 ml-4">
+            <Link href={`/dashboard/profile/${rowUser.id}`}>
+              <UserAvatar user={rowUser} size="sm" />
+            </Link>
             <span className="text-xs">
               {rowUser.name || rowUser.email.split('@')[0]} { rowUser.id === user?.id && '（你）' }
             </span>

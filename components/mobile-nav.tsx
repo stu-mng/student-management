@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { isAdmin } from "@/lib/utils"
-import { Menu } from "lucide-react"
+import { Menu, User, LogOut } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -41,6 +41,10 @@ export function MobileNav() {
   const handleSignOut = () => {
     setOpen(false)
     signOut()
+  }
+
+  const handleProfileClick = () => {
+    setOpen(false)
   }
 
   return (
@@ -79,29 +83,42 @@ export function MobileNav() {
         </div>
         <div className="px-6 py-4 border-t bg-muted/30 shrink-0">
           {user && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-              {avatarUrl && (
-                <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0">
-                  <Image 
-                    src={avatarUrl} 
-                    alt="User avatar" 
-                    width={32} 
-                    height={32}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
-              <span className="truncate">{displayName}</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {avatarUrl && (
+                  <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0">
+                    <Image 
+                      src={avatarUrl} 
+                      alt="User avatar" 
+                      width={32} 
+                      height={32}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+                <span className="truncate">{displayName}</span>
+              </div>
+              <div className="flex gap-2">
+                <SheetClose asChild>
+                  <Link href={`/dashboard/profile/${user.id}`} onClick={handleProfileClick}>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <User className="mr-2 h-4 w-4" />
+                      個人資料
+                    </Button>
+                  </Link>
+                </SheetClose>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSignOut} 
+                  className="flex-1"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  登出
+                </Button>
+              </div>
             </div>
           )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSignOut} 
-            className="w-full"
-          >
-            登出
-          </Button>
         </div>
       </SheetContent>
     </Sheet>

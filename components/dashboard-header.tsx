@@ -4,8 +4,17 @@ import { useAuth } from "@/components/auth-provider"
 import { MobileNav } from "@/components/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { isAdmin } from "@/lib/utils"
-import Image from "next/image"
+import { User, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -60,24 +69,41 @@ export default function DashboardHeader() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           {user && (
-            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-              {avatarUrl && (
-                <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0">
-                  <Image 
-                    src={avatarUrl} 
-                    alt="User avatar" 
-                    width={32} 
-                    height={32}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
-              <span className="max-w-[200px] truncate">{displayName}</span>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={avatarUrl || ""} alt={displayName} />
+                    <AvatarFallback>
+                      {displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/profile/${user.id}`} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>個人資料</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>登出</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-          <Button variant="outline" size="sm" onClick={signOut} className="hidden md:inline-flex">
-            登出
-          </Button>
         </div>
       </div>
     </header>

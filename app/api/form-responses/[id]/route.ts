@@ -93,8 +93,8 @@ export async function GET(
 
     const isOwner = user.id === response.respondent_id;
     const userRole = (userData.role as any)?.name;
-    const hasEditPermission = form.created_by === user.id || ['admin', 'root'].includes(userRole);
-    
+    const hasEditPermission = form.created_by === user.id || ['admin', 'root', 'manager'].includes(userRole);
+
     if (!isOwner && !hasEditPermission) {
       return NextResponse.json<ErrorResponse>(
         { error: 'Permission denied' },
@@ -163,7 +163,7 @@ export async function PUT(
     }
 
     // 檢查權限：只有回應者本人可以修改
-    if (existingResponse.respondent_id !== user.id) {
+    if (existingResponse.respondent_id !== user.id && user.role?.order < 3) {
       return NextResponse.json<ErrorResponse>(
         { error: 'Permission denied' },
         { status: 403 }
