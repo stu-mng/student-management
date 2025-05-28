@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -8,6 +9,7 @@ import { BookOpen, Bookmark, Info, Shield, User, UserCog, Users, History } from 
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getRoleTextColor, getRoleBgColor } from "@/lib/utils"
+import { roleDescriptions, permissionGroups, roleHeaders } from "@/lib/permissions-content"
 
 interface ManualTabsProps {
   user: any
@@ -104,7 +106,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <AlertDescription className="flex gap-4 items-center">
                   <Info className="h-4 w-4" />
                   <p>
-                    請注意：舊版系統尚未包含「區域管理員」角色。點擊
+                    系統採用六層級權限架構：系統管理員、計畫主持人、帶班老師、科任老師、大學伴、儲備大學伴。點擊
                     <Button 
                       variant="link" 
                       size="sm" 
@@ -177,49 +179,21 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <Shield className="h-6 w-6 text-primary" />
                 <CardTitle>權限層級體系</CardTitle>
               </div>
-              <CardDescription>系統中的四個用戶角色及其基本權限</CardDescription>
+              <CardDescription>系統中的六個用戶角色及其基本權限</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className={`shadow-none px-2 py-1 font-medium rounded-full ${getRoleTextColor('root')} ${getRoleBgColor('root')}`}>
-                    系統管理員
-                  </Badge>
-                  <div>
-                    <p className="font-medium">最高權限管理者，能夠管理所有使用者、學生資料及所有系統功能。</p>
-                    <p className="text-muted-foreground text-sm pt-1">可以創建其他系統管理員、全域管理員、區域管理員和大學伴。</p>
+                {roleDescriptions.map((role) => (
+                  <div key={role.name} className="flex items-start gap-3">
+                    <Badge variant="outline" className={`flex items-center justify-center w-20 text-center shadow-none px-2 py-1 font-medium rounded-full ${getRoleTextColor(role.name)} ${getRoleBgColor(role.name)}`}>
+                      {role.displayName}
+                    </Badge>
+                    <div>
+                      <p className="font-medium">{role.description}</p>
+                      <p className="text-muted-foreground text-sm pt-1">{role.details}</p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className={`shadow-none px-2 py-1 font-medium rounded-full ${getRoleTextColor('admin')} ${getRoleBgColor('admin')}`}>
-                    全域管理員
-                  </Badge>
-                  <div>
-                    <p className="font-medium">全系統管理者，能夠管理除系統管理員外的所有使用者，以及所有學生資料。</p>
-                    <p className="text-muted-foreground text-sm pt-1">可以創建區域管理員和大學伴，管理所有區域的資料。</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className={`shadow-none px-2 py-1 font-medium rounded-full ${getRoleTextColor('manager')} ${getRoleBgColor('manager')}`}>
-                    區域管理員
-                  </Badge>
-                  <div>
-                    <p className="font-medium">特定區域的管理者，只能管理其負責區域的學生資料，以及查看所在區域的資訊。</p>
-                    <p className="text-muted-foreground text-sm pt-1">可以創建大學伴，並將區域內的學生分配給大學伴。</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className={`shadow-none px-2 py-1 font-medium rounded-full ${getRoleTextColor('teacher')} ${getRoleBgColor('teacher')}`}>
-                    　大學伴　
-                  </Badge>
-                  <div>
-                    <p className="font-medium">最基本使用者，只能查看被分配給自己的學生資料。</p>
-                    <p className="text-muted-foreground text-sm pt-1">無法創建或管理其他用戶，僅能查看被分配的學生。</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -236,84 +210,33 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                     <tr className="border-b">
                       <th className="text-left font-medium py-2 px-4">資源</th>
                       <th className="text-left font-medium py-2 px-4">操作</th>
-                      <th className="text-center font-medium py-2 px-4">系統管理員<br />(root)</th>
-                      <th className="text-center font-medium py-2 px-4">全域管理員<br />(admin)</th>
-                      <th className="text-center font-medium py-2 px-4">區域管理員<br />(manager)</th>
-                      <th className="text-center font-medium py-2 px-4">大學伴<br />(teacher)</th>
+                      {roleHeaders.map((header) => (
+                        <th key={header.key} className="text-center font-medium py-2 px-2">
+                          {header.name}<br />{header.subName}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr className="bg-muted/20 font-medium">
-                      <td colSpan={6} className="py-2 px-4">使用者管理</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">查看用戶列表</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">GET /api/users</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">查看用戶詳情</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">GET /api/users/[id]</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">僅自己</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">新增用戶</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">POST /api/users</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">編輯用戶</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">PUT /api/users/[id]</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">除 root 外</td>
-                      <td className="text-center py-2 px-4">除 root／admin 外</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                    </tr>
-                    
-                    <tr className="bg-muted/20 font-medium">
-                      <td colSpan={6} className="py-2 px-4">學生管理</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">查看所有學生</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">GET /api/students</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">僅本區域</td>
-                      <td className="text-center py-2 px-4">僅被分配</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">新增學生</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">POST /api/students</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">僅本區域</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">編輯學生</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">PUT /api/students/[id]</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">僅本區域</td>
-                      <td className="text-center py-2 px-4">僅被分配</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 px-4">刪除學生</td>
-                      <td className="py-2 px-4 text-xs text-muted-foreground">DELETE /api/students/[id]</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">✅</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                      <td className="text-center py-2 px-4">❌</td>
-                    </tr>
+                    {permissionGroups.map((group) => (
+                      <React.Fragment key={group.name}>
+                        <tr className="bg-muted/20 font-medium">
+                          <td colSpan={8} className="py-2 px-4">{group.name}</td>
+                        </tr>
+                        {group.rows.map((row, index) => (
+                          <tr key={`${group.name}-${index}`}>
+                            <td className="py-2 px-4">{row.resource}</td>
+                            <td className="py-2 px-4 text-xs text-muted-foreground">{row.operation}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.root}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.admin}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.manager}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.subjectTeacher}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.teacher}</td>
+                            <td className="text-center py-2 px-2">{row.permissions.candidate}</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -327,7 +250,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
         <Card>
           <CardHeader>
             <CardTitle>教師操作指南</CardTitle>
-            <CardDescription>教師角色功能與操作流程</CardDescription>
+            <CardDescription>科任老師、大學伴和儲備大學伴角色功能與操作流程</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -354,6 +277,9 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                     <li>輸入關鍵字：例如 "男" 尋找男生、"1" 尋找一年級學生</li>
                     <li>使用篩選器：可同時設定多個條件，如 "年級=3 且 班級=2"</li>
                   </ul>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    <strong>權限說明：</strong>科任老師和大學伴可查看被分配的學生；儲備大學伴可能具有有限的查看權限。
+                  </p>
                 </div>
               </div>
               
@@ -377,7 +303,9 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <div className="ml-8">
                   <p className="mb-2">點擊「編輯」按鈕修改學生資訊。</p>
                   <p className="mb-2">填寫表單後點擊「更新學生」儲存變更。</p>
-                  <p className="text-sm text-muted-foreground">注意：教師無法刪除學生資料，僅能編輯。</p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>權限說明：</strong>科任老師和大學伴可編輯被分配的學生資料；儲備大學伴通常無編輯權限；所有教師角色均無法刪除學生資料。
+                  </p>
                 </div>
               </div>
             </div>
@@ -390,7 +318,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
         <Card>
           <CardHeader>
             <CardTitle>管理員操作指南</CardTitle>
-            <CardDescription>管理員角色功能與操作流程</CardDescription>
+            <CardDescription>計畫主持人和帶班老師角色功能與操作流程</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -403,7 +331,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <p className="mb-2">進入「用戶權限管理」頁面，查看系統中所有用戶。</p>
                   <p className="mb-2">點擊「新增用戶」按鈕將教師加入白名單並設定角色。</p>
                   <p className="mb-2">為已存在用戶修改權限，或從系統中移除用戶。</p>
-                  <p className="text-sm text-muted-foreground">注意：您只能管理比自己權限低的用戶。</p>
+                  <p className="text-sm text-muted-foreground">注意：您只能管理比自己權限低的用戶。計畫主持人可管理帶班老師、科任老師、大學伴和儲備大學伴。</p>
                 </div>
               </div>
               
@@ -416,6 +344,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <p className="mb-2">進入「小學伴分配」頁面，選擇要分配學生的教師。</p>
                   <p className="mb-2">勾選需要分配給該教師的學生。</p>
                   <p className="mb-2">點擊「保存分配」按鈕確認變更。</p>
+                  <p className="text-sm text-muted-foreground">帶班老師只能分配其負責區域內的學生。</p>
                 </div>
               </div>
               
@@ -427,7 +356,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <div className="ml-8">
                   <p className="mb-2">進入「匯入小學伴資料」頁面，上傳 Excel 或 CSV 檔案。</p>
                   <p className="mb-2">檢查預覽資料是否正確，確認無誤後點擊「確認匯入」。</p>
-                  <p className="text-sm text-muted-foreground">注意：請確保上傳檔案符合格式要求，包含所有必要欄位。</p>
+                  <p className="text-sm text-muted-foreground">注意：請確保上傳檔案符合格式要求，包含所有必要欄位。帶班老師只能匯入其負責區域的學生。</p>
                 </div>
               </div>
               
@@ -437,9 +366,10 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   學生資料管理
                 </h3>
                 <div className="ml-8">
-                  <p className="mb-2">管理員可進行所有學生資料操作，包括新增、編輯、刪除。</p>
+                  <p className="mb-2">計畫主持人可進行所有學生資料操作，包括新增、編輯、刪除。</p>
+                  <p className="mb-2">帶班老師可管理其負責區域內的學生資料，但無法刪除學生。</p>
                   <p className="mb-2">點擊「新增學生」按鈕手動添加單個學生。</p>
-                  <p className="mb-2">點擊「刪除」按鈕移除學生（不可恢復，請謹慎操作）。</p>
+                  <p className="mb-2">點擊「刪除」按鈕移除學生（不可恢復，請謹慎操作，僅計畫主持人可執行）。</p>
                 </div>
               </div>
             </div>
