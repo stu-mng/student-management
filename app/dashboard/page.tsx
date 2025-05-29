@@ -96,7 +96,7 @@ export default function DashboardPage() {
       description: "提供完整功能介紹與操作指南",
       icon: <BookOpen className="h-8 w-8 text-cyan-500" />,
       href: "/dashboard/manual",
-      allowedRoles: ["teacher", "admin", "root", "manager"]
+      allowedRoles: ["candidate", "teacher", "admin", "root", "manager"]
     }
   ]
 
@@ -162,15 +162,26 @@ export default function DashboardPage() {
                   <FeatureDescription description={feature.description} />
                 </CardHeader>
                 <CardContent className="pb-4 pt-0 px-4">
-                  <Link href={feature.href} passHref>
+                  {
+                    hasPermission(feature.allowedRoles) ? 
+                    (<Link href={feature.href} passHref>
+                      <Button 
+                        className="w-full" 
+                        variant="outline"
+                        disabled={!hasPermission(feature.allowedRoles)}
+                      >
+                        `前往 ${feature.title}`
+                      </Button>
+                  </Link>
+                  ) : (
                     <Button 
                       className="w-full" 
                       variant="outline"
                       disabled={!hasPermission(feature.allowedRoles)}
                     >
-                      {hasPermission(feature.allowedRoles) ? `前往 ${feature.title}` : `無權訪問`}
-                    </Button>
-                  </Link>
+                      '無權訪問'
+                    </Button>)
+                  }
                 </CardContent>
               </RestrictedCard>
             ))}
