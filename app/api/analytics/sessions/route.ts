@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest) {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
-        role:roles(name, order)
+        role:roles(id, name, order, display_name)
       `)
       .eq('id', user.id)
       .single();
@@ -29,9 +29,10 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: userError.message }, { status: 500 });
     }
 
-    // 檢查用戶是否有 admin 或 root 角色
-    const userRole = (userData.role as any)?.name;
-    if (userRole !== 'admin' && userRole !== 'root') {
+    // 檢查用戶是否有權限查看分析數據 (root, admin, manager 可以查看)
+    const userRole = (userData.role as any);
+    const allowedRoles = ['root', 'admin', 'manager'];
+    if (!userRole || !allowedRoles.includes(userRole.name)) {
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
     
@@ -44,7 +45,7 @@ export async function GET(_request: NextRequest) {
         email, 
         updated_at, 
         last_active,
-        role:roles(name, order)
+        role:roles(id, name, order, display_name)
       `)
       .order('last_active', { ascending: false });
     
@@ -71,11 +72,14 @@ export async function GET(_request: NextRequest) {
       return (currentTime - lastActiveTime) < ONLINE_THRESHOLD_MS;
     });
 
-    // 按角色分組
+    // 按角色分組 (根據新的角色結構)
     const usersByRole = {
-      teachers: onlineUsers.filter(u => (u.role as any)?.order === 3).length,
-      admins: onlineUsers.filter(u => (u.role as any)?.order === 1).length,
-      root: onlineUsers.filter(u => (u.role as any)?.order === 0).length,
+      root: onlineUsers.filter(u => (u.role as any)?.order === 0).length,           // 系統管理員
+      admin: onlineUsers.filter(u => (u.role as any)?.order === 1).length,          // 計畫主持人
+      manager: onlineUsers.filter(u => (u.role as any)?.order === 2).length,        // 帶班老師
+      subjectTeacher: onlineUsers.filter(u => (u.role as any)?.order === 3).length, // 科任老師
+      teacher: onlineUsers.filter(u => (u.role as any)?.order === 4).length,        // 大學伴
+      candidate: onlineUsers.filter(u => (u.role as any)?.order === 5).length,      // 儲備大學伴
       total: onlineUsers.length
     };
 
@@ -86,6 +90,8 @@ export async function GET(_request: NextRequest) {
           id: u.id,
           name: u.name || u.email?.split('@')[0] || 'Unknown',
           role: (u.role as any)?.name || 'unknown',
+          roleDisplayName: (u.role as any)?.display_name || 'Unknown',
+          roleOrder: (u.role as any)?.order ?? -1,
           last_active: u.last_active
         })),
         byRole: usersByRole

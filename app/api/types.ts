@@ -328,4 +328,56 @@ export interface SuccessResponse {
 // Regions Response
 export interface RegionsResponse extends SuccessResponse {
   data: string[];
+}
+
+// Analytics Types
+export interface OnlineUser {
+  id: string;
+  name: string;
+  role: string;
+  roleDisplayName: string;
+  roleOrder: number;
+  last_active: string | null;
+}
+
+export interface UsersByRole {
+  root: number;           // 系統管理員
+  admin: number;          // 計畫主持人
+  manager: number;        // 帶班老師
+  teacher: number;        // 大學伴
+  candidate: number;      // 儲備大學伴
+  total: number;
+}
+
+export interface SessionsAnalyticsResponse {
+  online: {
+    users: OnlineUser[];
+    byRole: UsersByRole;
+  };
+}
+
+// Main Analytics Types
+export interface AnalyticsResponse {
+  studentsByGrade: Record<string, number>;
+  studentsByType: Record<string, number>;
+  disadvantagedCount: number;
+  totalStudents: number;
+  totalRoot: number;           // 系統管理員
+  totalAdmins: number;         // 計畫主持人
+  totalManagers: number;       // 帶班老師
+  totalTeachers: number;       // 大學伴
+  totalCandidates: number;     // 儲備大學伴
+  teachersByActivity: Array<{
+    name: string;
+    studentsCount: number;
+    lastActive: string;
+  }>;
+  teachersStudentCounts: Array<{
+    name: string;
+    studentCount: number;
+  }>;
+  studentsOverTime: Array<{
+    month: string;
+    studentCount: number;
+  }>;
 } 

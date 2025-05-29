@@ -107,7 +107,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <AlertDescription className="flex gap-4 items-center">
                   <Info className="h-4 w-4" />
                   <p>
-                    系統採用六層級權限架構：系統管理員、計畫主持人、帶班老師、科任老師、大學伴、儲備大學伴。點擊
+                    系統採用六層級權限架構：系統管理員、計畫主持人、學校負責人、科任老師、大學伴、儲備大學伴。點擊
                     <Button 
                       variant="link" 
                       size="sm" 
@@ -231,7 +231,6 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                             <td className="text-center py-2 px-2">{row.permissions.root}</td>
                             <td className="text-center py-2 px-2">{row.permissions.admin}</td>
                             <td className="text-center py-2 px-2">{row.permissions.manager}</td>
-                            <td className="text-center py-2 px-2">{row.permissions.subjectTeacher}</td>
                             <td className="text-center py-2 px-2">{row.permissions.teacher}</td>
                             <td className="text-center py-2 px-2">{row.permissions.candidate}</td>
                           </tr>
@@ -251,7 +250,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
         <Card>
           <CardHeader>
             <CardTitle>教師操作指南</CardTitle>
-            <CardDescription>科任老師、大學伴和儲備大學伴角色功能與操作流程</CardDescription>
+            <CardDescription>大學伴和儲備大學伴角色功能與操作流程</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -279,7 +278,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                     <li>使用篩選器：可同時設定多個條件，如 "年級=3 且 班級=2"</li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-2">
-                    <strong>權限說明：</strong>科任老師和大學伴可查看被分配的學生；儲備大學伴可能具有有限的查看權限。
+                    <strong>權限說明：</strong>大學伴可查看被分配的學生；儲備大學伴可能具有有限的查看權限。
                   </p>
                 </div>
               </div>
@@ -305,7 +304,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <p className="mb-2">點擊「編輯」按鈕修改學生資訊。</p>
                   <p className="mb-2">填寫表單後點擊「更新學生」儲存變更。</p>
                   <p className="text-sm text-muted-foreground">
-                    <strong>權限說明：</strong>科任老師和大學伴可編輯被分配的學生資料；儲備大學伴通常無編輯權限；所有教師角色均無法刪除學生資料。
+                    <strong>權限說明：</strong>大學伴可編輯被分配的學生資料；儲備大學伴通常無編輯權限；所有教師角色均無法刪除學生資料。
                   </p>
                 </div>
               </div>
@@ -319,7 +318,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
         <Card>
           <CardHeader>
             <CardTitle>管理員操作指南</CardTitle>
-            <CardDescription>計畫主持人和帶班老師角色功能與操作流程</CardDescription>
+            <CardDescription>計畫主持人和學校負責人角色功能與操作流程</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -332,7 +331,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <p className="mb-2">進入「用戶權限管理」頁面，查看系統中所有用戶。</p>
                   <p className="mb-2">點擊「新增用戶」按鈕將教師加入白名單並設定角色。</p>
                   <p className="mb-2">為已存在用戶修改權限，或從系統中移除用戶。</p>
-                  <p className="text-sm text-muted-foreground">注意：您只能管理比自己權限低的用戶。計畫主持人可管理帶班老師、科任老師、大學伴和儲備大學伴。</p>
+                  <p className="text-sm text-muted-foreground">注意：您只能管理比自己權限低的用戶。計畫主持人可管理學校負責人、大學伴和儲備大學伴。</p>
                 </div>
               </div>
               
@@ -345,7 +344,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <p className="mb-2">進入「小學伴分配」頁面，選擇要分配學生的教師。</p>
                   <p className="mb-2">勾選需要分配給該教師的學生。</p>
                   <p className="mb-2">點擊「保存分配」按鈕確認變更。</p>
-                  <p className="text-sm text-muted-foreground">帶班老師只能分配其負責區域內的學生。</p>
+                  <p className="text-sm text-muted-foreground">學校負責人只能分配其負責區域內的學生。</p>
                 </div>
               </div>
               
@@ -357,7 +356,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <div className="ml-8">
                   <p className="mb-2">進入「匯入小學伴資料」頁面，上傳 Excel 或 CSV 檔案。</p>
                   <p className="mb-2">檢查預覽資料是否正確，確認無誤後點擊「確認匯入」。</p>
-                  <p className="text-sm text-muted-foreground">注意：請確保上傳檔案符合格式要求，包含所有必要欄位。帶班老師只能匯入其負責區域的學生。</p>
+                  <p className="text-sm text-muted-foreground">注意：請確保上傳檔案符合格式要求，包含所有必要欄位。學校負責人只能匯入其負責區域的學生。</p>
                 </div>
               </div>
               
@@ -368,7 +367,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 </h3>
                 <div className="ml-8">
                   <p className="mb-2">計畫主持人可進行所有學生資料操作，包括新增、編輯、刪除。</p>
-                  <p className="mb-2">帶班老師可管理其負責區域內的學生資料，但無法刪除學生。</p>
+                  <p className="mb-2">學校負責人可管理其負責區域內的學生資料，但無法刪除學生。</p>
                   <p className="mb-2">點擊「新增學生」按鈕手動添加單個學生。</p>
                   <p className="mb-2">點擊「刪除」按鈕移除學生（不可恢復，請謹慎操作，僅計畫主持人可執行）。</p>
                 </div>

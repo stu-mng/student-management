@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest) {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
-        role:roles(name)
+        role:roles(name, order)
       `)
       .eq('id', user.id)
       .single();
@@ -27,8 +27,9 @@ export async function GET(_request: NextRequest) {
     }
 
     // Check if user has admin or root role
-    const userRole = (userData.role as any)?.name;
-    if (userRole !== 'admin' && userRole !== 'root') {
+    const userRole = (userData.role as any);
+    const allowedRoles = ['root', 'admin', 'manager'];
+    if (!userRole || !allowedRoles.includes(userRole.name)) {
       return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
     
@@ -100,10 +101,9 @@ export async function GET(_request: NextRequest) {
         name, 
         email,
         last_active,
-        role:roles(name),
+        role:roles(name, order),
         teacher_student_access(count)
       `)
-      .eq('role.name', 'teacher')
       .not('last_active', 'is', null)
       .order('last_active', { ascending: false })
       .limit(5);
@@ -127,10 +127,9 @@ export async function GET(_request: NextRequest) {
         id,
         name,
         email,
-        role:roles(name),
+        role:roles(name, order),
         teacher_student_access(count)
       `)
-      .eq('role.name', 'teacher');
     
     if (allTeachersError) {
       console.log(allTeachersError);
@@ -191,7 +190,7 @@ export async function GET(_request: NextRequest) {
     const { data: userRoleCounts, error: roleCountError } = await supabase
       .from('users')
       .select(`
-        role:roles(name)
+        role:roles(name, order)
       `);
 
     if (roleCountError) {
@@ -199,21 +198,23 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: roleCountError.message }, { status: 500 });
     }
     
-    // Calculate counts for each role
-    const totalTeachers = userRoleCounts.filter(user => (user.role as any)?.order === 3).length;
-    const totalAdmins = userRoleCounts.filter(user => (user.role as any)?.order === 1).length;
-    const totalManagers = userRoleCounts.filter(user => (user.role as any)?.order === 2).length;
-    const totalRoot = userRoleCounts.filter(user => (user.role as any)?.order === 0).length;
+    // Calculate counts for each role based on the new RBAC system
+    const totalRoot = userRoleCounts.filter(user => (user.role as any)?.order === 0).length;           // 系統管理員
+    const totalAdmins = userRoleCounts.filter(user => (user.role as any)?.order === 1).length;         // 計畫主持人
+    const totalManagers = userRoleCounts.filter(user => (user.role as any)?.order === 2).length;       // 帶班老師
+    const totalTeachers = userRoleCounts.filter(user => (user.role as any)?.order === 4).length;       // 大學伴
+    const totalCandidates = userRoleCounts.filter(user => (user.role as any)?.order === 5).length;     // 儲備大學伴
     
     return NextResponse.json({
       studentsByGrade,
       studentsByType,
       disadvantagedCount: disadvantagedCount || 0,
       totalStudents: totalStudents || 0,
-      totalTeachers,
+      totalRoot,
       totalAdmins,
       totalManagers,
-      totalRoot,
+      totalTeachers,
+      totalCandidates,
       teachersByActivity,
       teachersStudentCounts,
       studentsOverTime

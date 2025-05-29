@@ -16,7 +16,6 @@ export interface PermissionMatrixRow {
     root: string;
     admin: string;
     manager: string;
-    subjectTeacher: string;
     teacher: string;
     candidate: string;
   };
@@ -28,25 +27,19 @@ export const roleDescriptions: RoleDescription[] = [
     name: 'root',
     displayName: '系統管理員',
     description: '最高權限管理者，能夠管理所有使用者、學生資料及所有系統功能。',
-    details: '可以創建其他系統管理員、計畫主持人、帶班老師、科任老師、大學伴和儲備大學伴。'
+    details: '可以創建其他系統管理員、計畫主持人、學校負責人、大學伴和儲備大學伴。'
   },
   {
     name: 'admin',
     displayName: '計畫主持人',
     description: '全系統管理者，能夠管理除系統管理員外的所有使用者，以及所有學生資料。',
-    details: '可以創建帶班老師、科任老師、大學伴和儲備大學伴，管理所有區域的資料。'
+    details: '可以創建學校負責人、大學伴和儲備大學伴，管理所有區域的資料。'
   },
   {
     name: 'manager',
-    displayName: '帶班老師',
+    displayName: '學校負責人',
     description: '特定區域的管理者，只能管理其負責區域的學生資料，以及查看所在區域的資訊。',
-    details: '可以創建科任老師、大學伴和儲備大學伴，並將區域內的學生分配給教師。'
-  },
-  {
-    name: 'subject-teacher',
-    displayName: '科任老師',
-    description: '特定科目的教師，可以查看和編輯被分配的學生資料。',
-    details: '可以管理被分配的學生，但無法創建其他用戶或進行系統管理。'
+    details: '可以創建大學伴和儲備大學伴，並將區域內的學生分配給教師。'
   },
   {
     name: 'teacher',
@@ -73,7 +66,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -86,7 +78,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '僅自己',
       teacher: '僅自己',
       candidate: '僅自己'
     }
@@ -99,7 +90,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -112,7 +102,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '除 root 外',
       manager: '除 root／admin 外',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -126,7 +115,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '僅本區域',
-      subjectTeacher: '僅被分配',
       teacher: '僅被分配',
       candidate: '僅被分配'
     }
@@ -139,7 +127,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '僅本區域',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -152,7 +139,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '僅本區域',
-      subjectTeacher: '僅被分配',
       teacher: '僅被分配',
       candidate: '❌'
     }
@@ -165,7 +151,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '❌',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -179,7 +164,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '創建者自訂',
       teacher: '創建者自訂',
       candidate: '創建者自訂'
     }
@@ -192,7 +176,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -205,7 +188,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '✅',
-      subjectTeacher: '創建者自訂',
       teacher: '創建者自訂',
       candidate: '創建者自訂'
     }
@@ -218,7 +200,6 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       root: '✅',
       admin: '✅',
       manager: '僅自己創建',
-      subjectTeacher: '❌',
       teacher: '❌',
       candidate: '❌'
     }
@@ -245,8 +226,7 @@ export const permissionGroups = [
 export const roleHeaders = [
   { key: 'root', name: '系統管理員', subName: '(root)' },
   { key: 'admin', name: '計畫主持人', subName: '(admin)' },
-  { key: 'manager', name: '帶班老師', subName: '(manager)' },
-  { key: 'subjectTeacher', name: '科任老師', subName: '(subject-teacher)' },
+  { key: 'manager', name: '學校負責人', subName: '(manager)' },
   { key: 'teacher', name: '大學伴', subName: '(teacher)' },
   { key: 'candidate', name: '儲備大學伴', subName: '(candidate)' }
 ]; 

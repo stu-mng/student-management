@@ -14,8 +14,6 @@ export const getRoleBgColor = (role: string) => {
         return 'bg-green-100';
       case 'manager':
         return 'bg-yellow-100';
-      case 'subject-teacher':
-        return 'bg-purple-100';
       case 'candidate':
         return 'bg-gray-100';
       case 'root':
@@ -34,8 +32,6 @@ export const getRoleTextColor = (role: string) => {
             return 'text-green-800';
         case 'manager':
             return 'text-yellow-800';
-        case 'subject-teacher':
-            return 'text-purple-800';
         case 'candidate':
             return 'text-gray-800';
         case 'root':
@@ -53,8 +49,6 @@ export const getRoleHoverTextColor = (role: string) => {
             return 'hover:text-green-900';
         case 'manager':
             return 'hover:text-yellow-900';
-        case 'subject-teacher':
-            return 'hover:text-purple-900';
         case 'candidate':
             return 'hover:text-gray-900';
         case 'root':
@@ -73,8 +67,6 @@ export const getRoleDisplay = (role: string) => {
             return '大學伴';
         case 'manager':
             return '帶班老師';
-        case 'subject-teacher':
-            return '科任老師';
         case 'candidate':
             return '儲備大學伴';
         case 'root':
@@ -92,8 +84,6 @@ switch (role) {
         return 'bg-green-500';
     case 'manager':
         return 'bg-yellow-500';
-    case 'subject-teacher':
-        return 'bg-purple-500';
     case 'candidate':
         return 'bg-gray-500';
     case 'root':
@@ -111,8 +101,6 @@ export const getRoleSortKey = (role: string) => {
             return 1;
         case 'manager':
             return 2;
-        case 'subject-teacher':
-            return 3;
         case 'teacher':
             return 4;
         case 'candidate':
@@ -268,16 +256,9 @@ export function isSubjectTeacher(role?: { name: string; order?: number } | null)
 
 export function isCandidate(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order === 5; // candidate 通常是 order = 5
+    return role.order === 5; // candidate 通常是 order = 4
   }
   return role?.name === 'candidate';
-}
-
-export function isStudent(role?: { name: string; order?: number } | null): boolean {
-  if (role?.order !== undefined) {
-    return role.order === 6; // student 通常是 order = 6 (如果有的話)
-  }
-  return role?.name === 'student';
 }
 
 // 檢查是否有管理權限（admin 或 root）
@@ -314,7 +295,7 @@ export function hasStudentManagePermission(role?: { name: string; order?: number
   if (role?.order !== undefined) {
     return role.order <= 4; // admin(1), root(0), manager(2), subject-teacher(3), teacher(4)
   }
-  return role?.name ? ['admin', 'root', 'manager', 'subject-teacher', 'teacher'].includes(role.name) : false;
+  return role?.name ? ['admin', 'root', 'manager', 'teacher'].includes(role.name) : false;
 }
 
 // 檢查是否有學生查看權限
@@ -322,7 +303,7 @@ export function hasStudentViewPermission(role?: { name: string; order?: number }
   if (role?.order !== undefined) {
     return role.order <= 5; // 包含所有角色，除了未定義的角色
   }
-  return role?.name ? ['admin', 'root', 'manager', 'subject-teacher', 'teacher', 'candidate'].includes(role.name) : false;
+  return role?.name ? ['admin', 'root', 'manager', 'teacher', 'candidate'].includes(role.name) : false;
 }
 
 // 檢查角色權限等級比較 - 使用 order 比較
