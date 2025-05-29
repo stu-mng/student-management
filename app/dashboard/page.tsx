@@ -65,7 +65,7 @@ export default function DashboardPage() {
       description: "創建、編輯和管理系統表單",
       icon: <Settings className="h-8 w-8 text-indigo-500" />,
       href: "/dashboard/forms/manage",
-      allowedRoles: ["admin", "root", "project_manager"]
+      allowedRoles: ["admin", "root", "manager"]
     },
     {
       title: "系統分析",
@@ -89,7 +89,7 @@ export default function DashboardPage() {
       description: "查看並填寫可用的表單",
       icon: <FileText className="h-8 w-8 text-orange-500" />,
       href: "/dashboard/forms",
-      allowedRoles: ["student", "teacher", "admin", "root", "manager", "candidate"]
+      allowedRoles: ["candidate", "teacher", "admin", "root", "manager"]
     },
     {
       title: "系統使用手冊",
@@ -103,13 +103,6 @@ export default function DashboardPage() {
   // Check if user has permission for a specific feature using utility functions
   const hasPermission = (allowedRoles: string[]) => {
     if (!user?.role?.name) return false;
-    
-    // Use utility functions for common permission checks
-    if (allowedRoles.includes('admin') && hasAdminPermission(user.role)) return true;
-    if (allowedRoles.includes('manager') && hasManagerPermission(user.role)) return true;
-    if (allowedRoles.includes('root') && isRoot(user.role)) return true;
-    
-    // Fallback to direct role name check for other roles
     return allowedRoles.includes(user.role.name);
   }
 

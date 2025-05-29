@@ -66,7 +66,7 @@ export const getRoleDisplay = (role: string) => {
         case 'teacher':
             return '大學伴';
         case 'manager':
-            return '帶班老師';
+            return '學校負責人';
         case 'candidate':
             return '儲備大學伴';
         case 'root':

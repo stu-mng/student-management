@@ -41,7 +41,7 @@ export function RestrictedCard({
     }
     
     let content: string = '';
-    (['root', 'admin', 'manager', 'teacher'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         content = getRoleDisplay(role);
       }
@@ -53,7 +53,7 @@ export function RestrictedCard({
   const getCardRoleBgColor = () => {
     let bgColor: string = '';
 
-    (['root', 'admin', 'manager', 'teacher'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         bgColor = getRoleBgColor(role);
       }
@@ -66,7 +66,7 @@ export function RestrictedCard({
   const getCardRoleTextColor = () => {
     let textColor: string = '';
 
-    (['root', 'admin', 'manager', 'teacher'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         textColor = getRoleTextColor(role);
       }
