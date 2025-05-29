@@ -170,7 +170,7 @@ export default function DashboardPage() {
                         variant="outline"
                         disabled={!hasPermission(feature.allowedRoles)}
                       >
-                        `前往 ${feature.title}`
+                        前往 {feature.title}
                       </Button>
                   </Link>
                   ) : (
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                       variant="outline"
                       disabled={!hasPermission(feature.allowedRoles)}
                     >
-                      '無權訪問'
+                      無權訪問
                     </Button>)
                   }
                 </CardContent>
