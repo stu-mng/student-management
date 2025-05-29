@@ -209,6 +209,19 @@ export const permissionMatrix: PermissionMatrixRow[] = [
       teacher: '創建者自訂',
       candidate: '創建者自訂'
     }
+  },
+  {
+    resource: '刪除表單',
+    operation: 'DELETE /api/forms/[id]',
+    endpoint: 'DELETE /api/forms/[id]',
+    permissions: {
+      root: '✅',
+      admin: '✅',
+      manager: '僅自己創建',
+      subjectTeacher: '❌',
+      teacher: '❌',
+      candidate: '❌'
+    }
   }
 ];
 
@@ -224,7 +237,7 @@ export const permissionGroups = [
   },
   {
     name: '表單管理',
-    rows: permissionMatrix.slice(8, 11)
+    rows: permissionMatrix.slice(8, 12)
   }
 ];
 

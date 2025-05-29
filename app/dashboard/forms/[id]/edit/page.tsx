@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Plus, Trash2, GripVertical, Save, Send, Eye, CalendarIcon, Copy, ArrowUp, ArrowDown, Pen, X } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -22,7 +23,8 @@ import { cn } from "@/lib/utils"
 import { useFormEditor, FormFieldWithId, FIELD_TYPES, FORM_TYPES } from "@/components/forms"
 import { PermissionsModal } from "@/components/forms"
 import { useFormContext } from "@/components/forms"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 // 權限顯示組件
 function PermissionsBadges({ permissions }: { permissions?: any[] }) {
@@ -94,11 +96,11 @@ function PermissionsBadges({ permissions }: { permissions?: any[] }) {
 function FormEditContent() {
   const { user } = useAuth()
   const { form, loading, error, refetchForm, previewMode, setPreviewMode, updateEditorActions, hasEditPermission } = useFormContext()
+  const router = useRouter()
+  const params = useParams()
 
   // 檢查用戶權限
   const hasEditPerm = hasEditPermission()
-
-  const router = useRouter();
 
   const {
     // 狀態
@@ -135,28 +137,6 @@ function FormEditContent() {
     saveDraft,
     publishForm,
   } = useFormEditor(form, hasEditPerm, refetchForm)
-
-  // 使用 useRef 存儲最新的函數，避免無限循環
-  const saveDraftRef = useRef(saveDraft)
-  const publishFormRef = useRef(publishForm)
-  
-  // 更新 ref 中的函數
-  useEffect(() => {
-    saveDraftRef.current = saveDraft
-    publishFormRef.current = publishForm
-  }, [saveDraft, publishForm])
-
-  // 將 useFormEditor 的函數提供給 layout
-  useEffect(() => {
-    if (updateEditorActions) {
-      updateEditorActions({
-        saveDraft: () => saveDraftRef.current(),
-        publishForm: () => publishFormRef.current(),
-        saving,
-        publishing,
-      })
-    }
-  }, [updateEditorActions, saving, publishing]) // 不包含函數依賴項
 
   // 處理權限更新
   const handlePermissionsUpdate = async (formId: string, permissions: any[]) => {

@@ -15,6 +15,7 @@ interface FormContextType {
   
   // 權限檢查
   hasEditPermission: () => boolean
+  hasDeletePermission: () => boolean
   
   // 頁面狀態
   pageType: 'view' | 'edit' | 'responses'
@@ -142,6 +143,22 @@ export function FormProvider({ children }: FormProviderProps) {
     return false
   }, [user, form])
 
+  const hasDeletePermission = useCallback(() => {
+    if (!user || !form) return false
+    
+    // 檢查是否為表單創建者
+    if (form.created_by === user.id) return true
+    
+    // 檢查角色權限
+    const userRole = user.role?.name
+    if (!userRole) return false
+    
+    // 只有管理員和 root 用戶可以刪除所有表單
+    if (['admin', 'root'].includes(userRole)) return true
+    
+    return false
+  }, [user, form])
+
   // 根據路由決定頁面類型
   const getPageType = (): 'view' | 'edit' | 'responses' => {
     if (pathname.includes('/edit')) return 'edit'
@@ -242,6 +259,7 @@ export function FormProvider({ children }: FormProviderProps) {
     
     // 權限檢查
     hasEditPermission: () => !!hasEditPermission(),
+    hasDeletePermission: () => !!hasDeletePermission(),
     
     // 頁面狀態
     pageType: getPageType(),
