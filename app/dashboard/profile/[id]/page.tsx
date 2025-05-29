@@ -212,28 +212,28 @@ export default function ProfilePage() {
     switch (status) {
       case 'submitted':
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+          <Badge variant="outline" className="text-wrap bg-green-50 text-green-600 border-green-200">
             <CheckCircle className="w-3 h-3 mr-1" />
             已提交
           </Badge>
         )
       case 'draft':
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
+          <Badge variant="outline" className="text-wrap bg-yellow-50 text-yellow-600 border-yellow-200">
             <AlertCircle className="w-3 h-3 mr-1" />
             草稿
           </Badge>
         )
       case 'reviewed':
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+          <Badge variant="outline" className="text-wrap bg-blue-50 text-blue-600 border-blue-200">
             <CheckCircle className="w-3 h-3 mr-1" />
             已審核
           </Badge>
         )
       default:
         return (
-          <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+          <Badge variant="outline" className="text-wrap bg-gray-50 text-gray-600 border-gray-200">
             <XCircle className="w-3 h-3 mr-1" />
             未知狀態
           </Badge>
@@ -243,10 +243,11 @@ export default function ProfilePage() {
 
   const getFormTypeBadge = (formType: string) => {
     const typeMap: Record<string, { label: string; color: string }> = {
-      'survey': { label: '問卷調查', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+      'survey': { label: '問卷調查', color: 'text-wrap bg-blue-50 text-blue-600 border-blue-200' },
       'application': { label: '申請表', color: 'bg-green-50 text-green-600 border-green-200' },
       'feedback': { label: '意見回饋', color: 'bg-purple-50 text-purple-600 border-purple-200' },
       'evaluation': { label: '評估表', color: 'bg-orange-50 text-orange-600 border-orange-200' },
+      'registration': { label: '報名表', color: 'bg-pink-50 text-pink-600 border-pink-200' },
     }
 
     const type = typeMap[formType] || { label: formType, color: 'bg-gray-50 text-gray-600 border-gray-200' }
@@ -403,7 +404,7 @@ export default function ProfilePage() {
                   <span>加入於 {formatRelativeTime(user.created_at)}</span>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 truncate text-wrap">
                     <Clock className="h-4 w-4" />
                     <span>{user.last_active ? `最後活動 ${formatRelativeTime(user.last_active)}` : '從未登入'}</span>
                 </div>
@@ -442,7 +443,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">
+                          <h3 className="font-medium truncate ...">
                             {response.forms?.title || '未知表單'}
                           </h3>
                           {response.forms?.form_type && getFormTypeBadge(response.forms.form_type)}

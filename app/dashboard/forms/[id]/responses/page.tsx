@@ -184,11 +184,8 @@ export default function FormResponsesPage() {
 
   useEffect(() => {
     if (accessData?.accessType === 'edit') {
-      if (currentTab === 'overview') {
-        fetchOverview()
-      } else {
-        fetchResponses(currentPage)
-      }
+      fetchOverview()
+      fetchResponses(currentPage)
     }
   }, [accessData, currentTab, currentPage])
 
@@ -351,16 +348,13 @@ export default function FormResponsesPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">已提交</CardTitle>
+            <CardTitle className="text-sm font-medium">總欄位回應</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {currentTab === 'individual' 
-                ? responses.filter(r => r.submission_status === 'submitted').length
-                : overview.reduce((acc, field) => 
-                    acc + field.responses.filter(r => r.submission_status === 'submitted').length, 0
-                  )
-              }
+              {overview.reduce((acc, field) => 
+                  acc + field.responses.length, 0
+              )}
             </div>
           </CardContent>
         </Card>

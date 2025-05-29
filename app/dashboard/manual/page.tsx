@@ -9,10 +9,27 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, BookOpen, Bookmark, Info, Link as LinkIcon, Shield, User, UserCog, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Suspense, useState } from "react"
+import { Suspense } from "react"
 import { getRoleTextColor, getRoleBgColor } from "@/lib/utils"
 
 import { ManualTabs } from "./manual-tabs"
+
+// Loading fallback for ManualTabs
+function ManualTabsLoading() {
+  return (
+    <div className="space-y-6">
+      <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
+        <div className="h-8 w-24 bg-muted-foreground/20 animate-pulse rounded mx-1" />
+        <div className="h-8 w-24 bg-muted-foreground/20 animate-pulse rounded mx-1" />
+        <div className="h-8 w-24 bg-muted-foreground/20 animate-pulse rounded mx-1" />
+      </div>
+      <div className="space-y-4">
+        <div className="h-32 bg-muted-foreground/10 animate-pulse rounded" />
+        <div className="h-48 bg-muted-foreground/10 animate-pulse rounded" />
+      </div>
+    </div>
+  )
+}
 
 export default function UserManualPage() {
   const { user } = useAuth()
@@ -38,7 +55,7 @@ export default function UserManualPage() {
       <p className="text-muted-foreground">系統功能指南與操作說明</p>
       
       <div className="w-full">
-        <Suspense fallback={<div className="h-10 bg-muted rounded-md animate-pulse mb-4"></div>}>
+        <Suspense fallback={<ManualTabsLoading />}>
           <ManualTabs user={user} isAdmin={isAdmin} />
         </Suspense>
       </div>

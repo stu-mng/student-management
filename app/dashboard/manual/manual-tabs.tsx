@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Bookmark, Info, Shield, User, UserCog, Users, History } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getRoleTextColor, getRoleBgColor } from "@/lib/utils"
 import { roleDescriptions, permissionGroups, roleHeaders } from "@/lib/permissions-content"
@@ -18,6 +18,7 @@ interface ManualTabsProps {
 
 export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
   
   // Get tab from URL when component mounts
@@ -31,9 +32,9 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
   // Update URL when tab changes
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    const url = new URL(window.location.href)
-    url.searchParams.set("tab", tab)
-    window.history.pushState({}, "", url)
+    const params = new URLSearchParams(searchParams)
+    params.set("tab", tab)
+    router.push(`/dashboard/manual?${params.toString()}`)
   }
 
   return (
