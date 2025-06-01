@@ -113,8 +113,8 @@ export async function GET(
 
         const respondentRoleOrder = (respondentData?.role as any)?.order || 0;
         
-        // 只有当前用户的权限等级更高（order更小）时才能查看
-        if (userRoleOrder >= respondentRoleOrder) {
+        // 当前用户的权限等级需要更高或相等（order更小或相等）才能查看
+        if (userRoleOrder > respondentRoleOrder) {
           return NextResponse.json<ErrorResponse>(
             { error: 'Permission denied' },
             { status: 403 }

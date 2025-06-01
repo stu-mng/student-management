@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
-import { formatRelativeTime, getRoleBgColor, getRoleDisplay, getRoleTextColor, hasHigherPermission } from "@/lib/utils"
+import { formatRelativeTime, getRoleBgColor, getRoleDisplay, getRoleTextColor, hasEqualOrHigherPermission } from "@/lib/utils"
 import { ArrowLeft, Calendar, Mail, MapPin, Clock, FileText, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -486,7 +486,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* Form Responses */}
-      {formResponses && (isCurrentUser || hasHigherPermission(currentUser?.role, user.role)) && (
+      {formResponses && (isCurrentUser || hasEqualOrHigherPermission(currentUser?.role, user.role)) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -598,7 +598,7 @@ export default function ProfilePage() {
         </Card>
       )}
       
-      {!isCurrentUser && !hasHigherPermission(currentUser?.role, user.role) && (
+      {!isCurrentUser && !hasEqualOrHigherPermission(currentUser?.role, user.role) && (
         <Card>
           <CardContent className="py-8">
             <div className="text-center text-muted-foreground">

@@ -1,6 +1,6 @@
 import { ErrorResponse, User, FormResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { hasHigherPermission } from '@/lib/utils';
+import { hasEqualOrHigherPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface UserProfileResponse {
@@ -12,7 +12,7 @@ interface UserProfileResponse {
  * GET /api/users/[id]/profile
  * 
  * 獲取用戶的個人資料頁面資訊
- * 如果當前用戶是本人或權限比查看用戶更高，則顯示表單作答記錄
+ * 如果當前用戶是本人或權限比查看用戶更高或相等，則顯示表單作答記錄
  */
 export async function GET(
   request: NextRequest,
@@ -88,9 +88,9 @@ export async function GET(
     const targetUserRole = Array.isArray(targetUserData.role) ? targetUserData.role[0] : targetUserData.role;
 
     // 檢查是否有權限查看表單作答記錄
-    // 如果是查看自己或當前用戶權限比目標用戶更高，則可以查看表單作答記錄
+    // 如果是查看自己或當前用戶權限比目標用戶更高或相等，則可以查看表單作答記錄
     const isCurrentUser = user.id === id;
-    const canViewFormResponses = isCurrentUser || hasHigherPermission(currentUserRole, targetUserRole);
+    const canViewFormResponses = isCurrentUser || hasEqualOrHigherPermission(currentUserRole, targetUserRole);
 
     let formResponses: FormResponse[] = [];
 
