@@ -155,7 +155,6 @@ export async function GET(
       if (permissionsError) {
         console.error('Error fetching form permissions:', permissionsError);
       } else if (permissionsData) {
-        console.log('Permissions data structure:', JSON.stringify(permissionsData, null, 2));
         permissions = permissionsData
           .filter(p => p.role) // 確保有角色資料
           .map(p => {

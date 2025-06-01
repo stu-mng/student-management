@@ -109,7 +109,6 @@ export async function GET(_request: NextRequest) {
       .limit(5);
     
     if (teachersError) {
-      console.log(teachersError)
       return NextResponse.json({ error: teachersError.message }, { status: 500 });
     }
     
@@ -132,7 +131,6 @@ export async function GET(_request: NextRequest) {
       `)
     
     if (allTeachersError) {
-      console.log(allTeachersError);
       return NextResponse.json({ error: allTeachersError.message }, { status: 500 });
     }
     
@@ -154,7 +152,6 @@ export async function GET(_request: NextRequest) {
       .gte('created_at', sixMonthsAgo.toISOString());
     
     if (studentsTimeError) {
-      console.log(studentsTimeError);
       return NextResponse.json({ error: studentsTimeError.message }, { status: 500 });
     }
     
@@ -194,7 +191,6 @@ export async function GET(_request: NextRequest) {
       `);
 
     if (roleCountError) {
-      console.log(roleCountError);
       return NextResponse.json({ error: roleCountError.message }, { status: 500 });
     }
     
@@ -221,7 +217,7 @@ export async function GET(_request: NextRequest) {
     });
     
   } catch (error) {
-    console.log('Analytics API error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Analytics API error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
       { error: '取得分析資料失敗' },
       { status: 500 }

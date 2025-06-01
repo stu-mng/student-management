@@ -32,20 +32,37 @@ interface User {
   last_active?: string | null
 }
 
+interface FormFieldOption {
+  id: string
+  option_value: string
+  option_label: string
+  option_type?: string
+  row_label?: string
+  column_label?: string
+  display_order?: number
+}
+
+interface GridOption {
+  value: string
+  label: string
+}
+
+interface FormField {
+  id: string
+  field_label: string
+  field_type: string
+  form_field_options?: FormFieldOption[]
+  grid_options?: {
+    rows: GridOption[]
+    columns: GridOption[]
+  }
+}
+
 interface FormFieldResponse {
   id: string
-  field_value: string | null
-  field_values: string[] | null
-  field: {
-    id: string
-    field_label: string
-    field_type: string
-    form_field_options?: {
-      id: string
-      option_value: string
-      option_label: string
-    }[]
-  }
+  field_value: string
+  field_values?: string[]
+  field: FormField
 }
 
 interface FormResponse {
@@ -307,7 +324,60 @@ export default function ProfilePage() {
   const renderResponseValue = (fieldResponse: FormFieldResponse) => {
     const { field_value, field_values, field } = fieldResponse
 
-    // 處理多選題（checkbox）
+    // 处理 grid 类型字段
+    if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+      try {
+        let gridData
+        if (typeof field_value === 'string') {
+          gridData = JSON.parse(field_value)
+        } else {
+          gridData = field_value
+        }
+        
+        if (!gridData || typeof gridData !== 'object') {
+          return '-'
+        }
+        
+        // 从 form_field_options 中构建行和列映射
+        const rows = field.form_field_options?.filter(opt => opt.option_type === 'grid_row') || [];
+        const columns = field.form_field_options?.filter(opt => opt.option_type === 'grid_column') || [];
+        
+        if (rows.length === 0 || columns.length === 0) {
+          return '-'
+        }
+        
+        const result = []
+        
+        for (const [rowValue, columnValue] of Object.entries(gridData)) {
+          const row = rows.find(r => r.option_value === rowValue)
+          
+          if (field.field_type === 'checkbox_grid' && Array.isArray(columnValue)) {
+            // 多选方格
+            const selectedColumns = columnValue
+              .map(val => columns.find(c => c.option_value === val)?.option_label)
+              .filter(Boolean)
+              .join(', ')
+            
+            if (selectedColumns && row?.option_label) {
+              result.push(`${row.option_label}: ${selectedColumns}`)
+            }
+          } else {
+            // 单选方格
+            const column = columns.find(c => c.option_value === columnValue)
+            if (row?.option_label && column?.option_label) {
+              result.push(`${row.option_label}: ${column.option_label}`)
+            }
+          }
+        }
+        
+        return result.length > 0 ? result.join('\n') : '-'
+      } catch (error) {
+        console.error('Error parsing grid response:', error)
+        return field_value || '-'
+      }
+    }
+
+    // 处理多选题（checkbox）
     if (field.field_type === 'checkbox' && field_values && Array.isArray(field_values)) {
       return field_values
         .map(value => {
@@ -318,13 +388,13 @@ export default function ProfilePage() {
         .join(', ')
     }
 
-    // 處理單選題（radio）和下拉選單（select）
+    // 处理单选题（radio）和下拉选单（select）
     if (['radio', 'select'].includes(field.field_type) && field_value) {
       const option = field.form_field_options?.find(opt => opt.option_value === field_value)
       return option?.option_label || field_value
     }
 
-    // 處理其他類型的欄位
+    // 处理其他类型的字段
     return field_value || '-'
   }
 
@@ -416,7 +486,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* Form Responses */}
-      {formResponses && !hasHigherPermission(user.role, currentUser?.role) && (
+      {formResponses && (isCurrentUser || hasHigherPermission(currentUser?.role, user.role)) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -483,7 +553,7 @@ export default function ProfilePage() {
                                 <div className="font-medium text-sm">
                                   {fieldResponse.field.field_label}
                                 </div>
-                                <div className="md:col-span-2 text-sm">
+                                <div className="md:col-span-2 text-sm whitespace-pre-line">
                                   {renderResponseValue(fieldResponse)}
                                 </div>
                               </div>
@@ -528,7 +598,7 @@ export default function ProfilePage() {
         </Card>
       )}
       
-      {hasHigherPermission(user.role, currentUser?.role) && (
+      {!isCurrentUser && !hasHigherPermission(currentUser?.role, user.role) && (
         <Card>
           <CardContent className="py-8">
             <div className="text-center text-muted-foreground">

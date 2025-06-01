@@ -93,6 +93,7 @@ export async function GET(
             id, 
             field_label, 
             field_type,
+            grid_options,
             form_field_options(
               option_value,
               option_label

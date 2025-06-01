@@ -23,7 +23,7 @@ export async function GET(
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
+    // 获取当前用户
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -32,7 +32,7 @@ export async function GET(
 
     const { id: responseId } = await params;
 
-    // 獲取回應數據
+    // 获取回应数据
     const { data: response, error: responseError } = await supabase
       .from('form_responses')
       .select(`
@@ -46,7 +46,11 @@ export async function GET(
             field_type,
             form_field_options(
               option_value,
-              option_label
+              option_label,
+              option_type,
+              row_label,
+              column_label,
+              display_order
             )
           )
         )
@@ -55,6 +59,7 @@ export async function GET(
       .single();
 
     if (responseError) {
+      console.error('Error fetching response:', responseError);
       if (responseError.code === 'PGRST116') {
         return NextResponse.json<ErrorResponse>(
           { error: 'Response not found' },
@@ -67,39 +72,60 @@ export async function GET(
       );
     }
 
-    // 檢查權限：只有回應者本人或有編輯權限的用戶可以查看
+    // 检查权限：只有回应者本人或有编辑权限的用户可以查看
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
-        role:roles(name)
+        role:roles(name, order)
       `)
       .eq('id', user.id)
       .single();
 
     if (userError) {
+      console.error('Error fetching user role:', userError);
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    // 獲取表單信息以檢查創建者權限
-    const { data: form, error: formError } = await supabase
-      .from('forms')
-      .select('created_by')
-      .eq('id', response.form_id)
-      .single();
-
-    if (formError) {
-      return NextResponse.json<ErrorResponse>({ error: 'Failed to fetch form' }, { status: 500 });
-    }
-
+    // 检查是否是回应者本人
     const isOwner = user.id === response.respondent_id;
     const userRole = (userData.role as any)?.name;
-    const hasEditPermission = form.created_by === user.id || ['admin', 'root', 'manager'].includes(userRole);
+    const userRoleOrder = (userData.role as any)?.order || 999;
+    const isAdmin = ['admin', 'root', 'manager'].includes(userRole);
+    
+    // 如果不是本人且不是管理员，则需要检查权限等级
+    if (!isOwner && !isAdmin) {
+      // 获取回应者的角色信息来进行权限比较
+      if (response.respondent_id) {
+        const { data: respondentData, error: respondentError } = await supabase
+          .from('users')
+          .select(`
+            role:roles(name, order)
+          `)
+          .eq('id', response.respondent_id)
+          .single();
 
-    if (!isOwner && !hasEditPermission) {
-      return NextResponse.json<ErrorResponse>(
-        { error: 'Permission denied' },
-        { status: 403 }
-      );
+        if (respondentError) {
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Permission denied' },
+            { status: 403 }
+          );
+        }
+
+        const respondentRoleOrder = (respondentData?.role as any)?.order || 0;
+        
+        // 只有当前用户的权限等级更高（order更小）时才能查看
+        if (userRoleOrder >= respondentRoleOrder) {
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Permission denied' },
+            { status: 403 }
+          );
+        }
+      } else {
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Permission denied' },
+          { status: 403 }
+        );
+      }
     }
 
     return NextResponse.json<FormResponseUpdateResponse>({
@@ -248,7 +274,11 @@ export async function PUT(
             field_type,
             form_field_options(
               option_value,
-              option_label
+              option_label,
+              option_type,
+              row_label,
+              column_label,
+              display_order
             )
           )
         )

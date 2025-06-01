@@ -175,7 +175,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.log(error.message)
       return NextResponse.json<ErrorResponse>({ error: error.message }, { status: 400 });
     }
 
