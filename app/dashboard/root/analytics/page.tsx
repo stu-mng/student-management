@@ -32,8 +32,7 @@ interface AnalyticsData {
   totalStudents: number
   totalRoot: number           // 系統管理員
   totalAdmins: number         // 計畫主持人
-  totalManagers: number       // 帶班老師
-  totalSubjectTeachers: number // 科任老師
+  totalManagers: number       // 學校負責人
   totalTeachers: number       // 大學伴
   totalCandidates: number     // 儲備大學伴
   teachersByActivity: Array<{
@@ -64,8 +63,7 @@ interface OnlineUsersData {
     byRole: {
       root: number           // 系統管理員
       admin: number          // 計畫主持人
-      manager: number        // 帶班老師
-      subjectTeacher: number // 科任老師
+      manager: number        // 學校負責人
       teacher: number        // 大學伴
       candidate: number      // 儲備大學伴
       total: number
@@ -198,7 +196,7 @@ export default function AnalyticsPage() {
             ) : (
               <div className="text-3xl font-bold">
                 {onlineData?.online.byRole.total || 0} 
-                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalRoot + data.totalAdmins + data.totalManagers + data.totalSubjectTeachers + data.totalTeachers + data.totalCandidates}</span>}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalRoot + data.totalAdmins + data.totalManagers + data.totalTeachers + data.totalCandidates}</span>}
               </div>
             )}
           </CardContent>
@@ -227,27 +225,6 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              在線科任老師
-              <div className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {onlineLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-3xl font-bold">
-                {onlineData?.online.byRole.subjectTeacher || 0}
-                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalSubjectTeachers}</span>}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
               在線儲備大學伴
               <div className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
@@ -269,6 +246,27 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              在線學校負責人
+              <div className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500"></span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {onlineLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">
+                {onlineData?.online.byRole.manager || 0}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalManagers}</span>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
               在線管理員
               <div className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
@@ -282,9 +280,8 @@ export default function AnalyticsPage() {
             ) : (
               <div className="text-3xl font-bold">
                 {(onlineData?.online.byRole.admin || 0) + 
-                 (onlineData?.online.byRole.manager || 0) + 
                  (onlineData?.online.byRole.root || 0)}
-                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalRoot + data.totalAdmins + data.totalManagers}</span>}
+                {data && <span className="text-base ml-1 text-muted-foreground font-normal">/ {data.totalRoot + data.totalAdmins}</span>}
               </div>
             )}
           </CardContent>

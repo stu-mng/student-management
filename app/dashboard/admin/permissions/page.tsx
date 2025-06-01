@@ -462,7 +462,7 @@ export default function PermissionsPage() {
         }, [user.region]);
         
         // If not a manager, show "不適用"
-        if (user.role.name !== 'manager' && user.role.name !== 'subject-teacher') {
+        if (user.role.name !== 'manager') {
           return <div className="pr-4 text-muted-foreground text-sm w-full text-center">不適用</div>;
         }
         

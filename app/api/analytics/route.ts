@@ -194,10 +194,10 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: roleCountError.message }, { status: 500 });
     }
     
-    // Calculate counts for each role based on the new RBAC system
+    // Calculate counts for each role based on the updated RBAC system
     const totalRoot = userRoleCounts.filter(user => (user.role as any)?.order === 0).length;           // 系統管理員
     const totalAdmins = userRoleCounts.filter(user => (user.role as any)?.order === 1).length;         // 計畫主持人
-    const totalManagers = userRoleCounts.filter(user => (user.role as any)?.order === 2).length;       // 帶班老師
+    const totalManagers = userRoleCounts.filter(user => (user.role as any)?.order === 2).length;       // 學校負責人
     const totalTeachers = userRoleCounts.filter(user => (user.role as any)?.order === 4).length;       // 大學伴
     const totalCandidates = userRoleCounts.filter(user => (user.role as any)?.order === 5).length;     // 儲備大學伴
     

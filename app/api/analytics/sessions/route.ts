@@ -72,12 +72,11 @@ export async function GET(_request: NextRequest) {
       return (currentTime - lastActiveTime) < ONLINE_THRESHOLD_MS;
     });
 
-    // 按角色分組 (根據新的角色結構)
+    // 按角色分組 (根據更新的角色結構)
     const usersByRole = {
       root: onlineUsers.filter(u => (u.role as any)?.order === 0).length,           // 系統管理員
       admin: onlineUsers.filter(u => (u.role as any)?.order === 1).length,          // 計畫主持人
-      manager: onlineUsers.filter(u => (u.role as any)?.order === 2).length,        // 帶班老師
-      subjectTeacher: onlineUsers.filter(u => (u.role as any)?.order === 3).length, // 科任老師
+      manager: onlineUsers.filter(u => (u.role as any)?.order === 2).length,        // 學校負責人
       teacher: onlineUsers.filter(u => (u.role as any)?.order === 4).length,        // 大學伴
       candidate: onlineUsers.filter(u => (u.role as any)?.order === 5).length,      // 儲備大學伴
       total: onlineUsers.length

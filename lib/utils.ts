@@ -247,13 +247,6 @@ export function isTeacher(role?: { name: string; order?: number } | null): boole
   return role?.name === 'teacher';
 }
 
-export function isSubjectTeacher(role?: { name: string; order?: number } | null): boolean {
-  if (role?.order !== undefined) {
-    return role.order === 3; // subject-teacher 通常是 order = 3
-  }
-  return role?.name === 'subject-teacher';
-}
-
 export function isCandidate(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
     return role.order === 5; // candidate 通常是 order = 4
@@ -293,7 +286,7 @@ export function hasUserManagePermission(role?: { name: string; order?: number } 
 // 檢查是否有學生管理權限（可以查看和編輯學生）
 export function hasStudentManagePermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 4; // admin(1), root(0), manager(2), subject-teacher(3), teacher(4)
+    return role.order <= 4; // admin(1), root(0), manager(2), teacher(4)
   }
   return role?.name ? ['admin', 'root', 'manager', 'teacher'].includes(role.name) : false;
 }
