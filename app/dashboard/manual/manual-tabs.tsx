@@ -428,11 +428,29 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               
-              {/* 版本 2.0.0 - 新增 */}
+              {/* 版本 2.1.0 - 新增 */}
+              <div className="border-l-4 border-emerald-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-emerald-500 text-white">v2.1.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 6 月 1 日 - 最新版本</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">〔系統優化〕表單系統完善與回應可視化</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 修復表單發布與草稿保存的關鍵問題</li>
+                  <li>• 實現完整的表單回應可視化系統</li>
+                  <li>• 新增網格統計模式與圖表模式切換功能</li>
+                  <li>• 優化選擇題字段的顯示與數據處理</li>
+                  <li>• 修復雙重顯示與數據類型不匹配的系統 bug</li>
+                  <li>• 提升表單回應數據的統計分析能力</li>
+                  <li>• 優化使用者介面互動體驗</li>
+                </ul>
+              </div>
+
+              {/* 版本 2.0.0 - 調整狀態 */}
               <div className="border-l-4 border-purple-500 pl-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="default" className="bg-purple-500 text-white">v2.0.0</Badge>
-                  <span className="text-sm text-muted-foreground">2025 年 5 月 29 日 - 最新版本</span>
+                  <Badge variant="outline" className="border-purple-500 text-purple-600">v2.0.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 5 月 29 日</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">〔重大更新〕RBAC 系統升級與表單功能</h3>
                 <ul className="space-y-1 text-sm">
