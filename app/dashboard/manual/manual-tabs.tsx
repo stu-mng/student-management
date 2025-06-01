@@ -434,15 +434,13 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <Badge variant="default" className="bg-emerald-500 text-white">v2.1.0</Badge>
                   <span className="text-sm text-muted-foreground">2025 年 6 月 1 日 - 最新版本</span>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">〔系統優化〕表單系統完善與回應可視化</h3>
+                <h3 className="text-lg font-semibold mb-2">〔功能擴充〕表單題型與統計功能優化</h3>
                 <ul className="space-y-1 text-sm">
-                  <li>• 修復表單發布與草稿保存的關鍵問題</li>
-                  <li>• 實現完整的表單回應可視化系統</li>
-                  <li>• 新增網格統計模式與圖表模式切換功能</li>
-                  <li>• 優化選擇題字段的顯示與數據處理</li>
-                  <li>• 修復雙重顯示與數據類型不匹配的系統 bug</li>
-                  <li>• 提升表單回應數據的統計分析能力</li>
-                  <li>• 優化使用者介面互動體驗</li>
+                  <li>• 新增單選方格題型，支援矩陣式選擇</li>
+                  <li>• 新增核取方塊格題型，實現多重選擇</li>
+                  <li>• 實作表單回應統計圖表功能</li>
+                  <li>• 優化表單編輯介面與操作流程</li>
+                  <li>• 修復表單編輯時的資料保存問題</li>
                 </ul>
               </div>
 
