@@ -32,31 +32,43 @@ export type Database = {
       }
       form_field_options: {
         Row: {
+          column_label: string | null
           created_at: string | null
           display_order: number
           field_id: string
+          grid_position: Json | null
           id: string
           is_active: boolean | null
           option_label: string
+          option_type: string | null
           option_value: string
+          row_label: string | null
         }
         Insert: {
+          column_label?: string | null
           created_at?: string | null
           display_order?: number
           field_id: string
+          grid_position?: Json | null
           id?: string
           is_active?: boolean | null
           option_label: string
+          option_type?: string | null
           option_value: string
+          row_label?: string | null
         }
         Update: {
+          column_label?: string | null
           created_at?: string | null
           display_order?: number
           field_id?: string
+          grid_position?: Json | null
           id?: string
           is_active?: boolean | null
           option_label?: string
+          option_type?: string | null
           option_value?: string
+          row_label?: string | null
         }
         Relationships: [
           {

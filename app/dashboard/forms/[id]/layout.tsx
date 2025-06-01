@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, Save, Eye, MessageSquare, Edit, FileText, Settings, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, Eye, MessageSquare, Edit, FileText, Settings, Trash2, Send } from "lucide-react"
 import { FormProvider, useFormContext } from "@/components/forms"
 import { useRouter, useParams } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -24,11 +24,11 @@ function FormActionButtons() {
     pageType, 
     previewMode, 
     setPreviewMode,
-    editorActions,
-    saveDraft,
-    publishForm,
     saving,
-    publishing 
+    publishing,
+    hasUnsavedChanges,
+    saveDraft,
+    publishForm
   } = useFormContext()
   const router = useRouter()
   const params = useParams()
@@ -65,11 +65,30 @@ function FormActionButtons() {
   
   const isActive = form.status === 'active'
   
-  // 使用編輯器動作（如果可用）或回退到 context 動作
-  const currentSaving = editorActions?.saving ?? saving
-  const currentPublishing = editorActions?.publishing ?? publishing
-  const currentSaveDraft = editorActions?.saveDraft ?? saveDraft
-  const currentPublishForm = editorActions?.publishForm ?? publishForm
+  // 簡單狀態更新函數（非編輯頁面使用）
+  const updateStatus = async (status: string) => {
+    if (!form) return
+    
+    try {
+      const response = await fetch(`/api/forms/${form.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to update form status to ${status}`)
+      }
+
+      toast.success(status === 'active' ? '表單已發布' : '表單已保存為草稿')
+      window.location.reload() // 簡單重新載入頁面
+    } catch (err) {
+      toast.error('更新表單狀態時發生錯誤')
+      console.error('Error updating form status:', err)
+    }
+  }
   
   switch (pageType) {
     case 'edit':
@@ -92,18 +111,20 @@ function FormActionButtons() {
               </Button>
             )}
             <Button
-              onClick={currentSaveDraft}
-              disabled={currentSaving || currentPublishing}
+              onClick={saveDraft}
+              disabled={saving || publishing}
+              className={hasUnsavedChanges ? "border-orange-500 text-orange-600" : ""}
             >
               {isActive ? <Settings className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}   
-              {currentSaving ? '處理中...' : (isActive ? '取消發布' : '儲存草稿')}
+              {saving ? '處理中...' : (isActive ? '保存為草稿' : '儲存草稿')}
+              {hasUnsavedChanges && ' *'}
             </Button>
             <Button
-              onClick={currentPublishForm}
-              disabled={currentSaving || currentPublishing}
+              onClick={publishForm}
+              disabled={saving || publishing}
             >
-              <Save className="h-4 w-4 mr-2" />
-              {currentSaving ? '處理中...' : '發布表單'}
+              <Send className="h-4 w-4 mr-2" />
+              {publishing ? '處理中...' : '發布表單'}
             </Button>
             {hasDeletePermission() && (
               <Button
@@ -174,12 +195,11 @@ function FormActionButtons() {
             </Button>
           </Link>
           <Button
-            onClick={currentSaveDraft}
-            disabled={currentSaving}
+            onClick={() => updateStatus('draft')}
             variant="outline"
           >
             <Settings className="h-4 w-4 mr-2" />
-            {currentSaving ? '處理中...' : '關閉表單'}
+            關閉表單
           </Button>
         </div>
       )
@@ -203,7 +223,7 @@ function FormActionButtons() {
 
 // 頁面內容組件
 function FormLayoutContent({ children }: { children: ReactNode }) {
-  const { form, loading, error, pageTitle, refetchForm } = useFormContext()
+  const { form, loading, error, pageTitle, refetchForm, editingResponseId } = useFormContext()
   const router = useRouter()
   // 載入中狀態
   if (loading) {
@@ -298,7 +318,7 @@ function FormLayoutContent({ children }: { children: ReactNode }) {
           <div>
             <h1 className="text-3xl font-bold">{pageTitle}</h1>
             {form && (
-              <p className="text-muted-foreground mt-2">{form.title}</p>
+              <p className="text-muted-foreground mt-2">{editingResponseId ? '編輯回覆' : '填寫表單'}</p>
             )}
           </div>
         </div>

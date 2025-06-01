@@ -114,6 +114,9 @@ export async function GET(
           id,
           option_value,
           option_label,
+          option_type,
+          row_label,
+          column_label,
           display_order,
           is_active
         )
@@ -166,11 +169,36 @@ export async function GET(
       }
     }
 
-    // 整理欄位資料，將選項排序
-    const formattedFields = fields?.map(field => ({
-      ...field,
-      form_field_options: field.form_field_options?.sort((a: any, b: any) => a.display_order - b.display_order)
-    })) || [];
+    // 整理欄位資料，將選項排序並重建 grid_options
+    const formattedFields = fields?.map(field => {
+      const sortedOptions = field.form_field_options?.sort((a: any, b: any) => a.display_order - b.display_order) || [];
+      
+      // 如果是 grid 類型欄位，重建 grid_options 結構
+      let gridOptions = undefined;
+      if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+        const rowOptions = sortedOptions.filter((opt: any) => opt.option_type === 'grid_row');
+        const columnOptions = sortedOptions.filter((opt: any) => opt.option_type === 'grid_column');
+        
+        if (rowOptions.length > 0 || columnOptions.length > 0) {
+          gridOptions = {
+            rows: rowOptions.map((opt: any) => ({
+              value: opt.option_value,
+              label: opt.option_label
+            })),
+            columns: columnOptions.map((opt: any) => ({
+              value: opt.option_value,
+              label: opt.option_label
+            }))
+          };
+        }
+      }
+
+      return {
+        ...field,
+        form_field_options: sortedOptions.filter((opt: any) => opt.option_type !== 'grid_row' && opt.option_type !== 'grid_column'),
+        grid_options: gridOptions
+      };
+    }) || [];
 
     // 檢查當前用戶是否已經提交回應
     let submitted = false;
@@ -403,23 +431,79 @@ export async function PUT(
 
       // 為有選項的欄位創建選項
       for (const field of fields) {
+        const fieldData = createdFields?.find(f => f.field_name === field.field_name);
+        if (!fieldData) continue;
+
+        // 處理一般選項（select, radio, checkbox）
         if (field.options && field.options.length > 0) {
-          const fieldData = createdFields?.find(f => f.field_name === field.field_name);
-          if (fieldData) {
-            const options = field.options.map((option, index) => ({
-              field_id: fieldData.id,
-              option_value: option.option_value,
-              option_label: option.option_label,
-              display_order: option.display_order || index,
-              is_active: option.is_active !== false,
-            }));
+          const options = field.options.map((option, index) => ({
+            field_id: fieldData.id,
+            option_value: option.option_value,
+            option_label: option.option_label,
+            display_order: option.display_order || index,
+            is_active: option.is_active !== false,
+            option_type: 'standard'
+          }));
 
-            const { error: optionsError } = await supabase
+          const { error: optionsError } = await supabase
+            .from('form_field_options')
+            .insert(options);
+
+          if (optionsError) {
+            console.error('Error creating field options:', optionsError);
+          }
+        }
+
+        // 處理 grid 選項（radio_grid, checkbox_grid）
+        if (field.grid_options && ['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+          const gridOptions: Array<{
+            field_id: string;
+            option_value: string;
+            option_label: string;
+            option_type: string;
+            row_label?: string;
+            column_label?: string;
+            display_order: number;
+            is_active: boolean;
+          }> = [];
+
+          // 添加行選項
+          if (field.grid_options.rows) {
+            field.grid_options.rows.forEach((row, index) => {
+              gridOptions.push({
+                field_id: fieldData.id,
+                option_value: row.value,
+                option_label: row.label,
+                option_type: 'grid_row',
+                row_label: row.label,
+                display_order: index,
+                is_active: true
+              });
+            });
+          }
+
+          // 添加列選項
+          if (field.grid_options.columns) {
+            field.grid_options.columns.forEach((column, index) => {
+              gridOptions.push({
+                field_id: fieldData.id,
+                option_value: column.value,
+                option_label: column.label,
+                option_type: 'grid_column',
+                column_label: column.label,
+                display_order: index,
+                is_active: true
+              });
+            });
+          }
+
+          if (gridOptions.length > 0) {
+            const { error: gridOptionsError } = await supabase
               .from('form_field_options')
-              .insert(options);
+              .insert(gridOptions);
 
-            if (optionsError) {
-              console.error('Error creating field options:', optionsError);
+            if (gridOptionsError) {
+              console.error('Error creating grid options:', gridOptionsError);
             }
           }
         }

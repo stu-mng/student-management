@@ -64,7 +64,18 @@ export default function FormDetailPage() {
             if (fieldResponse.field_values) {
               newFormData[fieldResponse.field_id] = fieldResponse.field_values
             } else if (fieldResponse.field_value) {
-              newFormData[fieldResponse.field_id] = fieldResponse.field_value
+              let value = fieldResponse.field_value
+              
+              // 檢查是否是 JSON 字符串（用於 grid 類型欄位）
+              if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+                try {
+                  value = JSON.parse(value)
+                } catch (err) {
+                  console.log('Not a JSON string, using as is:', value)
+                }
+              }
+              
+              newFormData[fieldResponse.field_id] = value
             }
           })
           
@@ -130,11 +141,19 @@ export default function FormDetailPage() {
 
     setSaving(true)
     try {
-      const fieldResponses = Object.entries(formData).map(([fieldId, value]) => ({
-        field_id: fieldId,
-        field_value: Array.isArray(value) ? null : value,
-        field_values: Array.isArray(value) ? value : null,
-      }))
+      const fieldResponses = Object.entries(formData).map(([fieldId, value]) => {
+        // 對於對象類型的值（如 grid 數據），需要序列化為 JSON 字符串
+        let processedValue = value
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          processedValue = JSON.stringify(value)
+        }
+        
+        return {
+          field_id: fieldId,
+          field_value: Array.isArray(processedValue) ? null : processedValue,
+          field_values: Array.isArray(processedValue) ? processedValue : null,
+        }
+      })
 
       let response
       if (editingResponseId) {
@@ -388,7 +407,7 @@ export default function FormDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Users className="h-5 w-5" />
-                {editingResponseId ? '編輯回覆' : '填寫表單'}
+                {form.title}
               </CardTitle>
               <CardDescription className="text-base whitespace-pre-line text-sm">
                 {form.description}

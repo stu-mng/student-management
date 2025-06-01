@@ -46,6 +46,8 @@ const FIELD_TYPES = [
   { value: 'select', label: '下拉選單' },
   { value: 'radio', label: '單選題' },
   { value: 'checkbox', label: '多選題' },
+  { value: 'radio_grid', label: '單選方格' },
+  { value: 'checkbox_grid', label: '核取方塊格' },
 ]
 
 const FORM_TYPES = [
@@ -242,7 +244,8 @@ export default function FormCreatePage() {
       is_active: true,
       placeholder: '',
       help_text: '',
-      options: []
+      options: [],
+      grid_options: undefined
     }
     setFields([...fields, newField])
   }
@@ -348,6 +351,36 @@ export default function FormCreatePage() {
           // 選項值已經自動生成，不需要驗證
         }
       }
+
+      // 驗證 grid 類型欄位
+      if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+        if (!field.grid_options || !field.grid_options.rows || !field.grid_options.columns) {
+          toast.error(`欄位「${field.field_label}」需要配置行列選項`)
+          return false
+        }
+        if (field.grid_options.rows.length === 0) {
+          toast.error(`欄位「${field.field_label}」需要至少一個行`)
+          return false
+        }
+        if (field.grid_options.columns.length === 0) {
+          toast.error(`欄位「${field.field_label}」需要至少一個列`)
+          return false
+        }
+        // 驗證行標籤
+        for (const row of field.grid_options.rows) {
+          if (!row.label.trim()) {
+            toast.error(`欄位「${field.field_label}」的所有行都必須有標籤`)
+            return false
+          }
+        }
+        // 驗證列標籤
+        for (const column of field.grid_options.columns) {
+          if (!column.label.trim()) {
+            toast.error(`欄位「${field.field_label}」的所有列都必須有標籤`)
+            return false
+          }
+        }
+      }
     }
 
     return true
@@ -365,27 +398,44 @@ export default function FormCreatePage() {
       is_required: isRequired,
       allow_multiple_submissions: allowMultipleSubmissions,
       submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
-      fields: fields.map(field => ({
-        field_name: field.field_name,
-        field_label: field.field_label,
-        field_type: field.field_type,
-        display_order: field.display_order,
-        is_required: field.is_required,
-        is_active: field.is_active,
-        placeholder: field.placeholder,
-        help_text: field.help_text,
-        default_value: field.default_value,
-        min_length: field.min_length,
-        max_length: field.max_length,
-        pattern: field.pattern,
-        options: field.options?.map((option, index) => ({
-          option_value: option.option_value,
-          option_label: option.option_label,
-          display_order: index,
-          is_active: option.is_active
-        }))
-      }))
+      fields: fields.map(field => {
+        const mappedField = {
+          field_name: field.field_name,
+          field_label: field.field_label,
+          field_type: field.field_type,
+          display_order: field.display_order,
+          is_required: field.is_required,
+          is_active: field.is_active,
+          placeholder: field.placeholder,
+          help_text: field.help_text,
+          default_value: field.default_value,
+          min_length: field.min_length,
+          max_length: field.max_length,
+          pattern: field.pattern,
+          grid_options: field.grid_options,
+          options: field.options?.map((option, index) => ({
+            option_value: option.option_value,
+            option_label: option.option_label,
+            display_order: index,
+            is_active: option.is_active
+          }))
+        }
+        
+        // 調試：檢查 grid 類型欄位的 grid_options
+        if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+          console.log('Grid field mapping:', {
+            field_type: field.field_type,
+            field_label: field.field_label,
+            grid_options: field.grid_options,
+            mapped_grid_options: mappedField.grid_options
+          })
+        }
+        
+        return mappedField
+      })
     }
+
+    console.log('Form data being sent to API:', JSON.stringify(formData, null, 2))
 
     const response = await fetch('/api/forms', {
       method: 'POST',
@@ -458,6 +508,7 @@ export default function FormCreatePage() {
   // 渲染欄位編輯器
   const renderFieldEditor = (field: FormFieldWithId, index: number) => {
     const needsOptions = ['select', 'radio', 'checkbox'].includes(field.field_type)
+    const needsGridOptions = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
 
     return (
       <Draggable key={field.tempId} draggableId={field.tempId} index={index}>
@@ -502,7 +553,19 @@ export default function FormCreatePage() {
                   <Label htmlFor={`field-type-${field.tempId}`}>欄位類型</Label>
                   <Select
                     value={field.field_type}
-                    onValueChange={(value) => updateField(field.tempId, { field_type: value })}
+                    onValueChange={(value) => {
+                      const updates: Partial<FormFieldWithId> = { field_type: value }
+                      
+                      // 當切換到 grid 類型且沒有 grid_options 時，初始化
+                      if (['radio_grid', 'checkbox_grid'].includes(value) && !field.grid_options) {
+                        updates.grid_options = {
+                          rows: [{ value: `row_${Date.now()}`, label: '' }],
+                          columns: [{ value: `col_${Date.now()}`, label: '' }]
+                        }
+                      }
+                      
+                      updateField(field.tempId, updates)
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -582,6 +645,130 @@ export default function FormCreatePage() {
                         </Button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {needsGridOptions && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>行配置</Label>
+                    <div className="space-y-2 mt-2">
+                      {field.grid_options?.rows?.map((row, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={row.label}
+                            onChange={(e) => {
+                              const newRows = [...(field.grid_options?.rows || [])]
+                              newRows[index] = { ...row, label: e.target.value }
+                              updateField(field.tempId, { 
+                                grid_options: { 
+                                  rows: newRows,
+                                  columns: field.grid_options?.columns || []
+                                } 
+                              })
+                            }}
+                            placeholder="行標籤"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newRows = [...(field.grid_options?.rows || [])]
+                              newRows.splice(index, 1)
+                              updateField(field.tempId, { 
+                                grid_options: { 
+                                  rows: newRows,
+                                  columns: field.grid_options?.columns || []
+                                } 
+                              })
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )) || []}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newRows = [...(field.grid_options?.rows || []), { value: `row_${Date.now()}`, label: '' }]
+                          updateField(field.tempId, { 
+                            grid_options: { 
+                              rows: newRows,
+                              columns: field.grid_options?.columns || []
+                            } 
+                          })
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        新增行
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>列配置</Label>
+                    <div className="space-y-2 mt-2">
+                      {field.grid_options?.columns?.map((column, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={column.label}
+                            onChange={(e) => {
+                              const newColumns = [...(field.grid_options?.columns || [])]
+                              newColumns[index] = { ...column, label: e.target.value }
+                              updateField(field.tempId, { 
+                                grid_options: { 
+                                  rows: field.grid_options?.rows || [],
+                                  columns: newColumns 
+                                } 
+                              })
+                            }}
+                            placeholder="列標籤"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newColumns = [...(field.grid_options?.columns || [])]
+                              newColumns.splice(index, 1)
+                              updateField(field.tempId, { 
+                                grid_options: { 
+                                  rows: field.grid_options?.rows || [],
+                                  columns: newColumns 
+                                } 
+                              })
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )) || []}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newColumns = [...(field.grid_options?.columns || []), { value: `col_${Date.now()}`, label: '' }]
+                          updateField(field.tempId, { 
+                            grid_options: { 
+                              rows: field.grid_options?.rows || [],
+                              columns: newColumns 
+                            } 
+                          })
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        新增列
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -842,6 +1029,86 @@ export default function FormCreatePage() {
                             <Label className="text-base">{option.option_label}</Label>
                           </div>
                         ))}
+                      </div>
+                    )}
+                    {field.field_type === 'radio_grid' && (
+                      <div className="border rounded p-2">
+                        <div className="text-sm text-gray-600 mb-2">單選方格預覽</div>
+                        {field.grid_options?.rows && field.grid_options?.columns ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
+                                  {field.grid_options.columns.map((col, idx) => (
+                                    <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
+                                      {col.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {field.grid_options.rows.map((row, idx) => (
+                                  <tr key={idx}>
+                                    <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
+                                      {row.label}
+                                    </td>
+                                    {field.grid_options!.columns.map((col, colIdx) => (
+                                      <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
+                                        <input 
+                                          type="radio" 
+                                          name={`preview_${field.tempId}_row_${idx}`}
+                                          value={col.value}
+                                          disabled 
+                                          className="w-4 h-4" 
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm">請配置行列選項</div>
+                        )}
+                      </div>
+                    )}
+                    {field.field_type === 'checkbox_grid' && (
+                      <div className="border rounded p-2">
+                        <div className="text-sm text-gray-600 mb-2">核取方塊格預覽</div>
+                        {field.grid_options?.rows && field.grid_options?.columns ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
+                                  {field.grid_options.columns.map((col, idx) => (
+                                    <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
+                                      {col.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {field.grid_options.rows.map((row, idx) => (
+                                  <tr key={idx}>
+                                    <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
+                                      {row.label}
+                                    </td>
+                                    {field.grid_options!.columns.map((col, colIdx) => (
+                                      <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
+                                        <input type="checkbox" disabled className="w-4 h-4" />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm">請配置行列選項</div>
+                        )}
                       </div>
                     )}
                   </div>

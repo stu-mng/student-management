@@ -117,6 +117,12 @@ export interface RolePermission {
   access_type: 'read' | 'edit' | null;
 }
 
+// Grid field types for radio_grid and checkbox_grid
+export interface GridOptions {
+  rows: Array<{ value: string; label: string }>;
+  columns: Array<{ value: string; label: string }>;
+}
+
 // Form Types
 export interface Form {
   id: string;
@@ -164,6 +170,7 @@ export interface FormField {
   created_at?: string | null;
   updated_at?: string | null;
   form_field_options?: FormFieldOption[];
+  grid_options?: GridOptions; // For radio_grid and checkbox_grid fields
 }
 
 export interface FormFieldOption {
@@ -246,6 +253,7 @@ export interface FormFieldCreateRequest {
   student_field_mapping?: string;
   auto_populate_from?: string;
   options?: FormFieldOptionCreateRequest[];
+  grid_options?: GridOptions;
 }
 
 export interface FormFieldOptionCreateRequest {
