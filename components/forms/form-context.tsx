@@ -1,10 +1,11 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react"
-import { useParams, useRouter, usePathname } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
-import { Form, FormField, FormFieldOption } from "@/app/api/types"
-import { toast } from "sonner"
+import type { Form, FormField, FormFieldOption } from "@/app/api/types";
+import { useAuth } from "@/components/auth-provider";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 // 從 useFormEditor 導入的類型
 export interface FormFieldWithId {
@@ -379,7 +380,7 @@ export function FormProvider({ children }: FormProviderProps) {
     if (initialStateRef.current) {
       checkForUnsavedChanges()
     }
-  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, fields])
+  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, fields, checkForUnsavedChanges])
 
   const hasEditPermission = useCallback(() => {
     if (!user || !form) return false
@@ -392,7 +393,7 @@ export function FormProvider({ children }: FormProviderProps) {
     if (!userRole) return false
     
     // 管理員和 root 用戶可以編輯所有表單
-    if (['admin', 'root'].includes(userRole)) return true
+    if (['admin', 'root', 'manager'].includes(userRole)) return true
     
     // 檢查表單權限設定
     if (form.permissions) {
@@ -909,4 +910,4 @@ export function FormProvider({ children }: FormProviderProps) {
   )
 }
 
-export { FormContext } 
+export { FormContext };

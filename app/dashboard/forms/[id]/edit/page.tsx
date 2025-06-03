@@ -1,29 +1,25 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
+import type { FormFieldWithId } from "@/components/forms"
+import { FIELD_TYPES, FORM_TYPES, PermissionsModal, useFormContext } from "@/components/forms"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, Plus, Trash2, GripVertical, Save, Send, Eye, CalendarIcon, Copy, ArrowUp, ArrowDown, Pen, X, Star } from "lucide-react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
-import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided } from "@hello-pangea/dnd"
-import { format } from "date-fns"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import { useFormContext, FormFieldWithId, FIELD_TYPES, FORM_TYPES } from "@/components/forms"
-import { PermissionsModal } from "@/components/forms"
-import { useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
+import type { DraggableProvided, DroppableProvided } from "@hello-pangea/dnd"
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd"
+import { format } from "date-fns"
+import { CalendarIcon, Eye, GripVertical, Pen, Plus, Trash2, X } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
 // 權限顯示組件
 function PermissionsBadges({ permissions }: { permissions?: any[] }) {
@@ -111,9 +107,6 @@ function FormEditContent() {
     previewMode,
     focusedFieldId,
     roles,
-    hasUnsavedChanges,
-    saving,
-    publishing,
     // 編輯操作
     setTitle,
     setDescription,
@@ -121,32 +114,22 @@ function FormEditContent() {
     setIsRequired,
     setAllowMultipleSubmissions,
     setSubmissionDeadline,
-    setPreviewMode,
     setFocusedFieldId,
     // 欄位操作
     addField,
     updateField,
     removeField,
-    duplicateField,
     addOption,
     updateOption,
     removeOption,
     onDragEnd,
-    // 保存操作
-    saveDraft,
-    publishForm,
-    // 工具方法
-    cleanupEmptyFields,
-    debugFieldsState,
   } = useFormContext()
-  const router = useRouter()
-  const params = useParams()
 
   // 檢查用戶權限
   const hasEditPerm = hasEditPermission()
 
   // 處理權限更新
-  const handlePermissionsUpdate = async (formId: string, permissions: any[]) => {
+  const handlePermissionsUpdate = async () => {
     try {
       await refetchForm()
     } catch (error) {
