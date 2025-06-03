@@ -2,7 +2,7 @@
 
 import type { Form, FormField, FormFieldOption } from "@/app/api/types";
 import { useAuth } from "@/components/auth-provider";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -136,7 +136,6 @@ interface FormProviderProps {
 export function FormProvider({ children }: FormProviderProps) {
   const { user } = useAuth()
   const params = useParams()
-  const router = useRouter()
   const pathname = usePathname()
   const formId = params.id as string
   
@@ -283,7 +282,7 @@ export function FormProvider({ children }: FormProviderProps) {
   }
 
   // 檢查未保存變更
-  const checkForUnsavedChanges = () => {
+  const checkForUnsavedChanges = useCallback(() => {
     const currentState = JSON.stringify({
       title,
       description,
@@ -316,7 +315,7 @@ export function FormProvider({ children }: FormProviderProps) {
     const hasChanges = initialStateRef.current !== currentState
     setHasUnsavedChanges(hasChanges)
     return hasChanges
-  }
+  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, fields])
 
   const fetchForm = async () => {
     try {
