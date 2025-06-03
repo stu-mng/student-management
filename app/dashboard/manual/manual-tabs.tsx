@@ -443,7 +443,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
               {/* 版本 2.1.0 */}
               <div className="border-l-4 border-emerald-500 pl-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="default" className="bg-emerald-500 text-white">v2.1.0</Badge>
+                  <Badge variant="outline" className="border-emerald-500 text-emerald-500">v2.1.0</Badge>
                   <span className="text-sm text-muted-foreground">2025 年 6 月 1 日</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">〔功能擴充〕表單題型與統計功能優化</h3>
