@@ -1,21 +1,16 @@
 "use client"
 
+import type { Form, RolePermission } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
+import { FormCard, PermissionsModal } from "@/components/forms"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Settings, Plus } from "lucide-react"
+import { hasManagerPermission } from "@/lib/utils"
+import { Plus, Settings } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Form, RolePermission } from "@/app/api/types"
 import { toast } from "sonner"
-import { hasAdminPermission } from "@/lib/utils"
-import { FormCard, PermissionsModal } from "@/components/forms"
-
-interface RolePermissionLocal {
-  role: string
-  access_type: 'read' | 'edit' | null
-}
 
 export default function FormsManagePage() {
   const { user } = useAuth()
@@ -75,7 +70,7 @@ export default function FormsManagePage() {
   }
 
   // 檢查用戶是否有管理權限
-  const hasManagePermission = hasAdminPermission(user?.role)
+  const hasManagePermission = hasManagerPermission(user?.role)
 
   if (!hasManagePermission) {
     return (
