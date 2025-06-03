@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/database/supabase/server';
-import { 
-  FormCreateRequest, 
-  FormsListResponse, 
-  FormDetailResponse, 
+import type {
   ErrorResponse,
+  FormCreateRequest,
+  FormDetailResponse,
+  FormsListResponse,
   Role,
   RolePermission
 } from '@/app/api/types';
+import { createClient } from '@/database/supabase/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 只有管理員和計畫主持可以創建表單
-    const currentUserRole = (userData.role as any)?.name;
+    const currentUserRole = (userData.role as unknown as Role)?.name;
     if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
@@ -303,8 +304,8 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' });
 
     // 根據用戶角色過濾表單
-    const currentUserRole = (userData.role as any)?.name;
-    const currentUserRoleId = (userData.role as any)?.id;
+    const currentUserRole = (userData.role as unknown as Role)?.name;
+    const currentUserRoleId = (userData.role as unknown as Role)?.id;
     
     if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
       // 一般用戶需要檢查權限設定

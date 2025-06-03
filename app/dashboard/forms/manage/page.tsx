@@ -6,7 +6,6 @@ import { FormCard, PermissionsModal } from "@/components/forms"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { hasManagerPermission } from "@/lib/utils"
 import { Plus, Settings } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -63,31 +62,10 @@ export default function FormsManagePage() {
       setDeletingId(null)
     }
   }
-
+  
   const handlePermissionsUpdate = (formId: string, permissions: RolePermission[]) => {
     // 可以在這裡更新本地狀態，或者重新載入表單列表
     // 目前先保持簡單，不做額外處理
-  }
-
-  // 檢查用戶是否有管理權限
-  const hasManagePermission = hasManagerPermission(user?.role)
-
-  if (!hasManagePermission) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">表單管理</h1>
-          <p className="text-muted-foreground mt-2">管理系統表單</p>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-red-600">
-              <p>您沒有權限存取此頁面</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   if (loading) {
