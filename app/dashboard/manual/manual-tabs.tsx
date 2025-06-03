@@ -1,15 +1,14 @@
 "use client"
 
-import React from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Bookmark, Info, Shield, User, UserCog, Users, History } from "lucide-react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { getRoleTextColor, getRoleBgColor } from "@/lib/utils"
-import { roleDescriptions, permissionGroups, roleHeaders } from "@/lib/permissions-content"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { permissionGroups, roleDescriptions, roleHeaders } from "@/lib/permissions-content"
+import { getRoleBgColor, getRoleTextColor } from "@/lib/utils"
+import { BookOpen, Bookmark, History, Info, Shield, User, UserCog, Users } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import React, { useEffect, useState } from "react"
 
 interface ManualTabsProps {
   user: any
@@ -428,11 +427,24 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               
-              {/* 版本 2.1.0 - 新增 */}
+              {/* 版本 2.2.0 - 新增 */}
+              <div className="border-l-4 border-emerald-500 pl-4 mb-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-emerald-500 text-white">v2.2.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 6 月 3 日 - 最新版本</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">〔重要修復〕表單編輯與權限管理優化</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 修復表單編輯造成回覆遺失的問題</li>
+                  <li>• 修復表單管理 manager 權限卡控問題</li>
+                </ul>
+              </div>
+
+              {/* 版本 2.1.0 */}
               <div className="border-l-4 border-emerald-500 pl-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="default" className="bg-emerald-500 text-white">v2.1.0</Badge>
-                  <span className="text-sm text-muted-foreground">2025 年 6 月 1 日 - 最新版本</span>
+                  <span className="text-sm text-muted-foreground">2025 年 6 月 1 日</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">〔功能擴充〕表單題型與統計功能優化</h3>
                 <ul className="space-y-1 text-sm">
