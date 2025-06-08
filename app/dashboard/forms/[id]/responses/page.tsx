@@ -1,19 +1,16 @@
 "use client"
 
-import { useAuth } from "@/components/auth-provider"
+import type { Form } from "@/app/api/types"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useParams, useSearchParams, useRouter } from "next/navigation"
-import { Form } from "@/app/api/types"
-import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface FormResponse {
   id: string
@@ -66,7 +63,6 @@ interface PaginationData {
 }
 
 export default function FormResponsesPage() {
-  const { user } = useAuth()
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -131,7 +127,7 @@ export default function FormResponsesPage() {
   }, [formId])
 
   // 載入總覽數據
-  const fetchOverview = async () => {
+  const fetchOverview = useCallback(async () => {
     if (!accessData?.accessType || accessData.accessType !== 'edit') {
       return
     }
@@ -152,10 +148,10 @@ export default function FormResponsesPage() {
     } finally {
       setOverviewLoading(false)
     }
-  }
+  }, [accessData?.accessType, formId])
 
   // 載入單一回應數據（帶分頁）
-  const fetchResponses = async (page: number = currentPage) => {
+  const fetchResponses = useCallback(async (page: number = currentPage) => {
     if (!accessData?.accessType || accessData.accessType !== 'edit') {
       return
     }
@@ -182,14 +178,17 @@ export default function FormResponsesPage() {
     } finally {
       setResponsesLoading(false)
     }
-  }
+  }, [accessData?.accessType, formId, currentPage, pagination.limit])
 
   useEffect(() => {
     if (accessData?.accessType === 'edit') {
-      fetchOverview()
-      fetchResponses(currentPage)
+      if (currentTab === 'overview') {
+        fetchOverview()
+      } else if (currentTab === 'individual') {
+        fetchResponses(currentPage)
+      }
     }
-  }, [accessData, currentTab, currentPage])
+  }, [accessData, currentTab, currentPage, fetchOverview, fetchResponses])
 
   // 更新 URL 參數
   const updateUrlParams = (tab: string, page?: number) => {
@@ -213,7 +212,14 @@ export default function FormResponsesPage() {
     updateUrlParams(currentTab, page)
   }
 
-  const renderResponseValue = (fieldResponse: any) => {
+  const renderResponseValue = (fieldResponse: {
+    field_value: string | null
+    field_values: string[] | null
+    field: {
+      field_type: string
+      id: string
+    }
+  }) => {
     // 處理 grid 類型欄位
     if (['radio_grid', 'checkbox_grid'].includes(fieldResponse.field.field_type)) {
       return renderGridResponseValue(fieldResponse)
@@ -225,7 +231,10 @@ export default function FormResponsesPage() {
     return fieldResponse.field_value || '-'
   }
 
-  const renderOverviewValue = (response: any, fieldType?: string, fieldId?: string) => {
+  const renderOverviewValue = (response: {
+    field_value: string | null
+    field_values: string[] | null
+  }, fieldType?: string, fieldId?: string) => {
     // 處理 grid 類型欄位
     if (fieldType && ['radio_grid', 'checkbox_grid'].includes(fieldType) && fieldId) {
       return renderGridOverviewValue(response, fieldId)
@@ -238,7 +247,13 @@ export default function FormResponsesPage() {
   }
 
   // 渲染 grid 回應值 - 用於單一回應頁面
-  const renderGridResponseValue = (fieldResponse: any) => {
+  const renderGridResponseValue = (fieldResponse: {
+    field_value: string | null
+    field: {
+      id: string
+      field_type: string
+    }
+  }) => {
     if (!form?.fields || !fieldResponse.field_value) {
       return '-'
     }
@@ -293,7 +308,9 @@ export default function FormResponsesPage() {
   }
 
   // 渲染 grid 總覽值 - 用於總覽頁面（顯示統計）
-  const renderGridOverviewValue = (response: any, fieldId: string) => {
+  const renderGridOverviewValue = (response: {
+    field_value: string | null
+  }, fieldId: string) => {
     if (!form?.fields || !response.field_value) {
       return '-'
     }
@@ -394,7 +411,14 @@ export default function FormResponsesPage() {
     ]
     
     // 自定義 Tooltip
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    function CustomTooltip({ active, payload, label }: {
+      active?: boolean
+      payload?: Array<{
+        value: number
+        color: string
+      }>
+      label?: string
+    }) {
       if (active && payload && payload.length) {
         const value = payload[0]?.value || 0
         const total = field.responses.filter(r => r.field_value || (r.field_values && r.field_values.length > 0)).length
@@ -426,7 +450,10 @@ export default function FormResponsesPage() {
     const statistics: { [key: string]: number } = {}
     
     // 初始化統計對象 - 使用標籤作為 key
-    formField.form_field_options.forEach((option: any) => {
+    formField.form_field_options.forEach((option: {
+      option_label: string
+      option_value: string
+    }) => {
       statistics[option.option_label] = 0
     })
     
@@ -467,7 +494,10 @@ export default function FormResponsesPage() {
     console.log('Final statistics for', field.field_label, statistics)
     
     // 準備圖表數據 - 使用標籤
-    const chartData = formField.form_field_options.map((option: any, index: number) => ({
+    const chartData = formField.form_field_options.map((option: {
+      option_label: string
+      option_value: string
+    }, index: number) => ({
       name: option.option_label,
       value: statistics[option.option_label] || 0,
       fill: colors[index % colors.length]
@@ -519,9 +549,12 @@ export default function FormResponsesPage() {
         
         {/* 詳細統計 */}
         <div className="mt-4 space-y-2">
-          <h4 className="font-medium text-gray-700 text-sm">詳細統計</h4>
+          <CardDescription className="font-medium text-gray-700 text-sm">詳細統計</CardDescription>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {formField.form_field_options.map((option: any, index: number) => {
+            {formField.form_field_options.map((option: {
+              option_label: string
+              option_value: string
+            }, index: number) => {
               const count = statistics[option.option_label] || 0
               const percentage = totalResponses > 0 ? ((count / totalResponses) * 100).toFixed(1) : '0.0'
               return (
@@ -569,41 +602,56 @@ export default function FormResponsesPage() {
     ]
     
     // 統計模式切換按鈕
-    const StatsToggle = () => (
-      <div className="flex items-center gap-4 mb-6">
-        <span className="text-sm font-medium text-gray-700">統計模式：</span>
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
+    function StatsToggle() {
+      return <div className="flex items-center gap-4 mb-6">
+        <div className="flex bg-muted rounded-lg p-1">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setGridStatsMode('row')}
             className={`px-3 py-1 text-sm rounded-md transition-all ${
               gridStatsMode === 'row'
-                ? 'bg-white text-blue-600 shadow-sm font-medium'
-                : 'text-gray-600 hover:text-gray-800'
+                ? 'bg-background text-primary shadow-sm font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             依行統計
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setGridStatsMode('column')}
             className={`px-3 py-1 text-sm rounded-md transition-all ${
               gridStatsMode === 'column'
-                ? 'bg-white text-blue-600 shadow-sm font-medium'
-                : 'text-gray-600 hover:text-gray-800'
+                ? 'bg-background text-primary shadow-sm font-medium'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             依列統計
-          </button>
+          </Button>
         </div>
       </div>
-    )
+    }
 
     // 自定義 Tooltip
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    function CustomTooltip({ active, payload, label }: {
+      active?: boolean
+      payload?: Array<{
+        value: number
+        color: string
+        name: string
+      }>
+      label?: string
+    }) {
       if (active && payload && payload.length) {
         return (
           <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
             <p className="font-medium text-gray-900 mb-2">{label}</p>
-            {payload.map((entry: any, index: number) => (
+            {payload.map((entry: {
+              value: number
+              color: string
+              name: string
+            }, index: number) => (
               <div key={index} className="flex items-center gap-2 text-sm">
                 <div 
                   className="w-3 h-3 rounded" 
@@ -682,7 +730,7 @@ export default function FormResponsesPage() {
             return (
               <Card key={row.value} className="p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{row.label}</h3>
+                  <CardTitle className="text-lg font-semibold text-gray-900">{row.label}</CardTitle>
                   <p className="text-sm text-gray-500">總回應數: {totalForRow}</p>
                 </div>
                 
@@ -777,7 +825,7 @@ export default function FormResponsesPage() {
             return (
               <Card key={col.value} className="p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{col.label}</h3>
+                  <CardTitle className="text-lg font-semibold text-gray-900">{col.label}</CardTitle>
                   <p className="text-sm text-gray-500">總回應數: {totalForCol}</p>
                 </div>
                 
@@ -1007,7 +1055,7 @@ export default function FormResponsesPage() {
                       /* Grid 欄位顯示統計 */
                       <div key={field.field_id} className="border rounded-lg p-4">
                         <div className="mb-4">
-                          <h3 className="text-lg font-semibold">{field.field_label}</h3>
+                          <CardTitle className="text-lg font-semibold">{field.field_label}</CardTitle>
                           <p className="text-sm text-muted-foreground">
                             {field.field_type} • {field.total_responses} 個回應
                           </p>
@@ -1025,7 +1073,7 @@ export default function FormResponsesPage() {
                       /* 其他欄位顯示個別回應 */
                       <div key={field.field_id} className="border rounded-lg p-4">
                         <div className="mb-4">
-                          <h3 className="text-lg font-semibold">{field.field_label}</h3>
+                          <CardTitle className="text-lg font-semibold">{field.field_label}</CardTitle>
                           <p className="text-sm text-muted-foreground">
                             {field.field_type} • {field.total_responses} 個回應
                           </p>
@@ -1035,7 +1083,7 @@ export default function FormResponsesPage() {
                           {field.responses.length === 0 ? (
                             <p className="text-muted-foreground text-sm">尚無回應</p>
                           ) : (
-                            field.responses.map((response, index) => (
+                            field.responses.map((response) => (
                               <div key={`${response.response_id}-${field.field_id}`} 
                                    className="flex items-start justify-between p-3 bg-muted/50 rounded">
                                 <div className="flex-1">
