@@ -1,13 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { ErrorResponse, PermissionsUpdateRequest } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse, RolePermission } from '@/app/api/types';
-
-interface PermissionsUpdateRequest {
-  permissions: {
-    role: string;
-    access_type: 'read' | 'edit' | null;
-  }[];
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function PUT(
   request: NextRequest,

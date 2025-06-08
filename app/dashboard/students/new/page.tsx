@@ -31,7 +31,7 @@ export default function AddStudentPage() {
   const [formData, setFormData] = useState<Omit<Student, 'id' | 'created_at' | 'updated_at'>>({
     name: "",
     gender: "",
-    grade: "",
+    grade: "1",
     class: "",
     family_background: "",
     is_disadvantaged: '否',
@@ -49,7 +49,7 @@ export default function AddStudentPage() {
     // If user is a manager with a region, set the region and disable changing it
     if (user && user.role?.name === 'manager') {
       if (user.region) {
-        setFormData(prev => ({ ...prev, region: user.region }))
+        setFormData(prev => ({ ...prev, region: user.region || "" }))
       } else {
         setIsManagerWithoutRegion(true)
       }
@@ -113,6 +113,7 @@ export default function AddStudentPage() {
         gender: formData.gender,
         grade: formData.grade,
         class: formData.class,
+        family_background: formData.family_background,
         email: formData.email,
         is_disadvantaged: formData.is_disadvantaged,
         cultural_disadvantage_factors: formData.cultural_disadvantage_factors,
@@ -121,7 +122,7 @@ export default function AddStudentPage() {
         student_type: formData.student_type,
         account_username: formData.account_username,
         account_password: formData.account_password,
-        region: user?.role?.name === 'manager' ? user.region : formData.region,
+        region: user?.role?.name === 'manager' ? (user.region || "") : formData.region,
       }
       
       // Call the API to create student

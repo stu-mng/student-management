@@ -1,11 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { ErrorResponse, RolesListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse, Role } from '@/app/api/types';
-
-interface RolesListResponse {
-  success: boolean;
-  data: Role[];
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * GET /api/roles

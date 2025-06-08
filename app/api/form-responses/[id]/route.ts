@@ -1,20 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/database/supabase/server';
-import { 
-  ErrorResponse,
-  SuccessResponse,
-  FormFieldResponseCreateRequest
+import {
+    ErrorResponse,
+    FormResponseUpdateResponse,
+    SuccessResponse,
+    UpdateFormResponseRequest
 } from '@/app/api/types';
-
-interface UpdateFormResponseRequest {
-  field_responses: FormFieldResponseCreateRequest[];
-  submission_status?: 'draft' | 'submitted';
-}
-
-interface FormResponseUpdateResponse {
-  success: boolean;
-  data: any;
-}
+import { createClient } from '@/database/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,

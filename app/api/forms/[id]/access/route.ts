@@ -1,14 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { AccessResponse, ErrorResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse } from '@/app/api/types';
-
-interface AccessResponse {
-  success: boolean;
-  data: {
-    hasAccess: boolean;
-    accessType: 'read' | 'edit' | null;
-  };
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,

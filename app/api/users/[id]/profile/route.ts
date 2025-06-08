@@ -1,12 +1,7 @@
-import { ErrorResponse, User, FormResponse } from '@/app/api/types';
+import { ErrorResponse, FormResponse, User, UserProfileResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasEqualOrHigherPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
-
-interface UserProfileResponse {
-  user: User;
-  formResponses?: FormResponse[];
-}
 
 /**
  * GET /api/users/[id]/profile

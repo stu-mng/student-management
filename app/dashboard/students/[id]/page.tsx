@@ -29,8 +29,9 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
     gender: "",
     grade: "1",
     class: "",
+    region: "",
     family_background: "",
-    is_disadvantaged: false,
+    is_disadvantaged: "否",
     cultural_disadvantage_factors: "",
     personal_background_notes: "",
     registration_motivation: "",
@@ -62,6 +63,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
           gender: student.gender,
           grade: student.grade,
           class: student.class,
+          region: student.region,
           family_background: student.family_background,
           is_disadvantaged: student.is_disadvantaged,
           cultural_disadvantage_factors: student.cultural_disadvantage_factors,
@@ -89,11 +91,11 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev: Partial<Student>) => ({ ...prev, [name]: value }))
   }
 
   const handleSelectChange = (name: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev: Partial<Student>) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,6 +119,8 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
         gender: formData.gender,
         grade: formData.grade,
         class: formData.class,
+        region: formData.region,
+        family_background: formData.family_background,
         email: formData.email,
         is_disadvantaged: formData.is_disadvantaged,
         cultural_disadvantage_factors: formData.cultural_disadvantage_factors,

@@ -1,18 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/database/supabase/server';
-import { 
+import type {
   ErrorResponse,
-  FormResponseCreateRequest, 
-  FormResponseDetailResponse 
+  FieldResponseCreateData,
+  FormFieldOption,
+  FormFieldResponseData,
+  FormResponseCreateData,
+  FormResponseCreateRequest,
+  FormResponseDetailResponse,
+  FormResponsesResponse,
+  UserData
 } from '@/app/api/types';
-
-interface FormResponsesResponse {
-  success: boolean;
-  data: any[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import { createClient } from '@/database/supabase/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
@@ -64,7 +63,7 @@ export async function GET(
     }
 
     // 檢查權限：只有表單創建者、管理員或 root 可以查看回應
-    const userRole = (userData.role as any)?.name;
+    const userRole = (userData as unknown as UserData).role?.name || '';
     const hasPermission = form.created_by === user.id || ['admin', 'root'].includes(userRole);
     
     if (!hasPermission) {
@@ -93,7 +92,6 @@ export async function GET(
             id, 
             field_label, 
             field_type,
-            grid_options,
             form_field_options(
               option_value,
               option_label
@@ -114,7 +112,7 @@ export async function GET(
     }
 
     // 創建選項值到標籤的映射函數
-    const createOptionMap = (options: any[]) => {
+    const createOptionMap = (options: FormFieldOption[]) => {
       const map = new Map<string, string>();
       options.forEach(option => {
         map.set(option.option_value, option.option_label);
@@ -136,7 +134,7 @@ export async function GET(
     // 處理回應數據，轉換選項值為標籤
     const processedResponses = responses?.map(response => ({
       ...response,
-      field_responses: response.field_responses.map((fieldResponse: any) => {
+      field_responses: response.field_responses.map((fieldResponse: FormFieldResponseData) => {
         const optionMap = createOptionMap(fieldResponse.field?.form_field_options || []);
         
         let displayValue: string | null = null;
@@ -256,7 +254,7 @@ export async function POST(
     }
 
     // 創建表單回應
-    const responseData: any = {
+    const responseData: FormResponseCreateData = {
       form_id,
       respondent_type,
       submission_status,
@@ -287,7 +285,7 @@ export async function POST(
 
     // 創建欄位回應
     if (field_responses.length > 0) {
-      const fieldResponsesData = field_responses.map((fieldResponse: any) => ({
+      const fieldResponsesData: FieldResponseCreateData[] = field_responses.map((fieldResponse) => ({
         response_id: formResponse.id,
         field_id: fieldResponse.field_id,
         field_value: fieldResponse.field_value,

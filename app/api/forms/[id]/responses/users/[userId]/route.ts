@@ -1,12 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { ErrorResponse, UserFormResponsesResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse } from '@/app/api/types';
-
-interface UserFormResponsesResponse {
-  success: boolean;
-  data: any[];
-  total: number;
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,

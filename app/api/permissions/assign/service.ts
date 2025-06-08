@@ -1,30 +1,4 @@
-import type { Student, User } from "@/lib/types";
-
-/**
- * Response interfaces for API
- */
-interface StudentsListResponse {
-  total: number;
-  data: Student[];
-}
-
-interface BulkAssignPermissionRequest {
-  teacher_id: string;
-  student_ids: string[];
-}
-
-interface BulkAssignPermissionResponse {
-  success: boolean;
-  count: number;
-  message?: string;
-}
-
-interface TeacherStudentPermission {
-  id: string;
-  teacher_id: string;
-  student_id: string;
-  created_at: string;
-}
+import type { BulkAssignPermissionRequest, BulkAssignPermissionResponse, Student, User } from "@/app/api/types";
 
 /**
  * Fetch all users with role 'teacher'

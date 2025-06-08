@@ -1,3 +1,9 @@
+// Import shared types from lib/types
+import type { Student } from '@/lib/types';
+
+// Re-export Student type for use in other files
+export type { Student } from '@/lib/types';
+
 // Authentication Types
 export interface LoginRequest {
   token: string;
@@ -54,35 +60,28 @@ export interface UsersListResponse {
   data: User[];
 }
 
-// Student Types
-export interface Student {
-  id: string;
-  student_id: string | null;
-  name: string;
-  grade?: string | null;
-  class?: string | null;
-  is_disadvantaged?: boolean;
-  student_type?: string | null;
-  region?: string | null;
-  created_at: string;
-  updated_at: string;
-  [key: string]: any; // For additional properties
-}
-
-export interface StudentUpdateRequest {
-  student_id?: string | null;
-  name?: string;
-  grade?: string | null;
-  class?: string | null;
-  is_disadvantaged?: boolean;
-  student_type?: string | null;
-  region?: string | null;
-  [key: string]: any; // For additional properties
-}
-
+// Student-related response types (using Student from lib/types)
 export interface StudentsListResponse {
   total: number;
   data: Student[];
+}
+
+// Student update request type
+export interface StudentUpdateRequest {
+  name?: string;
+  gender?: string;
+  grade?: '1' | '2' | '3' | '4' | '5' | '6';
+  class?: string;
+  region?: string;
+  family_background?: string;
+  is_disadvantaged?: '是' | '否';
+  cultural_disadvantage_factors?: string;
+  personal_background_notes?: string;
+  registration_motivation?: string;
+  student_type?: '新生' | '舊生';
+  account_username?: string;
+  account_password?: string;
+  email?: string;
 }
 
 // Permission Types
@@ -388,4 +387,144 @@ export interface AnalyticsResponse {
     month: string;
     studentCount: number;
   }>;
+}
+
+// API Routes Types
+export interface FormResponseData {
+  id: string;
+  form_id: string;
+  respondent_id: string | null;
+  respondent_type: string;
+  submission_status: string;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  respondent?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  field_responses: FormFieldResponseData[];
+}
+
+export interface FormFieldResponseData {
+  id: string;
+  response_id: string;
+  field_id: string;
+  field_value: string | null;
+  field_values: string[] | null;
+  field: {
+    id: string;
+    field_label: string;
+    field_type: string;
+    form_field_options?: FormFieldOption[];
+  };
+}
+
+export interface FormResponsesResponse {
+  success: boolean;
+  data: FormResponseData[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface UserRole {
+  id: number;
+  name: string;
+  display_name: string;
+  color: string | null;
+  order: number;
+}
+
+export interface UserData {
+  role: UserRole | null;
+}
+
+export interface FormResponseCreateData {
+  form_id: string;
+  respondent_id?: string;
+  respondent_type: string;
+  submission_status: string;
+  metadata?: Record<string, unknown>;
+  submitted_at?: string;
+}
+
+export interface FieldResponseCreateData {
+  response_id: string;
+  field_id: string;
+  field_value?: string | null;
+  field_values?: string[] | null;
+}
+
+// Additional API Routes Types
+export interface RolesListResponse {
+  success: boolean;
+  data: Role[];
+}
+
+export interface AccessResponse {
+  success: boolean;
+  data: {
+    hasAccess: boolean;
+    accessType: 'read' | 'edit' | null;
+  };
+}
+
+export interface PermissionsUpdateRequest {
+  permissions: {
+    role: string;
+    access_type: 'read' | 'edit' | null;
+  }[];
+}
+
+export interface UpdateFormResponseRequest {
+  field_responses: FormFieldResponseCreateRequest[];
+  submission_status?: 'draft' | 'submitted';
+}
+
+export interface FormResponseUpdateResponse {
+  success: boolean;
+  data: any;
+}
+
+export interface UserProfileResponse {
+  user: User;
+  formResponses?: FormResponse[];
+}
+
+export interface FieldOverview {
+  field_id: string;
+  field_label: string;
+  field_type: string;
+  display_order: number;
+  responses: Array<{
+    response_id: string;
+    respondent_name: string;
+    respondent_email: string;
+    field_value: string | null;
+    field_values: string[] | null;
+    created_at: string;
+    submission_status: string;
+  }>;
+  total_responses: number;
+}
+
+export interface FormOverviewResponse {
+  success: boolean;
+  data: FieldOverview[];
+  total_responses: number;
+}
+
+export interface UserFormResponsesResponse {
+  success: boolean;
+  data: any[];
+  total: number;
+}
+
+// Extended types for specific use cases
+export interface ExtendedFormFieldOption extends FormFieldOption {
+  option_type?: string;
+  row_label?: string;
+  column_label?: string;
 } 

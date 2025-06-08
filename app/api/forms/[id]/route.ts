@@ -1,24 +1,18 @@
 import type {
-  ErrorResponse,
-  FormDetailResponse,
-  FormFieldCreateRequest,
-  FormFieldOption,
-  FormFieldOptionCreateRequest,
-  FormUpdateRequest,
-  Role,
-  RolePermission,
-  SuccessResponse
+    ErrorResponse,
+    ExtendedFormFieldOption,
+    FormDetailResponse,
+    FormFieldCreateRequest,
+    FormFieldOption,
+    FormFieldOptionCreateRequest,
+    FormUpdateRequest,
+    Role,
+    RolePermission,
+    SuccessResponse
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-
-// 擴展的 FormFieldOption 類型，包含額外的屬性
-interface ExtendedFormFieldOption extends FormFieldOption {
-  option_type?: string;
-  row_label?: string;
-  column_label?: string;
-}
 
 // Supabase 客戶端類型
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;

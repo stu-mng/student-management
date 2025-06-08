@@ -1,29 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { ErrorResponse, FieldOverview, FormOverviewResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { ErrorResponse } from '@/app/api/types';
-
-interface FieldOverview {
-  field_id: string;
-  field_label: string;
-  field_type: string;
-  display_order: number;
-  responses: Array<{
-    response_id: string;
-    respondent_name: string;
-    respondent_email: string;
-    field_value: string | null;
-    field_values: string[] | null;
-    created_at: string;
-    submission_status: string;
-  }>;
-  total_responses: number;
-}
-
-interface FormOverviewResponse {
-  success: boolean;
-  data: FieldOverview[];
-  total_responses: number;
-}
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
