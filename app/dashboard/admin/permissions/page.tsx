@@ -3,25 +3,23 @@
 import type React from "react"
 
 import { useAuth } from "@/components/auth-provider"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
+import { canDeleteUser, canEditUser, cn, formatRelativeTime, getRoleBgColor, getRoleHoverTextColor, getRoleOrder, getRoleTextColor, hasEqualOrHigherPermission, hasUserManagePermission } from "@/lib/utils"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown, Check, ChevronsUpDown, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { getRoleTextColor, getRoleBgColor, getRoleDisplay, getRoleOrder, cn, getRoleHoverTextColor, formatRelativeTime, hasHigherPermission, canDeleteUser, hasUserManagePermission, canEditUser, hasEqualOrHigherPermission } from "@/lib/utils"
-import Link from "next/link"
 
 type User = {
   id: string
@@ -90,9 +88,12 @@ export default function PermissionsPage() {
         console.error("獲取角色數據錯誤:", error)
         // 使用預設角色作為後備
         setRoles([
-          { name: 'teacher', display_name: '大學伴', order: 3 },
-          { name: 'manager', display_name: '區域管理員', order: 2 },
-          { name: 'admin', display_name: '全域管理員', order: 1 },
+          { name: 'new-registrant', display_name: '新報名帳號', order: 6 },
+          { name: 'candidate', display_name: '儲備大學伴', order: 5 },
+          { name: 'teacher', display_name: '大學伴', order: 4 },
+          { name: 'class-teacher', display_name: '帶班老師', order: 3 },
+          { name: 'manager', display_name: '學校負責人', order: 2 },
+          { name: 'admin', display_name: '計畫主持人', order: 1 },
           { name: 'root', display_name: '系統管理員', order: 0 }
         ])
       }

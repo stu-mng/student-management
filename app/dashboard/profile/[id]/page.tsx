@@ -1,15 +1,13 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
 import { formatRelativeTime, getRoleBgColor, getRoleDisplay, getRoleTextColor, hasEqualOrHigherPermission } from "@/lib/utils"
-import { ArrowLeft, Calendar, Mail, MapPin, Clock, FileText, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
-import Link from "next/link"
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, ChevronDown, ChevronUp, Clock, FileText, Mail, MapPin, XCircle } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -377,8 +375,8 @@ export default function ProfilePage() {
       }
     }
 
-    // 处理多选题（checkbox）
-    if (field.field_type === 'checkbox' && field_values && Array.isArray(field_values)) {
+    // 处理多选题（checkbox 和 multi-select）
+    if (['checkbox', 'multi-select'].includes(field.field_type) && field_values && Array.isArray(field_values)) {
       return field_values
         .map(value => {
           const option = field.form_field_options?.find(opt => opt.option_value === value)

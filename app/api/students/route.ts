@@ -1,16 +1,9 @@
-import { ErrorResponse, Student, StudentsListResponse, SuccessResponse } from '@/app/api/types';
+import type { ErrorResponse, Student, StudentsListResponse, SuccessResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasUserManagePermission, isManager } from '@/lib/utils';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-/**
- * GET /api/students
- * 
- * 根據教師權限或管理員身份返回學生列表
- * 
- * 注意：需要执行數據庫遷移添加 region 欄位到 students 表:
- * ALTER TABLE students ADD COLUMN IF NOT EXISTS region VARCHAR(255);
- */
 export async function GET() {
   try {
     const supabase = await createClient();

@@ -1,6 +1,7 @@
-import { ErrorResponse, RolesListResponse } from '@/app/api/types';
+import type { ErrorResponse, RolesListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET /api/roles
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // 只有管理員可以查看角色列表
     const currentUserRole = (userData.role as any)?.name;
-    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
+    if (!['admin', 'root', 'manager', 'class-teacher'].includes(currentUserRole)) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 

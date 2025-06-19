@@ -26,7 +26,7 @@ export default function PrivacyPage() {
           
           <section className="mb-6">
             <h2 className="text-xl font-semibold mb-3">1. 資料收集</h2>
-            <p>學生管理系統收集以下資訊：</p>
+            <p>興大學伴酷系統收集以下資訊：</p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>基本個人資料</li>
               <li>學業相關資料</li>

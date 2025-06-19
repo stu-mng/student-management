@@ -8,7 +8,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <ProtectedRoute allowedRoles={["admin", "root", "manager"]}>
+    <ProtectedRoute allowedRoles={["admin", "root", "class-teacher", "manager"]}>
       <div className="space-y-6">
         {children}
       </div>

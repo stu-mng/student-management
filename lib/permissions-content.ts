@@ -16,8 +16,10 @@ export interface PermissionMatrixRow {
     root: string;
     admin: string;
     manager: string;
+    'class-teacher': string;
     teacher: string;
     candidate: string;
+    'new-registrant': string;
   };
 }
 
@@ -27,19 +29,25 @@ export const roleDescriptions: RoleDescription[] = [
     name: 'root',
     displayName: '系統管理員',
     description: '最高權限管理者，能夠管理所有使用者、學生資料及所有系統功能。',
-    details: '可以創建其他系統管理員、計畫主持人、學校負責人、大學伴和儲備大學伴。'
+    details: '可以創建其他系統管理員、計畫主持人、帶班老師、學校負責人、大學伴、儲備大學伴和新報名帳號。'
   },
   {
     name: 'admin',
     displayName: '計畫主持人',
     description: '全系統管理者，能夠管理除系統管理員外的所有使用者，以及所有學生資料。',
-    details: '可以創建學校負責人、大學伴和儲備大學伴，管理所有區域的資料。'
+    details: '可以創建帶班老師、學校負責人、大學伴、儲備大學伴和新報名帳號，管理所有區域的資料。'
+  },
+  {
+    name: 'class-teacher',
+    displayName: '帶班老師',
+    description: '負責帶領多個大學伴的教師，具有全域管理權限。',
+    details: '可以查看和編輯所有學生資料，協助指導大學伴教學工作。'
   },
   {
     name: 'manager',
     displayName: '學校負責人',
     description: '特定區域的管理者，只能管理其負責區域的學生資料，以及查看所在區域的資訊。',
-    details: '可以創建大學伴和儲備大學伴，並將區域內的學生分配給教師。'
+    details: '可以創建大學伴、儲備大學伴和新報名帳號，並將區域內的學生分配給大學伴。'
   },
   {
     name: 'teacher',
@@ -52,6 +60,12 @@ export const roleDescriptions: RoleDescription[] = [
     displayName: '儲備大學伴',
     description: '候補教學人員，具有有限的系統訪問權限。',
     details: '可能具有查看權限，但通常無法進行編輯操作，等待升級為正式大學伴。'
+  },
+  {
+    name: 'new-registrant',
+    displayName: '新報名帳號',
+    description: '剛註冊的新用戶，僅具有最基本的系統訪問權限。',
+    details: '只能查看基本資訊和填寫指定表單，等待管理員審核和分配正式角色。'
   }
 ];
 
@@ -65,9 +79,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '✅',
       manager: '✅',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -77,9 +93,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '✅',
       manager: '✅',
       teacher: '僅自己',
-      candidate: '僅自己'
+      candidate: '僅自己',
+      'new-registrant': '僅自己'
     }
   },
   {
@@ -89,9 +107,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
-      manager: '✅',
+      'class-teacher': '✅',
+      manager: '❌',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -101,12 +121,28 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '除 root 外',
-      manager: '除 root／admin 外',
+      'class-teacher': '除 root／admin 外',
+      manager: '❌',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   // 學生管理
+  {
+    resource: '學生管理',
+    operation: 'GET /api/students/manage',
+    endpoint: 'GET /api/students/manage',
+    permissions: {
+      root: '✅',
+      admin: '✅',
+      'class-teacher': '✅',
+      manager: '✅',
+      teacher: '❌',
+      candidate: '❌',
+      'new-registrant': '❌'
+    }
+  },
   {
     resource: '查看所有學生',
     operation: 'GET /api/students',
@@ -114,9 +150,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
-      manager: '僅本區域',
-      teacher: '僅被分配',
-      candidate: '僅被分配'
+      'class-teacher': '全域',
+      manager: '全域',
+      teacher: '全域',
+      candidate: '全域',
+      'new-registrant': '❌'
     }
   },
   {
@@ -126,9 +164,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
-      manager: '僅本區域',
+      'class-teacher': '✅',
+      manager: '本域',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -138,9 +178,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
-      manager: '僅本區域',
-      teacher: '僅被分配',
-      candidate: '❌'
+      'class-teacher': '全域',
+      manager: '全域',
+      teacher: '全域',
+      candidate: '全域',
+      'new-registrant': '❌'
     }
   },
   {
@@ -150,9 +192,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '❌',
       manager: '❌',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   // 表單管理
@@ -163,9 +207,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '✅',
       manager: '✅',
-      teacher: '創建者自訂',
-      candidate: '創建者自訂'
+      teacher: '✅',
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -175,9 +221,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '✅',
       manager: '✅',
-      teacher: '❌',
-      candidate: '❌'
+      teacher: '✅',
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -187,9 +235,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
+      'class-teacher': '✅',
       manager: '✅',
-      teacher: '創建者自訂',
-      candidate: '創建者自訂'
+      teacher: '✅',
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   },
   {
@@ -199,9 +249,11 @@ export const permissionMatrix: PermissionMatrixRow[] = [
     permissions: {
       root: '✅',
       admin: '✅',
-      manager: '僅自己創建',
+      'class-teacher': '❌',
+      manager: '❌',
       teacher: '❌',
-      candidate: '❌'
+      candidate: '❌',
+      'new-registrant': '❌'
     }
   }
 ];
@@ -214,11 +266,11 @@ export const permissionGroups = [
   },
   {
     name: '學生管理',
-    rows: permissionMatrix.slice(4, 8)
+    rows: permissionMatrix.slice(4, 9)
   },
   {
     name: '表單管理',
-    rows: permissionMatrix.slice(8, 12)
+    rows: permissionMatrix.slice(9, 13)
   }
 ];
 
@@ -226,7 +278,9 @@ export const permissionGroups = [
 export const roleHeaders = [
   { key: 'root', name: '系統管理員', subName: '(root)' },
   { key: 'admin', name: '計畫主持人', subName: '(admin)' },
+  { key: 'class-teacher', name: '帶班老師', subName: '(class-teacher)' },
   { key: 'manager', name: '學校負責人', subName: '(manager)' },
   { key: 'teacher', name: '大學伴', subName: '(teacher)' },
-  { key: 'candidate', name: '儲備大學伴', subName: '(candidate)' }
+  { key: 'candidate', name: '儲備大學伴', subName: '(candidate)' },
+  { key: 'new-registrant', name: '新報名帳號', subName: '(new-registrant)' }
 ]; 

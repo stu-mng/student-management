@@ -227,7 +227,7 @@ export default function DashboardPage() {
   };
 
   // 檢查是否為管理員
-  const isAdmin = user?.role?.name === "admin" || user?.role?.name === "root" || user?.role?.name === "manager";
+  const isAdmin = ['admin', 'root', 'class-teacher', 'manager'].includes(user?.role?.name as string);
 
   // 查看學生詳細資料
   const viewStudentDetails = (student: Student) => {
@@ -538,7 +538,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <RestrictedCard allowedRoles={["admin", "root", "teacher"]}>
+      <RestrictedCard allowedRoles={["admin", "root", "class-teacher", "manager", "teacher"]}>
         <CardHeader>
           <CardTitle>學生列表</CardTitle>
           <CardDescription>系統中所有學生的資料</CardDescription>

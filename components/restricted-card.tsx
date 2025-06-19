@@ -1,12 +1,13 @@
 'use client'
 
+import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getRoleBgColor, getRoleDisplay, getRoleTextColor } from "@/lib/utils";
-import React from 'react';
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import React from 'react';
 
 type ChildrenFunction = (props: { 
   badgeContent: string | null; 
@@ -21,7 +22,7 @@ interface RestrictedCardProps {
   children?: React.ReactNode | ChildrenFunction;
   footer?: React.ReactNode;
   className?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function RestrictedCard({
@@ -34,6 +35,20 @@ export function RestrictedCard({
   ...props
 }: RestrictedCardProps) {
   const router = useRouter();
+  const { user } = useAuth();
+
+  // 檢查用戶是否有權限查看此卡片
+  const hasPermission = () => {
+    if (!user?.role?.name) return false;
+    if (allowedRoles.length === 0) return true; // 如果沒有設置限制，則所有人都能看到
+    return allowedRoles.includes(user.role.name);
+  };
+
+  // 如果用戶沒有權限，直接不渲染此組件
+  if (!hasPermission()) {
+    return null;
+  }
+
   // Determine badge content based on allowed roles
   const getCardBadgeContent = () => {
     if (allowedRoles.length === 0) {
@@ -41,7 +56,7 @@ export function RestrictedCard({
     }
     
     let content: string = '';
-    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'class-teacher', 'manager' , 'teacher', 'candidate', 'new-registrant'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         content = getRoleDisplay(role);
       }
@@ -53,7 +68,7 @@ export function RestrictedCard({
   const getCardRoleBgColor = () => {
     let bgColor: string = '';
 
-    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'class-teacher', 'manager', 'teacher', 'new-registrant', 'candidate'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         bgColor = getRoleBgColor(role);
       }
@@ -66,7 +81,7 @@ export function RestrictedCard({
   const getCardRoleTextColor = () => {
     let textColor: string = '';
 
-    (['root', 'admin', 'manager', 'teacher', 'candidate'] as string[]).forEach((role: string) => {
+    (['root', 'admin', 'class-teacher', 'manager', 'teacher', 'new-registrant', 'candidate'] as string[]).forEach((role: string) => {
       if (allowedRoles.includes(role)) {
         textColor = getRoleTextColor(role);
       }

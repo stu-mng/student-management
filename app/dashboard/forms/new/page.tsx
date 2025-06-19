@@ -1,28 +1,29 @@
 "use client"
 
+import type { FormCreateRequest, FormFieldCreateRequest, FormFieldOptionCreateRequest } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { FIELD_TYPES } from "@/components/forms/form-context"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, Plus, Trash2, GripVertical, Save, Send, Eye, CalendarIcon, Shield } from "lucide-react"
-import Link from "next/link"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { FormCreateRequest, FormFieldCreateRequest, FormFieldOptionCreateRequest } from "@/app/api/types"
-import { toast } from "sonner"
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided } from "@hello-pangea/dnd"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { cn, hasFormManagePermission } from "@/lib/utils"
+import type { DraggableProvided, DropResult, DroppableProvided } from "@hello-pangea/dnd"
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd"
 import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { hasFormManagePermission } from "@/lib/utils"
+import { ArrowLeft, CalendarIcon, Eye, GripVertical, Plus, Save, Send, Shield, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 interface FormFieldWithId extends FormFieldCreateRequest {
   tempId: string
@@ -37,18 +38,6 @@ interface RolePermission {
   role: string
   access_type: 'read' | 'edit' | null
 }
-
-const FIELD_TYPES = [
-  { value: 'text', label: '單行文字' },
-  { value: 'textarea', label: '多行文字' },
-  { value: 'email', label: '電子郵件' },
-  { value: 'number', label: '數字' },
-  { value: 'select', label: '下拉選單' },
-  { value: 'radio', label: '單選題' },
-  { value: 'checkbox', label: '多選題' },
-  { value: 'radio_grid', label: '單選方格' },
-  { value: 'checkbox_grid', label: '核取方塊格' },
-]
 
 const FORM_TYPES = [
   { value: 'registration', label: '報名表' },
@@ -108,16 +97,19 @@ function PermissionsModal({ permissions, onPermissionsChange, roles }: {
         <div className="space-y-4">
           {localPermissions.map((permission) => {
             const roleLabel = roles.find(r => r.value === permission.role)?.label || permission.role
+            const isAdminRole = ['admin', 'manager', 'root'].includes(permission.role)
+            
             return (
               <div key={permission.role} className="flex items-center justify-between">
                 <Label className="text-sm font-medium">{roleLabel}</Label>
                 <Select
                   value={permission.access_type || 'null'}
                   onValueChange={(value) => 
-                    updatePermission(permission.role, value === 'null' ? null : value as 'read' | 'edit')
+                    !isAdminRole && updatePermission(permission.role, value === 'null' ? null : value as 'read' | 'edit')
                   }
+                  disabled={isAdminRole}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className={`w-32 ${isAdminRole ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -131,6 +123,10 @@ function PermissionsModal({ permissions, onPermissionsChange, roles }: {
               </div>
             )
           })}
+          
+          <div className="text-xs text-muted-foreground mt-4 p-2 bg-muted/50 rounded">
+            註：管理員角色（區域管理員、全域管理員、系統管理員）預設為編輯權限且無法修改
+          </div>
         </div>
 
         <DialogFooter>
@@ -175,14 +171,15 @@ export default function FormCreatePage() {
         const response = await fetch('/api/roles')
         if (response.ok) {
           const result = await response.json()
-          const rolesList = result.data.map((role: any) => ({
+          const rolesList = result.data.map((role: { name: string; display_name?: string }) => ({
             value: role.name,
             label: role.display_name || role.name
           }))
           setRoles(rolesList)
-          setPermissions(rolesList.map((role: any) => ({
+          // 設定權限預設值，管理員角色預設為編輯權限
+          setPermissions(rolesList.map((role: { value: string; label: string }) => ({
             role: role.value,
-            access_type: null
+            access_type: ['admin', 'manager', 'root'].includes(role.value) ? 'edit' as const : null
           })))
         }
       } catch (err) {
@@ -197,7 +194,7 @@ export default function FormCreatePage() {
         setRoles(defaultRoles)
         setPermissions(defaultRoles.map(role => ({
           role: role.value,
-          access_type: null
+          access_type: ['admin', 'manager', 'root'].includes(role.value) ? 'edit' as const : null
         })))
       }
     }
@@ -507,7 +504,7 @@ export default function FormCreatePage() {
 
   // 渲染欄位編輯器
   const renderFieldEditor = (field: FormFieldWithId, index: number) => {
-    const needsOptions = ['select', 'radio', 'checkbox'].includes(field.field_type)
+    const needsOptions = ['select', 'multi-select', 'radio', 'checkbox'].includes(field.field_type)
     const needsGridOptions = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
 
     return (
@@ -571,7 +568,41 @@ export default function FormCreatePage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {FIELD_TYPES.map((type) => (
+                      {/* 基礎輸入 */}
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b">
+                        基礎輸入
+                      </div>
+                      {FIELD_TYPES.filter(type => type.category === '基礎輸入').map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                      
+                      {/* 專用格式 */}
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                        專用格式
+                      </div>
+                      {FIELD_TYPES.filter(type => type.category === '專用格式').map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                      
+                      {/* 選擇題型 */}
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                        選擇題型
+                      </div>
+                      {FIELD_TYPES.filter(type => type.category === '選擇題型').map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                      
+                      {/* 高級題型 */}
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                        高級題型
+                      </div>
+                      {FIELD_TYPES.filter(type => type.category === '高級題型').map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>
@@ -772,6 +803,21 @@ export default function FormCreatePage() {
                   </div>
                 </div>
               )}
+
+              <div>
+                <Label htmlFor={`field-permissions-${field.tempId}`}>權限設定說明</Label>
+                <div className="text-sm text-muted-foreground mt-1">
+                  {field.field_type === 'taiwan_id' && (
+                    <p>此欄位將驗證台灣身分證字號格式（1個英文字母 + 9個數字）</p>
+                  )}
+                  {field.field_type === 'phone' && (
+                    <p>此欄位將驗證手機號碼格式（09xx-xxx-xxx）</p>
+                  )}
+                  {field.field_type === 'multi-select' && (
+                    <p>此欄位允許使用者選擇多個選項</p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1010,6 +1056,32 @@ export default function FormCreatePage() {
                           <SelectValue placeholder={field.placeholder || '請選擇'} />
                         </SelectTrigger>
                       </Select>
+                    )}
+                    {field.field_type === 'multi-select' && (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2 min-h-[2rem] p-2 border rounded-md bg-muted/30">
+                          <span className="text-sm text-muted-foreground">已選擇的選項會顯示在這裡...</span>
+                        </div>
+                        <Select disabled>
+                          <SelectTrigger className="text-base">
+                            <SelectValue placeholder={field.placeholder || '點擊選擇多個選項'} />
+                          </SelectTrigger>
+                        </Select>
+                      </div>
+                    )}
+                    {field.field_type === 'taiwan_id' && (
+                      <Input 
+                        placeholder={field.placeholder || 'A123456789'} 
+                        disabled 
+                        className="text-base" 
+                      />
+                    )}
+                    {field.field_type === 'phone' && (
+                      <Input 
+                        placeholder={field.placeholder || '0912-345-678'} 
+                        disabled 
+                        className="text-base" 
+                      />
                     )}
                     {field.field_type === 'radio' && (
                       <div className="space-y-3">

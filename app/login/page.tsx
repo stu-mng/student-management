@@ -23,7 +23,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-b from-blue-50 to-white">
       <Card className="w-full max-w-md shadow-lg border-0">
         <CardHeader className="space-y-2 text-center pb-2">
-          <CardTitle className="text-3xl font-bold text-primary">小學伴管理系統</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">興大學伴酷系統</CardTitle>
           <CardDescription className="text-gray-500">請使用您的 Google 帳戶登入以存取小學伴資料</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col space-y-6 pt-4">

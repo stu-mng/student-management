@@ -124,7 +124,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   <div className="max-w-[70%] w-[48rem] h-[27rem] relative mt-6 mb-8 overflow-hidden rounded-lg border border-border">
                   <iframe 
                       src="https://www.youtube.com/embed/4CgpOY9dcpU" 
-                      title="學生管理系統功能介紹" 
+                      title="興大學伴酷系統功能介紹" 
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                       allowFullScreen
                       className="absolute top-0 left-0 h-full w-full"
@@ -221,7 +221,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                     {permissionGroups.map((group) => (
                       <React.Fragment key={group.name}>
                         <tr className="bg-muted/20 font-medium">
-                          <td colSpan={8} className="py-2 px-4">{group.name}</td>
+                          <td colSpan={9} className="py-2 px-4">{group.name}</td>
                         </tr>
                         {group.rows.map((row, index) => (
                           <tr key={`${group.name}-${index}`}>
@@ -229,9 +229,11 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                             <td className="py-2 px-4 text-xs text-muted-foreground">{row.operation}</td>
                             <td className="text-center py-2 px-2">{row.permissions.root}</td>
                             <td className="text-center py-2 px-2">{row.permissions.admin}</td>
+                            <td className="text-center py-2 px-2">{row.permissions['class-teacher']}</td>
                             <td className="text-center py-2 px-2">{row.permissions.manager}</td>
                             <td className="text-center py-2 px-2">{row.permissions.teacher}</td>
                             <td className="text-center py-2 px-2">{row.permissions.candidate}</td>
+                            <td className="text-center py-2 px-2">{row.permissions['new-registrant']}</td>
                           </tr>
                         ))}
                       </React.Fragment>
@@ -571,7 +573,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">系統初始版本</h3>
                 <ul className="space-y-1 text-sm">
-                  <li>• 建立基礎的學生管理系統架構</li>
+                  <li>• 建立基礎的興大學伴酷系統架構</li>
                   <li>• 實現基本的用戶認證與授權</li>
                   <li>• 建立學生資料的 CRUD 操作</li>
                   <li>• 設定初始的資料庫結構</li>

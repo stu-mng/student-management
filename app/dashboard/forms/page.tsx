@@ -1,12 +1,11 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Form } from "@/app/api/types"
+import type { Form } from "@/app/api/types"
 import { FormCard } from "@/components/forms"
 
 interface FormWithSubmitStatus extends Form {

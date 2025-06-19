@@ -1,7 +1,8 @@
-import { ErrorResponse, Student, StudentUpdateRequest, SuccessResponse } from '@/app/api/types';
+import type { ErrorResponse, Student, SuccessResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasUserManagePermission } from '@/lib/utils';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET /api/students/[id]
@@ -46,7 +47,7 @@ export async function GET(
     const hasManagePermission = hasUserManagePermission(userRoleObj);
     
     // 創建查詢
-    let query = supabase
+    const query = supabase
       .from('students')
       .select('*')
       .eq('id', (await params).id)

@@ -14,8 +14,12 @@ export const getRoleBgColor = (role: string) => {
         return 'bg-green-100';
       case 'manager':
         return 'bg-yellow-100';
+      case 'class-teacher':
+        return 'bg-teal-100';
       case 'candidate':
         return 'bg-gray-100';
+      case 'new-registrant':
+        return 'bg-slate-100';
       case 'root':
         return 'bg-red-100';
       default:
@@ -32,8 +36,12 @@ export const getRoleTextColor = (role: string) => {
             return 'text-green-800';
         case 'manager':
             return 'text-yellow-800';
+        case 'class-teacher':
+            return 'text-teal-800';
         case 'candidate':
             return 'text-gray-800';
+        case 'new-registrant':
+            return 'text-slate-800';
         case 'root':
             return 'text-red-800';
         default:
@@ -49,8 +57,12 @@ export const getRoleHoverTextColor = (role: string) => {
             return 'hover:text-green-900';
         case 'manager':
             return 'hover:text-yellow-900';
+        case 'class-teacher':
+            return 'hover:text-teal-900';
         case 'candidate':
             return 'hover:text-gray-900';
+        case 'new-registrant':
+            return 'hover:text-slate-900';
         case 'root':
             return 'hover:text-red-900';
         default:
@@ -67,8 +79,12 @@ export const getRoleDisplay = (role: string) => {
             return '大學伴';
         case 'manager':
             return '學校負責人';
+        case 'class-teacher':
+            return '帶班老師';
         case 'candidate':
             return '儲備大學伴';
+        case 'new-registrant':
+            return '新報名帳號';
         case 'root':
             return '系統管理員';
         default:
@@ -84,8 +100,12 @@ switch (role) {
         return 'bg-green-500';
     case 'manager':
         return 'bg-yellow-500';
+    case 'class-teacher':
+        return 'bg-teal-500';
     case 'candidate':
         return 'bg-gray-500';
+    case 'new-registrant':
+        return 'bg-slate-500';
     case 'root':
         return 'bg-red-500';
     default:
@@ -101,12 +121,16 @@ export const getRoleSortKey = (role: string) => {
             return 1;
         case 'manager':
             return 2;
+        case 'class-teacher':
+            return 3;
         case 'teacher':
             return 4;
         case 'candidate':
             return 5;
-        default:
+        case 'new-registrant':
             return 6;
+        default:
+            return 7;
     }
 }
 
@@ -249,9 +273,23 @@ export function isTeacher(role?: { name: string; order?: number } | null): boole
 
 export function isCandidate(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order === 5; // candidate 通常是 order = 4
+    return role.order === 5; // candidate 通常是 order = 5
   }
   return role?.name === 'candidate';
+}
+
+export function isClassTeacher(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 3; // class-teacher 通常是 order = 3
+  }
+  return role?.name === 'class-teacher';
+}
+
+export function isNewRegistrant(role?: { name: string; order?: number } | null): boolean {
+  if (role?.order !== undefined) {
+    return role.order === 6; // new-registrant 通常是 order = 6
+  }
+  return role?.name === 'new-registrant';
 }
 
 // 檢查是否有管理權限（admin 或 root）
@@ -262,7 +300,7 @@ export function hasAdminPermission(role?: { name: string; order?: number } | nul
 // 檢查是否有管理員級別權限（admin, root, manager）
 export function hasManagerPermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 2; // admin(1), root(0), manager(2)
+    return role.order <= 3; // admin(1), root(0), manager(2), class-teacher(3) 以上
   }
   return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
 }
@@ -270,7 +308,7 @@ export function hasManagerPermission(role?: { name: string; order?: number } | n
 // 檢查是否有表單管理權限
 export function hasFormManagePermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 2; // admin(1), root(0), manager(2)
+    return role.order <= 3; // admin(1), root(0), manager(2), class-teacher(3) 以上
   }
   return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
 }
@@ -278,25 +316,25 @@ export function hasFormManagePermission(role?: { name: string; order?: number } 
 // 檢查是否有用戶管理權限
 export function hasUserManagePermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 2; // admin(1), root(0), manager(2)
+    return role.order <= 3; 
   }
-  return role?.name ? ['admin', 'root', 'manager'].includes(role.name) : false;
+  return role?.name ? ['admin', 'root', 'manager', 'class-teacher'].includes(role.name) : false;
 }
 
 // 檢查是否有學生管理權限（可以查看和編輯學生）
 export function hasStudentManagePermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 4; // admin(1), root(0), manager(2), teacher(4)
+    return role.order <= 4; // admin(1), root(0), manager(2), class-teacher(3), teacher(4)
   }
-  return role?.name ? ['admin', 'root', 'manager', 'teacher'].includes(role.name) : false;
+  return role?.name ? ['admin', 'root', 'manager', 'class-teacher', 'teacher'].includes(role.name) : false;
 }
 
 // 檢查是否有學生查看權限
 export function hasStudentViewPermission(role?: { name: string; order?: number } | null): boolean {
   if (role?.order !== undefined) {
-    return role.order <= 5; // 包含所有角色，除了未定義的角色
+    return role.order <= 5; // 包含所有角色到 candidate(5)
   }
-  return role?.name ? ['admin', 'root', 'manager', 'teacher', 'candidate'].includes(role.name) : false;
+  return role?.name ? ['admin', 'root', 'manager', 'class-teacher', 'teacher', 'candidate'].includes(role.name) : false;
 }
 
 // 檢查角色權限等級比較 - 使用 order 比較

@@ -1,4 +1,4 @@
-import { ErrorResponse, RegionsResponse } from '@/app/api/types';
+import type { ErrorResponse, RegionsResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasUserManagePermission } from '@/lib/utils';
 import { NextResponse } from 'next/server';
@@ -40,7 +40,7 @@ export async function GET() {
     }
 
     // 查詢區域資料
-    let query = supabase.from('students').select('region');
+    const query = supabase.from('students').select('region');
     
     // 執行查詢
     const { data, error } = await query;

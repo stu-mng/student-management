@@ -1,12 +1,67 @@
 "use client"
 
 import type { FormField, FormFieldOption } from "@/app/api/types"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { X } from "lucide-react"
+import { useState } from "react"
+
+// 台灣身分證字號驗證函數
+const validateTaiwanId = (id: string): boolean => {
+  // 檢查格式：1個英文字母 + 9個數字
+  const idRegex = /^[A-Z][0-9]{9}$/
+  if (!idRegex.test(id)) {
+    return false
+  }
+
+  // 英文字母對應數字表
+  const letterToNumber: { [key: string]: number } = {
+    A: 10, B: 11, C: 12, D: 13, E: 14, F: 15, G: 16, H: 17, I: 34, J: 18,
+    K: 19, L: 20, M: 21, N: 22, O: 35, P: 23, Q: 24, R: 25, S: 26, T: 27,
+    U: 28, V: 29, W: 30, X: 31, Y: 32, Z: 33
+  }
+
+  const firstLetter = id.charAt(0)
+  const letterNumber = letterToNumber[firstLetter]
+  
+  // 將英文字母轉換為兩位數字
+  const firstDigit = Math.floor(letterNumber / 10)
+  const secondDigit = letterNumber % 10
+
+  // 取得後面的9個數字
+  const digits = id.substring(1).split('').map(Number)
+
+  // 計算檢查碼
+  let sum = firstDigit * 1 + secondDigit * 9
+  for (let i = 0; i < 8; i++) {
+    sum += digits[i] * (8 - i)
+  }
+
+  const remainder = sum % 10
+  const checkDigit = remainder === 0 ? 0 : 10 - remainder
+
+  return checkDigit === digits[8]
+}
+
+// 台灣手機號碼驗證函數
+const validatePhoneNumber = (phone: string): boolean => {
+  // 檢查格式：09xx-xxx-xxx
+  const phoneRegex = /^09\d{2}-\d{3}-\d{3}$/
+  return phoneRegex.test(phone)
+}
+
+// Email 格式驗證函數
+const validateEmail = (email: string): boolean => {
+  // 基本 Email 格式驗證：必須包含 @ 符號，且 @ 前後都有內容
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
 interface FormFieldComponentProps {
   field: FormField
@@ -102,20 +157,86 @@ function GridComponent({ field, value, onChange, hasError = false, mode }: GridC
 export function FormFieldComponent({ field, value, onChange, hasError = false }: FormFieldComponentProps) {
   const fieldValue = value || field.default_value || ''
   const errorClass = hasError ? 'border-red-500 focus:border-red-500' : ''
+  const [multiSelectOpen, setMultiSelectOpen] = useState(false)
 
   const renderFieldInput = () => {
     switch (field.field_type) {
       case 'text':
-      case 'email':
         return (
           <Input
-            type={field.field_type}
+            type="text"
             value={fieldValue}
             onChange={(e) => onChange(field.id, e.target.value)}
             placeholder={field.placeholder || ''}
             required={field.is_required || false}
             className={`text-base ${errorClass}`}
           />
+        )
+
+      case 'email':
+        return (
+          <div className="space-y-2">
+            <Input
+              type="email"
+              value={fieldValue}
+              onChange={(e) => onChange(field.id, e.target.value)}
+              placeholder={field.placeholder || 'example@email.com'}
+              required={field.is_required || false}
+              className={`text-base ${errorClass}`}
+            />
+            {fieldValue && !validateEmail(fieldValue) && (
+              <p className="text-sm text-red-600">電子郵件格式不正確（必須包含 @ 符號）</p>
+            )}
+          </div>
+        )
+
+      case 'taiwan_id':
+        return (
+          <div className="space-y-2">
+            <Input
+              type="text"
+              value={fieldValue}
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase()
+                onChange(field.id, value)
+              }}
+              placeholder={field.placeholder || 'A123456789'}
+              required={field.is_required || false}
+              className={`text-base ${errorClass}`}
+              maxLength={10}
+            />
+            {fieldValue && !validateTaiwanId(fieldValue) && (
+              <p className="text-sm text-red-600">身分證字號格式不正確</p>
+            )}
+          </div>
+        )
+
+      case 'phone':
+        return (
+          <div className="space-y-2">
+            <Input
+              type="text"
+              value={fieldValue}
+              onChange={(e) => {
+                let value = e.target.value.replace(/[^\d]/g, '') // 只保留數字
+                // 自動格式化：09xx-xxx-xxx
+                if (value.length > 4) {
+                  value = value.slice(0, 4) + '-' + value.slice(4)
+                }
+                if (value.length > 8) {
+                  value = value.slice(0, 8) + '-' + value.slice(8, 11)
+                }
+                onChange(field.id, value)
+              }}
+              placeholder={field.placeholder || '0912-345-678'}
+              required={field.is_required || false}
+              className={`text-base ${errorClass}`}
+              maxLength={12}
+            />
+            {fieldValue && !validatePhoneNumber(fieldValue) && (
+              <p className="text-sm text-red-600">手機號碼格式不正確（應為 09xx-xxx-xxx）</p>
+            )}
+          </div>
         )
 
       case 'number':
@@ -160,6 +281,72 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
             </SelectContent>
           </Select>
         )
+
+      case 'multi-select': {
+        const selectedValues = Array.isArray(value) ? value : []
+        const availableOptions = field.form_field_options?.filter(
+          option => !selectedValues.includes(option.option_value)
+        ) || []
+        
+        return (
+          <div className="space-y-2">
+            {/* 已選擇的標籤 */}
+            <div className="flex flex-wrap gap-2 min-h-[2rem] p-2 border rounded-md bg-muted/30">
+              {selectedValues.length === 0 ? (
+                <span className="text-sm text-muted-foreground">尚未選擇任何選項</span>
+              ) : (
+                selectedValues.map((selectedValue: string) => {
+                  const option = field.form_field_options?.find(opt => opt.option_value === selectedValue)
+                  return (
+                    <Badge key={selectedValue} variant="secondary" className="group cursor-pointer">
+                      <span className="mr-1">{option?.option_label || selectedValue}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          const newValues = selectedValues.filter(v => v !== selectedValue)
+                          onChange(field.id, newValues)
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )
+                })
+              )}
+            </div>
+            
+            {/* 選項下拉選單 */}
+            {availableOptions.length > 0 && (
+              <Select
+                open={multiSelectOpen}
+                onOpenChange={setMultiSelectOpen}
+                onValueChange={(val) => {
+                  const newValues = [...selectedValues, val]
+                  onChange(field.id, newValues)
+                  setMultiSelectOpen(false)
+                }}
+              >
+                <SelectTrigger className={`text-base ${errorClass}`}>
+                  <SelectValue placeholder={field.placeholder || '點擊選擇選項'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableOptions.map((option: FormFieldOption) => (
+                    <SelectItem key={option.id} value={option.option_value} className="text-base">
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {availableOptions.length === 0 && selectedValues.length > 0 && (
+              <p className="text-sm text-muted-foreground">所有選項都已選擇</p>
+            )}
+          </div>
+        )
+      }
 
       case 'radio':
         return (

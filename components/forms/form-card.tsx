@@ -1,14 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Calendar, Clock, Users, CheckCircle, XCircle, Edit, MessageSquare, Trash2, Eye, Pen, X, FileText, ClipboardList, FileQuestion, MessageCircle, FileSpreadsheet } from "lucide-react"
-import Link from "next/link"
 import { Form, Role } from "@/app/api/types"
-import { formatDate, formatRelativeTime } from "@/lib/utils"
-import { useEffect, useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatRelativeTime } from "@/lib/utils"
+import { ClipboardList, Eye, FileQuestion, FileSpreadsheet, FileText, MessageCircle, Pen, X } from "lucide-react"
+import Link from "next/link"
 
 interface RolePermission {
   role: Role
@@ -118,6 +116,19 @@ function PermissionsBadges({ permissions }: { permissions?: RolePermission[] }) 
 
 export function FormCard({ form, variant, onDelete, permissionsModal, deletingId, roles }: FormCardProps) {
   const getStatusBadge = (status: string) => {
+    // Check if deadline has passed for active forms
+    if (status === 'active' && form.submission_deadline) {
+      const deadlinePassed = new Date() > new Date(form.submission_deadline)
+      if (deadlinePassed) {
+        return (
+          <div className="flex items-center gap-1.5 text-red-700 text-xs">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            已截止
+          </div>
+        )
+      }
+    }
+
     switch (status) {
       case 'active':
         return (

@@ -22,9 +22,12 @@ interface PermissionsModalProps {
 
 const DEFAULT_ROLES = [
   { value: 'teacher', label: '大學伴' },
-  { value: 'manager', label: '區域管理員' },
-  { value: 'admin', label: '全域管理員' },
+  { value: 'class-teacher', label: '帶班老師' },
+  { value: 'manager', label: '學校負責人' },
+  { value: 'admin', label: '計畫主持人' },
   { value: 'root', label: '系統管理員' },
+  { value: 'candidate', label: '儲備大學伴' },
+  { value: 'new-registrant', label: '新報名帳號' },
 ]
 
 const ACCESS_TYPES = [
@@ -46,7 +49,7 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
         const response = await fetch('/api/roles')
         if (response.ok) {
           const result = await response.json()
-          const rolesList = result.data.map((role: any) => ({
+          const rolesList = result.data.map((role: { name: string; display_name?: string }) => ({
             value: role.name,
             label: role.display_name || role.name
           }))
@@ -69,6 +72,13 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
       const existingPermissions = form.permissions || []
       const allPermissions = availableRoles.map(role => {
         const existing = existingPermissions.find((p: RolePermission) => p.role.name === role.value)
+        
+        // 對於有全部權限的角色，默認設為編輯權限（除非特別設定）
+        let defaultAccessType = null;
+        if (['root', 'admin', 'manager'].includes(role.value) && !existing) {
+          defaultAccessType = 'edit';
+        }
+        
         return {
           role: { 
             id: 0, 
@@ -77,7 +87,7 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
             color: null, 
             order: 0 
           } as Role,
-          access_type: existing ? existing.access_type : null
+          access_type: existing ? existing.access_type : (defaultAccessType as 'read' | 'edit' | null)
         }
       })
       setPermissions(allPermissions)
@@ -144,6 +154,9 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
         <div className="space-y-4">
           {permissions.map((permission) => {
             const roleLabel = availableRoles.find(r => r.value === permission.role.name)?.label || permission.role.name
+            // 檢查是否為總是有權限的角色
+            const isAlwaysAllowed = ['root', 'admin', 'manager'].includes(permission.role.name);
+            
             return (
               <div key={permission.role.name} className="flex items-center justify-between">
                 <Label className="text-sm font-medium">{roleLabel}</Label>
@@ -152,16 +165,26 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
                   onValueChange={(value) => 
                     updatePermission(permission.role.name, value === 'null' ? null : value as 'read' | 'edit')
                   }
+                  disabled={isAlwaysAllowed}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className={`w-32 ${isAlwaysAllowed ? 'opacity-75' : ''}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ACCESS_TYPES.map((type) => (
-                      <SelectItem key={type.value || 'null'} value={type.value || 'null'}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
+                    {isAlwaysAllowed ? (
+                      // 對於總是有權限的角色，只顯示檢視和編輯選項
+                      <>
+                        <SelectItem value="read">檢視</SelectItem>
+                        <SelectItem value="edit">編輯</SelectItem>
+                      </>
+                    ) : (
+                      // 對於其他角色，顯示所有選項
+                      ACCESS_TYPES.map((type) => (
+                        <SelectItem key={type.value || 'null'} value={type.value || 'null'}>
+                          {type.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

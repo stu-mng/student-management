@@ -201,7 +201,7 @@ export default function EditStudentPage({ params }: { params: Promise<{ id: stri
         <p className="text-muted-foreground">更新學生的資料</p>
       </div>
 
-      <RestrictedCard allowedRoles={["admin", "root"]}>
+      <RestrictedCard allowedRoles={["admin", "root", "class-teacher", 'manager']}>
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <div className="flex justify-between items-center">

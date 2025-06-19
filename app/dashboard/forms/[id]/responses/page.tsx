@@ -387,7 +387,7 @@ export default function FormResponsesPage() {
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{field.field_label}</h3>
             <p className="text-sm text-gray-500">
-              {field.field_type === 'multiple_choice' || field.field_type === 'checkbox' ? '多選' : '單選'} • 
+              {field.field_type === 'multiple_choice' || field.field_type === 'checkbox' || field.field_type === 'multi-select' ? '多選' : '單選'} • 
               尚未設定選項
             </p>
           </div>
@@ -468,7 +468,7 @@ export default function FormResponsesPage() {
         field_type: field.field_type
       })
       
-      if (field.field_type === 'multiple_choice' || field.field_type === 'checkbox') {
+      if (field.field_type === 'multiple_choice' || field.field_type === 'checkbox' || field.field_type === 'multi-select') {
         // 多選欄位 - field_values 中存的是標籤
         if (response.field_values && Array.isArray(response.field_values)) {
           response.field_values.forEach(label => {
@@ -512,7 +512,7 @@ export default function FormResponsesPage() {
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{field.field_label}</h3>
           <p className="text-sm text-gray-500">
-            {field.field_type === 'multiple_choice' || field.field_type === 'checkbox' ? '多選' : '單選'} • 
+            {field.field_type === 'multiple_choice' || field.field_type === 'checkbox' || field.field_type === 'multi-select' ? '多選' : '單選'} • 
             總選擇次數: {totalResponses} • 
             回應人數: {field.responses.filter(r => r.field_value || (r.field_values && r.field_values.length > 0)).length}
           </p>
@@ -956,7 +956,7 @@ export default function FormResponsesPage() {
             <div className="flex-1">
               <CardTitle className="text-xl">{form.title}</CardTitle>
               {form.description && (
-                <CardDescription className="mt-2 text-base whitespace-pre-line text-sm">
+                <CardDescription className="mt-2 whitespace-pre-line text-sm">
                   {form.description}
                 </CardDescription>
               )}
@@ -1064,7 +1064,7 @@ export default function FormResponsesPage() {
                           {renderGridStatistics(field)}
                         </div>
                       </div>
-                    ) : ['single_choice', 'multiple_choice', 'radio', 'checkbox'].includes(field.field_type) ? (
+                    ) : ['single_choice', 'multiple_choice', 'radio', 'checkbox', 'multi-select'].includes(field.field_type) ? (
                       /* 選擇類型欄位顯示圖表統計 - 直接顯示，不需要額外包裝 */
                       <div key={field.field_id}>
                         {renderChoiceStatistics(field)}

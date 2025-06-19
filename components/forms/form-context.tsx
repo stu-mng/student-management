@@ -39,16 +39,32 @@ export interface FormFieldOptionWithId {
   is_active: boolean
 }
 
-export const FIELD_TYPES = [
-  { value: 'text', label: '單行文字' },
-  { value: 'textarea', label: '多行文字' },
-  { value: 'email', label: '電子郵件' },
-  { value: 'number', label: '數字' },
-  { value: 'select', label: '下拉選單' },
-  { value: 'radio', label: '單選題' },
-  { value: 'checkbox', label: '多選題' },
-  { value: 'radio_grid', label: '單選方格' },
-  { value: 'checkbox_grid', label: '核取方塊格' },
+export interface FieldType {
+  value: string
+  label: string
+  category: string
+}
+
+export const FIELD_TYPES: FieldType[] = [
+  // 基礎文字輸入
+  { value: 'text', label: '單行文字', category: '基礎輸入' },
+  { value: 'textarea', label: '多行文字', category: '基礎輸入' },
+  { value: 'number', label: '數字', category: '基礎輸入' },
+  
+  // 專用格式輸入
+  { value: 'email', label: '電子郵件', category: '專用格式' },
+  { value: 'phone', label: '電話號碼', category: '專用格式' },
+  { value: 'taiwan_id', label: '身分證字號', category: '專用格式' },
+  
+  // 選擇題型
+  { value: 'radio', label: '單選題', category: '選擇題型' },
+  { value: 'checkbox', label: '多選題', category: '選擇題型' },
+  { value: 'select', label: '下拉選單', category: '選擇題型' },
+  { value: 'multi-select', label: '多選下拉選單', category: '選擇題型' },
+  
+  // 高級題型
+  { value: 'radio_grid', label: '單選方格', category: '高級題型' },
+  { value: 'checkbox_grid', label: '核取方塊格', category: '高級題型' },
 ]
 
 export const FORM_TYPES = [

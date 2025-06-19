@@ -1,4 +1,4 @@
-import { LucideIcon, BarChart3, FileSpreadsheet, Shield, Users, FileText, UserCheck, Eye, Settings } from "lucide-react";
+import { BarChart3, Eye, FileSpreadsheet, FileText, LucideIcon, Settings, Shield, UserCheck, Users } from "lucide-react";
 
 interface Feature {
   title: string;
@@ -33,7 +33,7 @@ interface LandingContent {
 
 export const landingContent: LandingContent = {
   hero: {
-    title: "學生管理系統",
+    title: "興大學伴酷系統",
     description: "高效能、安全的學生資料管理解決方案，具備完整的用戶管理與表單系統",
     buttonText: "登入系統"
   },

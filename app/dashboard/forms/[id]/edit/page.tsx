@@ -1,6 +1,5 @@
 "use client"
 
-import { useAuth } from "@/components/auth-provider"
 import type { FormFieldWithId } from "@/components/forms"
 import { FIELD_TYPES, FORM_TYPES, PermissionsModal, useFormContext } from "@/components/forms"
 import { Badge } from "@/components/ui/badge"
@@ -19,10 +18,12 @@ import type { DraggableProvided, DroppableProvided } from "@hello-pangea/dnd"
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd"
 import { format } from "date-fns"
 import { CalendarIcon, Eye, GripVertical, Pen, Plus, Trash2, X } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
 
 // 權限顯示組件
-function PermissionsBadges({ permissions }: { permissions?: any[] }) {
+function PermissionsBadges({ permissions }: { permissions?: Array<{
+  role: { name: string; display_name?: string | null };
+  access_type: string | null;
+}> }) {
   if (!permissions || permissions.length === 0) {
     return (
       <div className="flex flex-wrap gap-1 mt-2">
@@ -89,7 +90,6 @@ function PermissionsBadges({ permissions }: { permissions?: any[] }) {
 
 // 編輯頁面內容組件
 function FormEditContent() {
-  const { user } = useAuth()
   const { 
     form, 
     loading, 
@@ -140,7 +140,7 @@ function FormEditContent() {
   // 渲染欄位編輯器
   const renderFieldEditor = (field: FormFieldWithId, index: number) => {
     const isFocused = focusedFieldId === field.tempId
-    const needsOptions = ['select', 'radio', 'checkbox'].includes(field.field_type)
+    const needsOptions = ['select', 'multi-select', 'radio', 'checkbox'].includes(field.field_type)
     const needsGridOptions = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
 
     return (
@@ -208,7 +208,41 @@ function FormEditContent() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {FIELD_TYPES.map((type) => (
+                        {/* 基礎輸入 */}
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b">
+                          基礎輸入
+                        </div>
+                        {FIELD_TYPES.filter(type => type.category === '基礎輸入').map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                        
+                        {/* 專用格式 */}
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                          專用格式
+                        </div>
+                        {FIELD_TYPES.filter(type => type.category === '專用格式').map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                        
+                        {/* 選擇題型 */}
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                          選擇題型
+                        </div>
+                        {FIELD_TYPES.filter(type => type.category === '選擇題型').map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                        
+                        {/* 高級題型 */}
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
+                          高級題型
+                        </div>
+                        {FIELD_TYPES.filter(type => type.category === '高級題型').map((type) => (
                           <SelectItem key={type.value} value={type.value}>
                             {type.label}
                           </SelectItem>
@@ -640,7 +674,7 @@ function FormEditContent() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">{title || '未命名表單'}</CardTitle>
-            {description && <CardDescription className="text-lg mt-2 whitespace-pre-line text-sm">{description}</CardDescription>}
+            {description && <CardDescription className="mt-2 whitespace-pre-line text-sm">{description}</CardDescription>}
           </CardHeader>
           <CardContent className="space-y-4">
             {fields.length === 0 ? (
@@ -671,12 +705,30 @@ function FormEditContent() {
                   {field.field_type === 'number' && (
                     <Input type="number" placeholder={field.placeholder} disabled className="text-base" />
                   )}
+                  {field.field_type === 'taiwan_id' && (
+                    <Input placeholder={field.placeholder || '請輸入身分證字號'} disabled className="text-base" />
+                  )}
+                  {field.field_type === 'phone' && (
+                    <Input placeholder={field.placeholder || '請輸入電話號碼'} disabled className="text-base" />
+                  )}
                   {field.field_type === 'select' && (
                     <Select disabled>
                       <SelectTrigger className="text-base">
                         <SelectValue placeholder={field.placeholder || '請選擇'} />
                       </SelectTrigger>
                     </Select>
+                  )}
+                  {field.field_type === 'multi-select' && (
+                    <div className="space-y-2">
+                      <Select disabled>
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder={field.placeholder || '點擊選擇選項'} />
+                        </SelectTrigger>
+                      </Select>
+                      <div className="text-sm text-muted-foreground">
+                        多選下拉選單預覽 ({field.options?.length || 0} 個選項)
+                      </div>
+                    </div>
                   )}
                   {field.field_type === 'radio' && (
                     <div className="space-y-3">

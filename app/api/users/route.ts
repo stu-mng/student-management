@@ -1,7 +1,8 @@
-import { ErrorResponse, SuccessResponse, User, UserCreateRequest, UsersListResponse } from '@/app/api/types';
+  import type { ErrorResponse, SuccessResponse, User, UserCreateRequest, UsersListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasEqualOrHigherPermission } from '@/lib/utils';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET /api/users

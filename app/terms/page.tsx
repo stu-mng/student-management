@@ -25,7 +25,7 @@ export default function TermsPage() {
           
           <section className="mb-6">
             <h2 className="text-xl font-semibold mb-3">1. 服務介紹</h2>
-            <p>歡迎使用學生管理系統（以下簡稱「本服務」）。本服務旨在提供學生資訊管理、課程安排及學習進度追蹤等功能。使用本服務前，請詳閱以下條款。</p>
+            <p>歡迎使用興大學伴酷系統（以下簡稱「本服務」）。本服務旨在提供學生資訊管理、課程安排及學習進度追蹤等功能。使用本服務前，請詳閱以下條款。</p>
           </section>
           
           <section className="mb-6">
