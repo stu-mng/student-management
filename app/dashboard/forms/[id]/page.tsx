@@ -314,7 +314,85 @@ function FormEditView({
   onSaveResponse: () => void
   onSectionChange: (index: number) => void
 }) {
-  const hasValidationErrors = () => {
+  // 純檢查函數 - 不會修改狀態，只返回是否有錯誤
+  const checkHasValidationErrors = () => {
+    // Email validation
+    const validateEmail = (email: string): boolean => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return emailRegex.test(email)
+    }
+
+    // Taiwan ID validation
+    const validateTaiwanId = (id: string): boolean => {
+      if (!/^[A-Z][12]\d{8}$/.test(id)) return false
+      
+      const letterValues: { [key: string]: number } = {
+        A: 10, B: 11, C: 12, D: 13, E: 14, F: 15, G: 16, H: 17, I: 34, J: 18,
+        K: 19, L: 20, M: 21, N: 22, O: 35, P: 23, Q: 24, R: 25, S: 26, T: 27,
+        U: 28, V: 29, W: 32, X: 30, Y: 31, Z: 33
+      }
+      
+      const firstLetter = id[0]
+      const firstDigit = Math.floor(letterValues[firstLetter] / 10)
+      const secondDigit = letterValues[firstLetter] % 10
+      
+      let sum = firstDigit + secondDigit * 9
+      for (let i = 1; i < 9; i++) {
+        sum += parseInt(id[i]) * (9 - i)
+      }
+      
+      const checkDigit = (10 - (sum % 10)) % 10
+      return checkDigit === parseInt(id[9])
+    }
+
+    // Phone number validation
+    const validatePhoneNumber = (phone: string): boolean => {
+      const phoneRegex = /^(\+886|0)?[2-9]\d{7,8}$/
+      return phoneRegex.test(phone.replace(/[-\s]/g, ''))
+    }
+
+    if (!form.sections || form.sections.length === 0) return false
+
+    // Only validate current section
+    const currentSection = form.sections[currentSectionIndex]
+    if (!currentSection || !currentSection.fields) return false
+
+    let hasErrors = false
+
+    currentSection.fields.forEach(field => {
+      const value = formData[field.id]
+      const isEmpty = !value || (typeof value === 'string' && value.trim() === '') || 
+                     (Array.isArray(value) && value.length === 0)
+
+      // Required field validation
+      if (field.is_required && isEmpty) {
+        hasErrors = true
+        return
+      }
+
+      if (!isEmpty && typeof value === 'string') {
+        // Email validation
+        if (field.field_type === 'email' && !validateEmail(value)) {
+          hasErrors = true
+        }
+
+        // Taiwan ID validation
+        if (field.field_type === 'taiwan_id' && !validateTaiwanId(value)) {
+          hasErrors = true
+        }
+
+        // Phone validation
+        if (field.field_type === 'phone' && !validatePhoneNumber(value)) {
+          hasErrors = true
+        }
+      }
+    })
+
+    return hasErrors
+  }
+
+  // 執行驗證並更新狀態的函數 - 只在需要時調用
+  const performValidationAndUpdateState = () => {
     // Email validation
     const validateEmail = (email: string): boolean => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -540,8 +618,14 @@ function FormEditView({
               取消
             </Button>
             <Button
-              onClick={onSaveResponse}
-              disabled={saving || deadlinePassed || hasValidationErrors()}
+              onClick={() => {
+                // 在提交時執行驗證並更新狀態
+                const hasErrors = performValidationAndUpdateState()
+                if (!hasErrors) {
+                  onSaveResponse()
+                }
+              }}
+              disabled={saving || deadlinePassed || checkHasValidationErrors()}
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? (editingResponseId ? '儲存中...' : '提交中...') : (editingResponseId ? '儲存' : '提交')}
