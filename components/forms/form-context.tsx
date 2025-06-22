@@ -686,6 +686,9 @@ export function FormProvider({ children }: FormProviderProps) {
     try {
       const activeFields = fields.filter(field => field.is_active !== false)
       
+      // 計算全域 display_order
+      let globalDisplayOrder = 0
+      
       const formData = {
         title,
         description,
@@ -694,23 +697,20 @@ export function FormProvider({ children }: FormProviderProps) {
         allow_multiple_submissions: allowMultipleSubmissions,
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'draft',
-        sections: sections.map(section => ({
-          id: section.id,
-          title: section.title || '',
-          description: section.description || '',
-          order: section.order,
-          fields: activeFields
+        sections: sections.map(section => {
+          const sectionFields = activeFields
             .filter(field => 
               field.form_section_id === section.id || 
               field.form_section_id === section.tempId ||
               (!field.form_section_id && section.order === 0)
             )
+            .sort((a, b) => a.display_order - b.display_order) // 保持區段內順序
             .map(field => ({
               id: field.id,
               field_name: field.field_name,
               field_label: field.field_label,
               field_type: field.field_type,
-              display_order: field.display_order,
+              display_order: globalDisplayOrder++, // 使用全域順序
               is_required: field.is_required,
               is_active: field.is_active,
               placeholder: field.placeholder || '',
@@ -728,7 +728,15 @@ export function FormProvider({ children }: FormProviderProps) {
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }))
-        }))
+          
+          return {
+            id: section.id,
+            title: section.title || '',
+            description: section.description || '',
+            order: section.order,
+            fields: sectionFields
+          }
+        })
       }
 
       const response = await fetch(`/api/forms/${form.id}`, {
@@ -797,6 +805,9 @@ export function FormProvider({ children }: FormProviderProps) {
     try {
       const activeFields = fields.filter(field => field.is_active !== false)
       
+      // 計算全域 display_order
+      let globalDisplayOrder = 0
+      
       const formData = {
         title,
         description,
@@ -805,23 +816,20 @@ export function FormProvider({ children }: FormProviderProps) {
         allow_multiple_submissions: allowMultipleSubmissions,
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'active',
-        sections: sections.map(section => ({
-          id: section.id,
-          title: section.title || '',
-          description: section.description || '',
-          order: section.order,
-          fields: activeFields
+        sections: sections.map(section => {
+          const sectionFields = activeFields
             .filter(field => 
               field.form_section_id === section.id || 
               field.form_section_id === section.tempId ||
               (!field.form_section_id && section.order === 0)
             )
+            .sort((a, b) => a.display_order - b.display_order) // 保持區段內順序
             .map(field => ({
               id: field.id,
               field_name: field.field_name,
               field_label: field.field_label,
               field_type: field.field_type,
-              display_order: field.display_order,
+              display_order: globalDisplayOrder++, // 使用全域順序
               is_required: field.is_required,
               is_active: field.is_active,
               placeholder: field.placeholder || '',
@@ -839,7 +847,15 @@ export function FormProvider({ children }: FormProviderProps) {
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }))
-        }))
+          
+          return {
+            id: section.id,
+            title: section.title || '',
+            description: section.description || '',
+            order: section.order,
+            fields: sectionFields
+          }
+        })
       }
 
       const response = await fetch(`/api/forms/${form.id}`, {

@@ -107,6 +107,9 @@ function FormCreateContent() {
     
     setIsLoading(true)
     try {
+      // 計算全域 display_order
+      let globalDisplayOrder = 0
+      
       const formData = {
         title,
         description,
@@ -118,23 +121,26 @@ function FormCreateContent() {
           title: section.title,
           description: section.description,
           order: sectionIndex + 1,
-          fields: section.fields?.map((field, fieldIndex) => ({
-            field_name: field.field_name || `field_${sectionIndex}_${fieldIndex}`,
-            field_label: field.field_label,
-            field_type: field.field_type,
-            display_order: fieldIndex,
-            is_required: field.is_required || false,
-            is_active: true,
-            placeholder: field.placeholder || '',
-            help_text: field.help_text || '',
-            options: field.options?.map((opt, optIndex) => ({
-              option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
-              option_label: opt.option_label,
-              display_order: optIndex,
-              is_active: true
-            })) || [],
-            grid_options: field.grid_options || { rows: [], columns: [] }
-          })) || []
+          fields: section.fields?.map((field, fieldIndex) => {
+            const fieldData = {
+              field_name: field.field_name || `field_${sectionIndex}_${fieldIndex}`,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              display_order: globalDisplayOrder++, // 使用全域順序
+              is_required: field.is_required || false,
+              is_active: true,
+              placeholder: field.placeholder || '',
+              help_text: field.help_text || '',
+              options: field.options?.map((opt, optIndex) => ({
+                option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
+                option_label: opt.option_label,
+                display_order: optIndex,
+                is_active: true
+              })) || [],
+              grid_options: field.grid_options || { rows: [], columns: [] }
+            }
+            return fieldData
+          }) || []
         }))
       }
       
@@ -165,6 +171,9 @@ function FormCreateContent() {
     
     setIsLoading(true)
     try {
+      // 計算全域 display_order
+      let globalDisplayOrder = 0
+      
       const formData = {
         title,
         description,
@@ -176,23 +185,26 @@ function FormCreateContent() {
           title: section.title,
           description: section.description,
           order: sectionIndex + 1,
-          fields: section.fields?.map((field, fieldIndex) => ({
-            field_name: field.field_name || `field_${sectionIndex}_${fieldIndex}`,
-            field_label: field.field_label,
-            field_type: field.field_type,
-            display_order: fieldIndex,
-            is_required: field.is_required || false,
-            is_active: true,
-            placeholder: field.placeholder || '',
-            help_text: field.help_text || '',
-            options: field.options?.map((opt, optIndex) => ({
-              option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
-              option_label: opt.option_label,
-              display_order: optIndex,
-              is_active: true
-            })) || [],
-            grid_options: field.grid_options || { rows: [], columns: [] }
-          })) || []
+          fields: section.fields?.map((field, fieldIndex) => {
+            const fieldData = {
+              field_name: field.field_name || `field_${sectionIndex}_${fieldIndex}`,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              display_order: globalDisplayOrder++, // 使用全域順序
+              is_required: field.is_required || false,
+              is_active: true,
+              placeholder: field.placeholder || '',
+              help_text: field.help_text || '',
+              options: field.options?.map((opt, optIndex) => ({
+                option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
+                option_label: opt.option_label,
+                display_order: optIndex,
+                is_active: true
+              })) || [],
+              grid_options: field.grid_options || { rows: [], columns: [] }
+            }
+            return fieldData
+          }) || []
         }))
       }
       
