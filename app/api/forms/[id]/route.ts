@@ -129,7 +129,8 @@ export async function GET(
             row_label,
             column_label,
             display_order,
-            is_active
+            is_active,
+            jump_to_section_id
           )
         )
       `)
@@ -232,7 +233,8 @@ export async function GET(
           row_label,
           column_label,
           display_order,
-          is_active
+          is_active,
+          jump_to_section_id
         )
       `)
       .eq('form_id', id)
@@ -820,7 +822,8 @@ async function updateFieldOptions(supabase: SupabaseClient, fieldId: string, fie
             option_label: option.option_label,
             display_order: option.display_order || index,
             is_active: option.is_active !== false,
-            option_type: 'standard'
+            option_type: 'standard',
+            jump_to_section_id: option.jump_to_section_id || null
           })
           .eq('id', existingOption.id);
 
@@ -837,7 +840,8 @@ async function updateFieldOptions(supabase: SupabaseClient, fieldId: string, fie
             option_label: option.option_label,
             display_order: option.display_order || index,
             is_active: option.is_active !== false,
-            option_type: 'standard'
+            option_type: 'standard',
+            jump_to_section_id: option.jump_to_section_id || null
           });
 
         if (insertError) {

@@ -39,6 +39,7 @@ export type Database = {
           grid_position: Json | null
           id: string
           is_active: boolean | null
+          jump_to_section_id: string | null
           option_label: string
           option_type: string | null
           option_value: string
@@ -52,6 +53,7 @@ export type Database = {
           grid_position?: Json | null
           id?: string
           is_active?: boolean | null
+          jump_to_section_id?: string | null
           option_label: string
           option_type?: string | null
           option_value: string
@@ -65,6 +67,7 @@ export type Database = {
           grid_position?: Json | null
           id?: string
           is_active?: boolean | null
+          jump_to_section_id?: string | null
           option_label?: string
           option_type?: string | null
           option_value?: string
@@ -76,6 +79,13 @@ export type Database = {
             columns: ["field_id"]
             isOneToOne: false
             referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_options_jump_to_section_id_fkey"
+            columns: ["jump_to_section_id"]
+            isOneToOne: false
+            referencedRelation: "form_sections"
             referencedColumns: ["id"]
           },
         ]

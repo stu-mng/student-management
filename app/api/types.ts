@@ -205,6 +205,7 @@ export interface FormFieldOption {
   display_order: number;
   is_active?: boolean | null;
   created_at?: string | null;
+  jump_to_section_id?: string | null;
 }
 
 export interface FormResponse {
@@ -289,6 +290,7 @@ export interface FormFieldOptionCreateRequest {
   option_label: string;
   display_order?: number;
   is_active?: boolean;
+  jump_to_section_id?: string;
 }
 
 export interface FormUpdateRequest {

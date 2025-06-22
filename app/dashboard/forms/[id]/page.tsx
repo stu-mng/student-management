@@ -60,6 +60,8 @@ interface FormMainContentProps {
   onFieldChange: (fieldId: string, value: string | number | boolean | string[] | object) => void
   onSaveResponse: () => void
   onSectionChange: (index: number) => void
+  onPreviousStep?: () => void
+  onNextStep?: () => void
 }
 
 // Form Basic Info Component
@@ -300,7 +302,9 @@ function FormEditView({
   onCancelEdit,
   onFieldChange,
   onSaveResponse,
-  onSectionChange
+  onSectionChange,
+  onPreviousStep,
+  onNextStep
 }: {
   form: Form
   editingResponseId: string | null
@@ -313,6 +317,8 @@ function FormEditView({
   onFieldChange: (fieldId: string, value: string | number | boolean | string[] | object) => void
   onSaveResponse: () => void
   onSectionChange: (index: number) => void
+  onPreviousStep?: () => void
+  onNextStep?: () => void
 }) {
   // 純檢查函數 - 不會修改狀態，只返回是否有錯誤
   const checkHasValidationErrors = () => {
@@ -589,20 +595,20 @@ function FormEditView({
             <div className="flex justify-between pt-4 border-t">
               <Button
                 variant="outline"
-                onClick={() => onSectionChange(currentSectionIndex - 1)}
+                onClick={onPreviousStep || (() => onSectionChange(currentSectionIndex - 1))}
                 disabled={currentSectionIndex === 0}
               >
-                上一段落
+                上一步
               </Button>
               <div className="text-sm text-muted-foreground self-center">
                 第 {currentSectionIndex + 1} 段落，共 {form.sections.length} 段落
               </div>
               <Button
                 variant="outline"
-                onClick={() => onSectionChange(currentSectionIndex + 1)}
+                onClick={onNextStep || (() => onSectionChange(currentSectionIndex + 1))}
                 disabled={currentSectionIndex === form.sections.length - 1}
               >
-                下一段落
+                下一步
               </Button>
             </div>
           )}
@@ -714,7 +720,9 @@ function FormMainContent({
   onCancelEdit,
   onFieldChange,
   onSaveResponse,
-  onSectionChange
+  onSectionChange,
+  onPreviousStep,
+  onNextStep
 }: FormMainContentProps) {
   if (shouldShowSubmittedState) {
     return (
@@ -745,6 +753,8 @@ function FormMainContent({
       onFieldChange={onFieldChange}
       onSaveResponse={onSaveResponse}
       onSectionChange={onSectionChange}
+      onPreviousStep={onPreviousStep}
+      onNextStep={onNextStep}
     />
   )
 }
@@ -1070,6 +1080,69 @@ export default function FormDetailPage() {
     }
   }
 
+  // Helper function to determine next section based on jump logic
+  const getNextSectionIndex = (currentIndex: number): number => {
+    if (!form?.sections || currentIndex >= form.sections.length - 1) {
+      return currentIndex // Already at last section
+    }
+
+    const currentSection = form.sections[currentIndex]
+    if (!currentSection?.fields) {
+      return currentIndex + 1 // No fields, go to next section
+    }
+
+    // Check for fields with jump logic in current section
+    for (const field of currentSection.fields) {
+      if (field.field_type === 'radio' || field.field_type === 'select') {
+        const fieldValue = formData[field.id]
+        
+        // Check if user has answered this field
+        if (fieldValue) {
+          // Find the selected option and check for jump logic
+          const selectedOption = field.form_field_options?.find((option: any) => 
+            option.option_value === fieldValue
+          )
+          
+          if (selectedOption?.jump_to_section_id) {
+            // Find the target section index
+            const targetSectionIndex = form.sections.findIndex(section => 
+              section.id === selectedOption.jump_to_section_id
+            )
+            
+            if (targetSectionIndex !== -1) {
+              return targetSectionIndex
+            }
+          }
+        } else {
+          // Field has jump logic but user hasn't answered
+          // Check if field is required
+          if (field.is_required) {
+            // Required field not answered, stay on current section
+            return currentIndex
+          }
+          // Optional field not answered, continue to next section
+        }
+      }
+    }
+
+    // No jump logic triggered, go to next section
+    return currentIndex + 1
+  }
+
+  // Enhanced navigation handlers
+  const handlePreviousStep = () => {
+    if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(currentSectionIndex - 1)
+    }
+  }
+
+  const handleNextStep = () => {
+    const nextIndex = getNextSectionIndex(currentSectionIndex)
+    if (nextIndex !== currentSectionIndex) {
+      setCurrentSectionIndex(nextIndex)
+    }
+  }
+
   // Helper functions for badges
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1163,6 +1236,8 @@ export default function FormDetailPage() {
                 onFieldChange={handleFieldChange}
                 onSaveResponse={handleSaveResponse}
                 onSectionChange={handleSectionChange}
+                onPreviousStep={handlePreviousStep}
+                onNextStep={handleNextStep}
               />
             </div>
           </div>

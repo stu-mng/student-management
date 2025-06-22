@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import type { DraggableProvided } from "@hello-pangea/dnd"
 import { Draggable } from "@hello-pangea/dnd"
 import { GripVertical, Trash2 } from "lucide-react"
-import type { FormFieldWithId } from "../form-context"
+import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FIELD_TYPES } from "../form-context"
 import { FormFieldBuilder } from "./form-field-builder"
 import { FormFieldPreview } from "./form-field-preview"
@@ -14,6 +14,7 @@ import { FormFieldPreview } from "./form-field-preview"
 interface FormFieldCardProps {
   field: FormFieldWithId
   fieldIndex: number
+  sections: FormSectionWithId[]
   isFocused: boolean
   onUpdate: (updates: Partial<FormFieldWithId>) => void
   onRemove: () => void
@@ -24,6 +25,7 @@ interface FormFieldCardProps {
 export function FormFieldCard({
   field,
   fieldIndex,
+  sections,
   isFocused,
   onUpdate,
   onRemove,
@@ -95,7 +97,7 @@ export function FormFieldCard({
               </div>
               
               {isFocused ? (
-                <FormFieldBuilder field={field} onUpdate={onUpdate} />
+                <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
               ) : (
                 <FormFieldPreview field={field} />
               )}
@@ -142,7 +144,7 @@ export function FormFieldCard({
           </div>
           
           {isFocused ? (
-            <FormFieldBuilder field={field} onUpdate={onUpdate} />
+            <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
           ) : (
             <FormFieldPreview field={field} />
           )}
@@ -193,7 +195,7 @@ export function FormFieldCard({
             </div>
             
             {isFocused ? (
-              <FormFieldBuilder field={field} onUpdate={onUpdate} />
+              <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
             ) : (
               <FormFieldPreview field={field} />
             )}

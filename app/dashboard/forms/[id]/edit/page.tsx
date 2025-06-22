@@ -345,6 +345,7 @@ function FormEditContent() {
             {sections.length > 0 && sections[currentSectionIndex] && (
               <FormSectionEditor
                 section={sections[currentSectionIndex]}
+                sections={sections}
                 onUpdate={(updates) => updateSection(sections[currentSectionIndex].tempId, updates)}
                 onRemove={() => {
                   const currentSection = sections[currentSectionIndex]
@@ -403,6 +404,7 @@ function FormEditContent() {
                               key={field.tempId}
                               field={field}
                               fieldIndex={index}
+                              sections={sections}
                               isFocused={focusedFieldId === field.tempId}
                               onFocus={() => setFocusedFieldId(field.tempId)}
                               onUpdate={(updates) => updateField(field.tempId, updates)}

@@ -135,7 +135,8 @@ function FormCreateContent() {
                 option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
                 option_label: opt.option_label,
                 display_order: optIndex,
-                is_active: true
+                is_active: true,
+                jump_to_section_id: opt.jump_to_section_id
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }
@@ -199,7 +200,8 @@ function FormCreateContent() {
                 option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
                 option_label: opt.option_label,
                 display_order: optIndex,
-                is_active: true
+                is_active: true,
+                jump_to_section_id: opt.jump_to_section_id
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }
@@ -481,6 +483,7 @@ function FormCreateContent() {
             {currentSection && (
               <FormSectionEditor
                 section={currentSection}
+                sections={sections}
                 onUpdate={(updates) => updateSection(currentSectionIndex, updates)}
                 onRemove={() => removeSection(currentSectionIndex)}
                 canRemove={sections.length > 1}
@@ -517,6 +520,7 @@ function FormCreateContent() {
                                 key={field.tempId}
                                 field={field}
                                 fieldIndex={fieldIndex}
+                                sections={sections}
                                 isFocused={focusedFieldId === field.tempId}
                                 onUpdate={(updates) => updateField(currentSectionIndex, fieldIndex, updates)}
                                 onRemove={() => removeField(currentSectionIndex, fieldIndex)}

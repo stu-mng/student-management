@@ -5,17 +5,18 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import type { FormFieldWithId } from "../form-context"
+import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FIELD_TYPES } from "../form-context"
 import { FieldOptionsEditor } from "./field-options-editor"
 import { GridOptionsEditor } from "./grid-options-editor"
 
 interface FormFieldBuilderProps {
   field: FormFieldWithId
+  sections: FormSectionWithId[]
   onUpdate: (updates: Partial<FormFieldWithId>) => void
 }
 
-export function FormFieldBuilder({ field, onUpdate }: FormFieldBuilderProps) {
+export function FormFieldBuilder({ field, sections, onUpdate }: FormFieldBuilderProps) {
   const needsOptions = ['radio', 'checkbox', 'select', 'multi-select'].includes(field.field_type)
   const needsGrid = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
 
@@ -123,7 +124,7 @@ export function FormFieldBuilder({ field, onUpdate }: FormFieldBuilderProps) {
 
       {/* Options Configuration */}
       {needsOptions && (
-        <FieldOptionsEditor field={field} onUpdate={onUpdate} />
+        <FieldOptionsEditor field={field} sections={sections} onUpdate={onUpdate} />
       )}
 
       {/* Grid Configuration */}

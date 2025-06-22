@@ -47,6 +47,7 @@ export interface FormFieldOptionWithId {
   option_label: string
   display_order: number
   is_active: boolean
+  jump_to_section_id?: string
 }
 
 export interface FieldType {
@@ -202,6 +203,18 @@ export function FormProvider({ children }: FormProviderProps) {
   const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const generateRandomOptionValue = () => `option_${Math.random().toString(36).substr(2, 6)}`
 
+  // 將 tempId 轉換為實際的 section id
+  const resolveSectionId = (tempIdOrId: string): string | undefined => {
+    // 如果已經是實際的 ID，直接返回
+    if (tempIdOrId && !tempIdOrId.startsWith('temp_') && !tempIdOrId.startsWith('existing_')) {
+      return tempIdOrId
+    }
+    
+    // 查找對應的 section
+    const section = sections.find(s => s.tempId === tempIdOrId)
+    return section?.id
+  }
+
   // 載入角色列表
   const loadRoles = async () => {
     try {
@@ -276,7 +289,8 @@ export function FormProvider({ children }: FormProviderProps) {
               option_value: option.option_value,
               option_label: option.option_label,
               display_order: option.display_order,
-              is_active: option.is_active !== false
+              is_active: option.is_active !== false,
+              jump_to_section_id: option.jump_to_section_id || undefined
             })) || [],
             grid_options: field.grid_options || {
               rows: [],
@@ -325,7 +339,8 @@ export function FormProvider({ children }: FormProviderProps) {
               option_value: option.option_value,
               option_label: option.option_label,
               display_order: index,
-              is_active: option.is_active
+              is_active: option.is_active,
+              jump_to_section_id: option.jump_to_section_id
             }))
           }))
         })) || []
@@ -368,7 +383,8 @@ export function FormProvider({ children }: FormProviderProps) {
           option_value: option.option_value,
           option_label: option.option_label,
           display_order: index,
-          is_active: option.is_active
+          is_active: option.is_active,
+          jump_to_section_id: option.jump_to_section_id
         }))
       }))
     })
@@ -724,7 +740,8 @@ export function FormProvider({ children }: FormProviderProps) {
                 option_value: option.option_value,
                 option_label: option.option_label,
                 display_order: index,
-                is_active: option.is_active
+                is_active: option.is_active,
+                jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }))
@@ -781,7 +798,8 @@ export function FormProvider({ children }: FormProviderProps) {
             option_value: option.option_value,
             option_label: option.option_label,
             display_order: index,
-            is_active: option.is_active
+            is_active: option.is_active,
+            jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
           }))
         }))
       })
@@ -843,7 +861,8 @@ export function FormProvider({ children }: FormProviderProps) {
                 option_value: option.option_value,
                 option_label: option.option_label,
                 display_order: index,
-                is_active: option.is_active
+                is_active: option.is_active,
+                jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
               })) || [],
               grid_options: field.grid_options || { rows: [], columns: [] }
             }))
@@ -900,7 +919,8 @@ export function FormProvider({ children }: FormProviderProps) {
             option_value: option.option_value,
             option_label: option.option_label,
             display_order: index,
-            is_active: option.is_active
+            is_active: option.is_active,
+            jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
           }))
         }))
       })
