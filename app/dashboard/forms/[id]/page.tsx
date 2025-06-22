@@ -2,7 +2,7 @@
 
 import type { Form } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
-import { FormFieldComponent, useFormContext } from "@/components/forms"
+import { FormFieldComponent, FormSectionNavigation, useFormContext } from "@/components/forms"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,11 +53,13 @@ interface FormMainContentProps {
   validationErrors: Set<string>
   saving: boolean
   deadlinePassed: boolean
+  currentSectionIndex: number
   onEditResponse: (responseId: string) => void
   onNewResponse: () => void
   onCancelEdit: () => void
   onFieldChange: (fieldId: string, value: string | number | boolean | string[] | object) => void
   onSaveResponse: () => void
+  onSectionChange: (index: number) => void
 }
 
 // Form Basic Info Component
@@ -294,9 +296,11 @@ function FormEditView({
   validationErrors,
   saving,
   deadlinePassed,
+  currentSectionIndex,
   onCancelEdit,
   onFieldChange,
-  onSaveResponse
+  onSaveResponse,
+  onSectionChange
 }: {
   form: Form
   editingResponseId: string | null
@@ -304,172 +308,246 @@ function FormEditView({
   validationErrors: Set<string>
   saving: boolean
   deadlinePassed: boolean
+  currentSectionIndex: number
   onCancelEdit: () => void
   onFieldChange: (fieldId: string, value: string | number | boolean | string[] | object) => void
   onSaveResponse: () => void
+  onSectionChange: (index: number) => void
 }) {
-  // 檢查是否有任何驗證錯誤
   const hasValidationErrors = () => {
-    // 驗證函數
+    // Email validation
     const validateEmail = (email: string): boolean => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       return emailRegex.test(email)
     }
 
+    // Taiwan ID validation
     const validateTaiwanId = (id: string): boolean => {
-      const idRegex = /^[A-Z][0-9]{9}$/
-      if (!idRegex.test(id)) {
-        return false
-      }
-
-      const letterToNumber: { [key: string]: number } = {
+      if (!/^[A-Z][12]\d{8}$/.test(id)) return false
+      
+      const letterValues: { [key: string]: number } = {
         A: 10, B: 11, C: 12, D: 13, E: 14, F: 15, G: 16, H: 17, I: 34, J: 18,
         K: 19, L: 20, M: 21, N: 22, O: 35, P: 23, Q: 24, R: 25, S: 26, T: 27,
-        U: 28, V: 29, W: 30, X: 31, Y: 32, Z: 33
+        U: 28, V: 29, W: 32, X: 30, Y: 31, Z: 33
       }
-
-      const firstLetter = id.charAt(0)
-      const letterNumber = letterToNumber[firstLetter]
       
-      const firstDigit = Math.floor(letterNumber / 10)
-      const secondDigit = letterNumber % 10
-
-      const digits = id.substring(1).split('').map(Number)
-
-      let sum = firstDigit * 1 + secondDigit * 9
-      for (let i = 0; i < 8; i++) {
-        sum += digits[i] * (8 - i)
+      const firstLetter = id[0]
+      const firstDigit = Math.floor(letterValues[firstLetter] / 10)
+      const secondDigit = letterValues[firstLetter] % 10
+      
+      let sum = firstDigit + secondDigit * 9
+      for (let i = 1; i < 9; i++) {
+        sum += parseInt(id[i]) * (9 - i)
       }
-
-      const remainder = sum % 10
-      const checkDigit = remainder === 0 ? 0 : 10 - remainder
-
-      return checkDigit === digits[8]
+      
+      const checkDigit = (10 - (sum % 10)) % 10
+      return checkDigit === parseInt(id[9])
     }
 
+    // Phone number validation
     const validatePhoneNumber = (phone: string): boolean => {
-      const phoneRegex = /^09\d{2}-\d{3}-\d{3}$/
-      return phoneRegex.test(phone)
+      const phoneRegex = /^(\+886|0)?[2-9]\d{7,8}$/
+      return phoneRegex.test(phone.replace(/[-\s]/g, ''))
     }
 
-    // 檢查是否有必填字段未填寫或格式錯誤
-    if (!form?.fields) return false
+    let hasErrors = false
+    const newValidationErrors = new Set<string>()
 
-    for (const field of form.fields) {
+    if (!form.sections || form.sections.length === 0) return false
+
+    // Only validate current section
+    const currentSection = form.sections[currentSectionIndex]
+    if (!currentSection || !currentSection.fields) return false
+
+    currentSection.fields.forEach(field => {
       const value = formData[field.id]
-      const stringValue = typeof value === 'string' ? value : String(value || '')
-      
-      // 檢查必填字段
-      if (field.is_required) {
-        if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')) {
-          return true
-        }
+      const isEmpty = !value || (typeof value === 'string' && value.trim() === '') || 
+                     (Array.isArray(value) && value.length === 0)
+
+      // Required field validation
+      if (field.is_required && isEmpty) {
+        newValidationErrors.add(field.id)
+        hasErrors = true
+        return
       }
 
-      // 檢查格式驗證（只在有值的情況下）
-      if (value && typeof value === 'string' && value.trim() !== '') {
-        switch (field.field_type) {
-          case 'email':
-            if (!validateEmail(stringValue)) {
-              return true
-            }
-            break
-          case 'taiwan_id':
-            if (!validateTaiwanId(stringValue.toUpperCase())) {
-              return true
-            }
-            break
-          case 'phone':
-            if (!validatePhoneNumber(stringValue)) {
-              return true
-            }
-            break
-          case 'number':
-            if (isNaN(Number(stringValue))) {
-              return true
-            }
-            break
+      if (!isEmpty && typeof value === 'string') {
+        // Email validation
+        if (field.field_type === 'email' && !validateEmail(value)) {
+          newValidationErrors.add(field.id)
+          hasErrors = true
+        }
+
+        // Taiwan ID validation
+        if (field.field_type === 'taiwan_id' && !validateTaiwanId(value)) {
+          newValidationErrors.add(field.id)
+          hasErrors = true
+        }
+
+        // Phone validation
+        if (field.field_type === 'phone' && !validatePhoneNumber(value)) {
+          newValidationErrors.add(field.id)
+          hasErrors = true
         }
       }
-    }
+    })
 
-    return false
+    // Update validation errors state
+    validationErrors.clear()
+    newValidationErrors.forEach(error => validationErrors.add(error))
+
+    return hasErrors
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl">{form.title}</CardTitle>
-            {form.description && (
-              <CardDescription className="text-lg mt-2 whitespace-pre-line">
-                {form.description}
-              </CardDescription>
-            )}
-          </div>
-          {editingResponseId && (
-            <Button variant="outline" onClick={onCancelEdit}>
-              <X className="h-4 w-4 mr-2" />
-              取消編輯
-            </Button>
-          )}
-        </div>
-      </CardHeader>
+  // Group sections for navigation
+  const sectionsForNav = form.sections?.map(section => ({
+    tempId: section.id,
+    title: section.title || '未命名段落',
+    description: section.description || undefined,
+    order: section.order || 0,
+    fields: section.fields?.map(field => ({
+      tempId: `existing_${field.id}`,
+      id: field.id,
+      form_section_id: field.form_section_id,
+      field_name: field.field_name,
+      field_label: field.field_label,
+      field_type: field.field_type,
+      display_order: field.display_order,
+      is_required: field.is_required || false,
+      is_active: field.is_active !== false,
+      placeholder: field.placeholder || '',
+      help_text: field.help_text || '',
+      default_value: field.default_value || '',
+      min_length: field.min_length || undefined,
+      max_length: field.max_length || undefined,
+      pattern: field.pattern || '',
+      options: field.form_field_options?.map(option => ({
+        tempId: `existing_option_${option.id}`,
+        id: option.id,
+        option_value: option.option_value,
+        option_label: option.option_label,
+        display_order: option.display_order,
+        is_active: option.is_active !== false
+      })) || [],
+      grid_options: field.grid_options
+    })) || []
+  })) || []
 
-      <CardContent className="space-y-4">
-        {deadlinePassed && (
-          <div className="flex items-center gap-2 p-4 bg-red-50 rounded-lg border border-red-200">
-            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <div>
-              <p className="text-red-800 font-medium">表單已截止</p>
-              <p className="text-red-700 text-sm">
-                截止時間：{form.submission_deadline ? formatDate(form.submission_deadline) : '未設定'}
+  const currentSection = form.sections?.[currentSectionIndex]
+
+  return (
+    <div className="space-y-6">
+      {/* Section Navigation */}
+      {form.sections && form.sections.length > 1 && (
+        <FormSectionNavigation
+          sections={sectionsForNav}
+          currentSectionIndex={currentSectionIndex}
+          onSectionChange={onSectionChange}
+          onAddSection={() => {}} // Not needed for form filling
+          showAddButton={false}
+        />
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            {editingResponseId ? '編輯回應' : '填寫表單'}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={onCancelEdit}
+                disabled={saving}
+              >
+                <X className="h-4 w-4 mr-2" />
+                取消
+              </Button>
+              <Button
+                onClick={onSaveResponse}
+                disabled={saving || deadlinePassed || hasValidationErrors()}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? '儲存中...' : '儲存'}
+              </Button>
+            </div>
+          </CardTitle>
+          {currentSection && (
+            <CardDescription>
+              {currentSection.title && (
+                <div className="font-medium">{currentSection.title}</div>
+              )}
+              {currentSection.description && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {currentSection.description}
+                </div>
+              )}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {deadlinePassed && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">表單已截止</span>
+              </div>
+              <p className="text-sm text-red-700 mt-1">
+                此表單的提交截止時間已過，無法進行編輯或提交。
               </p>
             </div>
-          </div>
-        )}
-        
-        {form.fields && form.fields.length > 0 ? (
-          <>
-            {form.fields
-              .sort((a, b) => a.display_order - b.display_order)
-              .map((field) => (
-                <FormFieldComponent
-                  key={field.id}
-                  field={field}
-                  value={formData[field.id]}
-                  onChange={onFieldChange}
-                  hasError={validationErrors.has(field.id)}
-                />
+          )}
+
+          {currentSection?.fields && currentSection.fields.length > 0 ? (
+            <div className="space-y-6">
+              {currentSection.fields.map((field) => (
+                <div key={field.id} className="space-y-2">
+                  <FormFieldComponent
+                    field={field}
+                    value={formData[field.id]}
+                    onChange={onFieldChange}
+                    hasError={validationErrors.has(field.id)}
+                  />
+                  {validationErrors.has(field.id) && (
+                    <p className="text-sm text-red-600">
+                      {field.field_type === 'email' && '請輸入有效的電子郵件地址'}
+                      {field.field_type === 'taiwan_id' && '請輸入有效的身分證字號'}
+                      {field.field_type === 'phone' && '請輸入有效的電話號碼'}
+                      {field.is_required && !formData[field.id] && '此欄位為必填'}
+                    </p>
+                  )}
+                </div>
               ))}
-            
-            {/* 只在表單為 active 狀態且未過期時顯示提交按鈕 */}
-            {form.status === 'active' && !deadlinePassed && (
-              <div className="pt-4 border-t">
-                <Button 
-                  onClick={onSaveResponse}
-                  disabled={saving || hasValidationErrors()}
-                  className="w-full text-base py-6"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? (editingResponseId ? '更新中...' : '提交中...') : (editingResponseId ? '更新回覆' : '提交表單')}
-                </Button>
-                {hasValidationErrors() && (
-                  <p className="text-sm text-red-600 mt-2 text-center">
-                    請先修正表單中的錯誤再提交
-                  </p>
-                )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>此段落沒有欄位</p>
+            </div>
+          )}
+
+          {/* Section Navigation Buttons */}
+          {form.sections && form.sections.length > 1 && (
+            <div className="flex justify-between pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => onSectionChange(currentSectionIndex - 1)}
+                disabled={currentSectionIndex === 0}
+              >
+                上一段落
+              </Button>
+              <div className="text-sm text-muted-foreground self-center">
+                第 {currentSectionIndex + 1} 段落，共 {form.sections.length} 段落
               </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-lg">此表單尚未設定任何欄位</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <Button
+                variant="outline"
+                onClick={() => onSectionChange(currentSectionIndex + 1)}
+                disabled={currentSectionIndex === form.sections.length - 1}
+              >
+                下一段落
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
@@ -544,41 +622,44 @@ function FormMainContent({
   validationErrors,
   saving,
   deadlinePassed,
+  currentSectionIndex,
   onEditResponse,
   onNewResponse,
   onCancelEdit,
   onFieldChange,
-  onSaveResponse
+  onSaveResponse,
+  onSectionChange
 }: FormMainContentProps) {
-  // If deadline passed and form hasn't been submitted, show expired view
-  if (deadlinePassed && !shouldShowSubmittedState) {
+  if (shouldShowSubmittedState) {
+    return (
+      <SubmittedStateView
+        form={form}
+        userResponses={userResponses}
+        deadlinePassed={deadlinePassed}
+        onEditResponse={onEditResponse}
+        onNewResponse={onNewResponse}
+      />
+    )
+  }
+
+  if (deadlinePassed && !editingResponseId) {
     return <ExpiredFormView form={form} />
   }
 
   return (
-    <div className="lg:col-span-3">
-      {shouldShowSubmittedState ? (
-        <SubmittedStateView
-          form={form}
-          userResponses={userResponses}
-          deadlinePassed={deadlinePassed}
-          onEditResponse={onEditResponse}
-          onNewResponse={onNewResponse}
-        />
-      ) : (
-        <FormEditView
-          form={form}
-          editingResponseId={editingResponseId}
-          formData={formData}
-          validationErrors={validationErrors}
-          saving={saving}
-          deadlinePassed={deadlinePassed}
-          onCancelEdit={onCancelEdit}
-          onFieldChange={onFieldChange}
-          onSaveResponse={onSaveResponse}
-        />
-      )}
-    </div>
+    <FormEditView
+      form={form}
+      editingResponseId={editingResponseId}
+      formData={formData}
+      validationErrors={validationErrors}
+      saving={saving}
+      deadlinePassed={deadlinePassed}
+      currentSectionIndex={currentSectionIndex}
+      onCancelEdit={onCancelEdit}
+      onFieldChange={onFieldChange}
+      onSaveResponse={onSaveResponse}
+      onSectionChange={onSectionChange}
+    />
   )
 }
 
@@ -593,6 +674,7 @@ export default function FormDetailPage() {
   const [editingResponseId, setEditingResponseId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
 
   // Helper function to check if deadline has passed
   const isDeadlinePassed = () => {
@@ -744,7 +826,10 @@ export default function FormDetailPage() {
     const formatErrors: string[] = []
     const errorFieldIds = new Set<string>()
     
-    form.fields?.forEach(field => {
+    // 從 sections 中獲取所有欄位
+    const allFields = form.sections?.flatMap(section => section.fields || []) || []
+    
+    allFields.forEach(field => {
       const value = formData[field.id]
       const stringValue = typeof value === 'string' ? value : String(value || '')
       
@@ -893,6 +978,12 @@ export default function FormDetailPage() {
     setValidationErrors(new Set())
   }
 
+  const handleSectionChange = (index: number) => {
+    if (index >= 0 && index < (form?.sections?.length || 0)) {
+      setCurrentSectionIndex(index)
+    }
+  }
+
   // Helper functions for badges
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -947,31 +1038,50 @@ export default function FormDetailPage() {
   const shouldShowSubmittedState = Boolean(form.submitted && !form.allow_multiple_submissions && !showForm)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <FormInfoSidebar 
-        form={form}
-        userResponses={userResponses}
-        loadingResponses={loadingResponses}
-        getStatusBadge={getStatusBadge}
-        getFormTypeBadge={getFormTypeBadge}
-        getSubmissionStatusBadge={getSubmissionStatusBadge}
-      />
-      
-      <FormMainContent
-        form={form}
-        shouldShowSubmittedState={shouldShowSubmittedState}
-        userResponses={userResponses}
-        editingResponseId={editingResponseId}
-        formData={formData}
-        validationErrors={validationErrors}
-        saving={saving}
-        deadlinePassed={deadlinePassed}
-        onEditResponse={handleEditResponse}
-        onNewResponse={handleNewResponse}
-        onCancelEdit={handleCancelEdit}
-        onFieldChange={handleFieldChange}
-        onSaveResponse={handleSaveResponse}
-      />
+    <div className="container mx-auto p-6">
+      {!form ? (
+        <div>載入中...</div>
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">{form.title}</h1>
+            {form.description && (
+              <p className="text-muted-foreground mt-2">{form.description}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <FormInfoSidebar
+              form={form}
+              userResponses={userResponses}
+              loadingResponses={loadingResponses}
+              getStatusBadge={getStatusBadge}
+              getFormTypeBadge={getFormTypeBadge}
+              getSubmissionStatusBadge={getSubmissionStatusBadge}
+            />
+
+            <div className="lg:col-span-2">
+              <FormMainContent
+                form={form}
+                shouldShowSubmittedState={shouldShowSubmittedState}
+                userResponses={userResponses}
+                editingResponseId={editingResponseId}
+                formData={formData}
+                validationErrors={validationErrors}
+                saving={saving}
+                deadlinePassed={deadlinePassed}
+                currentSectionIndex={currentSectionIndex}
+                onEditResponse={handleEditResponse}
+                onNewResponse={handleNewResponse}
+                onCancelEdit={handleCancelEdit}
+                onFieldChange={handleFieldChange}
+                onSaveResponse={handleSaveResponse}
+                onSectionChange={handleSectionChange}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

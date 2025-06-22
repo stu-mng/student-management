@@ -122,6 +122,30 @@ export interface GridOptions {
   columns: Array<{ value: string; label: string }>;
 }
 
+// Form Section Types
+export interface FormSection {
+  id: string;
+  form_id: string;
+  title?: string | null;
+  description?: string | null;
+  order: number;
+  created_at: string;
+  fields?: FormField[];
+}
+
+export interface FormSectionCreateRequest {
+  title?: string;
+  description?: string;
+  order?: number;
+  fields?: FormFieldCreateRequest[];
+}
+
+export interface FormSectionUpdateRequest {
+  title?: string;
+  description?: string;
+  order?: number;
+}
+
 // Form Types
 export interface Form {
   id: string;
@@ -135,7 +159,7 @@ export interface Form {
   created_by?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
-  fields?: FormField[];
+  sections?: FormSection[];
   access_type?: 'read' | 'edit' | null;
   permissions?: RolePermission[];
   submitted?: boolean;
@@ -150,6 +174,7 @@ export interface Form {
 export interface FormField {
   id: string;
   form_id: string;
+  form_section_id: string;
   field_name: string;
   field_label: string;
   field_type: string;
@@ -158,8 +183,8 @@ export interface FormField {
   is_active?: boolean | null;
   placeholder?: string | null;
   help_text?: string | null;
-  validation_rules?: any;
-  conditional_logic?: any;
+  validation_rules?: Record<string, unknown>;
+  conditional_logic?: Record<string, unknown>;
   default_value?: string | null;
   min_length?: number | null;
   max_length?: number | null;
@@ -192,7 +217,7 @@ export interface FormResponse {
   reviewed_at?: string | null;
   reviewed_by?: string | null;
   review_notes?: string | null;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   created_at?: string | null;
   updated_at?: string | null;
   forms?: Partial<Form>;
@@ -204,7 +229,7 @@ export interface FormFieldResponse {
   response_id: string;
   field_id: string;
   field_value?: string | null;
-  field_values?: any;
+  field_values?: string[] | Record<string, unknown>;
   created_at?: string | null;
   updated_at?: string | null;
   form_fields?: Partial<FormField>;
@@ -214,7 +239,7 @@ export interface FormTemplate {
   id: string;
   name: string;
   description?: string | null;
-  template_data: any;
+  template_data: Record<string, unknown>;
   category?: string | null;
   is_system_template?: boolean | null;
   created_by?: string | null;
@@ -231,20 +256,24 @@ export interface FormCreateRequest {
   is_required?: boolean;
   allow_multiple_submissions?: boolean;
   submission_deadline?: string;
-  fields?: FormFieldCreateRequest[];
+  sections?: FormSectionCreateRequest[];
 }
 
 export interface FormFieldCreateRequest {
+  // 必要欄位 - 與資料庫 schema 一致
   field_name: string;
   field_label: string;
   field_type: string;
+  
+  // 可選欄位
+  form_section_id?: string; // 在 API 中會自動設定
   display_order?: number;
   is_required?: boolean;
   is_active?: boolean;
   placeholder?: string;
   help_text?: string;
-  validation_rules?: any;
-  conditional_logic?: any;
+  validation_rules?: Record<string, unknown>;
+  conditional_logic?: Record<string, unknown>;
   default_value?: string;
   min_length?: number;
   max_length?: number;
@@ -270,7 +299,7 @@ export interface FormUpdateRequest {
   is_required?: boolean;
   allow_multiple_submissions?: boolean;
   submission_deadline?: string;
-  fields?: FormFieldCreateRequest[];
+  sections?: FormSectionCreateRequest[];
 }
 
 export interface FormsListResponse {
@@ -292,13 +321,13 @@ export interface FormResponseCreateRequest {
   respondent_type?: string;
   submission_status?: string;
   field_responses?: FormFieldResponseCreateRequest[];
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface FormFieldResponseCreateRequest {
   field_id: string;
   field_value?: string;
-  field_values?: any;
+  field_values?: string[] | Record<string, unknown>;
 }
 
 export interface FormResponseUpdateRequest {
@@ -306,7 +335,7 @@ export interface FormResponseUpdateRequest {
   field_responses?: FormFieldResponseCreateRequest[];
   review_notes?: string;
   reviewed_by?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface FormResponsesListResponse {
@@ -454,7 +483,7 @@ export interface FieldResponseCreateData {
   response_id: string;
   field_id: string;
   field_value?: string | null;
-  field_values?: string[] | null;
+  field_values?: string[] | Record<string, unknown> | null;
 }
 
 // Additional API Routes Types
@@ -485,7 +514,7 @@ export interface UpdateFormResponseRequest {
 
 export interface FormResponseUpdateResponse {
   success: boolean;
-  data: any;
+  data: FormResponse;
 }
 
 export interface UserProfileResponse {
@@ -518,7 +547,7 @@ export interface FormOverviewResponse {
 
 export interface UserFormResponsesResponse {
   success: boolean;
-  data: any[];
+  data: FormResponse[];
   total: number;
 }
 

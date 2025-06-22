@@ -136,6 +136,7 @@ export type Database = {
           field_name: string
           field_type: string
           form_id: string
+          form_section_id: string
           help_text: string | null
           id: string
           is_active: boolean | null
@@ -158,6 +159,7 @@ export type Database = {
           field_name: string
           field_type: string
           form_id: string
+          form_section_id: string
           help_text?: string | null
           id?: string
           is_active?: boolean | null
@@ -180,6 +182,7 @@ export type Database = {
           field_name?: string
           field_type?: string
           form_id?: string
+          form_section_id?: string
           help_text?: string | null
           id?: string
           is_active?: boolean | null
@@ -198,6 +201,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_fields_form_section_id_fkey"
+            columns: ["form_section_id"]
+            isOneToOne: false
+            referencedRelation: "form_sections"
             referencedColumns: ["id"]
           },
         ]
@@ -265,6 +275,41 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_sections: {
+        Row: {
+          created_at: string
+          description: string | null
+          form_id: string
+          id: string
+          order: number
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          form_id: string
+          id?: string
+          order?: number
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          form_id?: string
+          id?: string
+          order?: number
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_sections_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
             referencedColumns: ["id"]
           },
         ]
@@ -394,6 +439,7 @@ export type Database = {
           color: string | null
           display_name: string | null
           id: number
+          is_active: boolean
           name: string
           order: number
         }
@@ -401,6 +447,7 @@ export type Database = {
           color?: string | null
           display_name?: string | null
           id?: number
+          is_active?: boolean
           name: string
           order?: number
         }
@@ -408,6 +455,7 @@ export type Database = {
           color?: string | null
           display_name?: string | null
           id?: number
+          is_active?: boolean
           name?: string
           order?: number
         }

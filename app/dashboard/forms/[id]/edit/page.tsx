@@ -1,7 +1,7 @@
 "use client"
 
 import type { FormFieldWithId } from "@/components/forms"
-import { FIELD_TYPES, FORM_TYPES, PermissionsModal, useFormContext } from "@/components/forms"
+import { FORM_TYPES, FormFieldCard, FormSectionNavigation, PermissionsModal, useFormContext } from "@/components/forms"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -14,10 +14,11 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import type { DraggableProvided, DroppableProvided } from "@hello-pangea/dnd"
-import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd"
+import type { DroppableProvided } from "@hello-pangea/dnd"
+import { DragDropContext, Droppable } from "@hello-pangea/dnd"
 import { format } from "date-fns"
-import { CalendarIcon, Eye, GripVertical, Pen, Plus, Trash2, X } from "lucide-react"
+import { CalendarIcon, Eye, Pen, Plus, X } from "lucide-react"
+import { useState } from "react"
 
 // 權限顯示組件
 function PermissionsBadges({ permissions }: { permissions?: Array<{
@@ -90,6 +91,8 @@ function PermissionsBadges({ permissions }: { permissions?: Array<{
 
 // 編輯頁面內容組件
 function FormEditContent() {
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  
   const { 
     form, 
     loading, 
@@ -103,6 +106,7 @@ function FormEditContent() {
     isRequired,
     allowMultipleSubmissions,
     submissionDeadline,
+    sections,
     fields,
     previewMode,
     focusedFieldId,
@@ -115,6 +119,10 @@ function FormEditContent() {
     setAllowMultipleSubmissions,
     setSubmissionDeadline,
     setFocusedFieldId,
+    // 分段操作
+    addSection,
+    updateSection,
+    removeSection,
     // 欄位操作
     addField,
     updateField,
@@ -123,10 +131,33 @@ function FormEditContent() {
     updateOption,
     removeOption,
     onDragEnd,
+    setPreviewMode,
   } = useFormContext()
 
   // 檢查用戶權限
   const hasEditPerm = hasEditPermission()
+
+  // 處理段落切換
+  const handleSectionChange = (index: number) => {
+    if (index >= 0 && index < sections.length) {
+      setCurrentSectionIndex(index)
+    }
+  }
+
+  // 獲取當前段落的欄位
+  const getCurrentSectionFields = () => {
+    if (sections.length === 0) return fields
+    
+    const currentSection = sections[currentSectionIndex]
+    if (!currentSection) return []
+    
+    return fields.filter(field => 
+      field.form_section_id === currentSection.id || 
+      (!field.form_section_id && currentSectionIndex === 0)
+    )
+  }
+
+  const currentSectionFields = getCurrentSectionFields()
 
   // 處理權限更新
   const handlePermissionsUpdate = async () => {
@@ -135,337 +166,6 @@ function FormEditContent() {
     } catch (error) {
       console.error('Failed to refetch form after permissions update:', error)
     }
-  }
-
-  // 渲染欄位編輯器
-  const renderFieldEditor = (field: FormFieldWithId, index: number) => {
-    const isFocused = focusedFieldId === field.tempId
-    const needsOptions = ['select', 'multi-select', 'radio', 'checkbox'].includes(field.field_type)
-    const needsGridOptions = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
-
-    return (
-      <Draggable key={field.tempId} draggableId={field.tempId} index={index}>
-        {(provided: DraggableProvided) => (
-          <Card 
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={`border transition-all duration-200 cursor-pointer relative ${
-              isFocused ? 'border-l-4 border-l-purple-500 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!isFocused) {
-                setFocusedFieldId(field.tempId)
-              }
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 text-gray-400" />
-                  <Badge variant="outline" className="text-xs">
-                    {FIELD_TYPES.find(t => t.value === field.field_type)?.label || field.field_type}
-                  </Badge>
-                  {field.is_required && (
-                    <p className="text-red-500">*</p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeField(field.tempId)
-                  }}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* 基本設定 - 始終顯示 */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`field-label-${field.tempId}`}>欄位標題 *</Label>
-                    <Input
-                      id={`field-label-${field.tempId}`}
-                      value={field.field_label}
-                      onChange={(e) => updateField(field.tempId, { field_label: e.target.value })}
-                      placeholder="請輸入欄位標題"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`field-type-${field.tempId}`}>欄位類型</Label>
-                    <Select
-                      value={field.field_type}
-                      onValueChange={(value) => updateField(field.tempId, { field_type: value })}
-                    >
-                      <SelectTrigger onClick={(e) => e.stopPropagation()}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* 基礎輸入 */}
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b">
-                          基礎輸入
-                        </div>
-                        {FIELD_TYPES.filter(type => type.category === '基礎輸入').map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                        
-                        {/* 專用格式 */}
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
-                          專用格式
-                        </div>
-                        {FIELD_TYPES.filter(type => type.category === '專用格式').map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                        
-                        {/* 選擇題型 */}
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
-                          選擇題型
-                        </div>
-                        {FIELD_TYPES.filter(type => type.category === '選擇題型').map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                        
-                        {/* 高級題型 */}
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b mt-1">
-                          高級題型
-                        </div>
-                        {FIELD_TYPES.filter(type => type.category === '高級題型').map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor={`field-placeholder-${field.tempId}`}>提示文字</Label>
-                  <Input
-                    id={`field-placeholder-${field.tempId}`}
-                    value={field.placeholder || ''}
-                    onChange={(e) => updateField(field.tempId, { placeholder: e.target.value })}
-                    placeholder="請輸入提示文字"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor={`field-help-${field.tempId}`}>說明文字</Label>
-                  <Textarea
-                    id={`field-help-${field.tempId}`}
-                    value={field.help_text || ''}
-                    onChange={(e) => updateField(field.tempId, { help_text: e.target.value })}
-                    placeholder="請輸入說明文字"
-                    rows={2}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id={`field-required-${field.tempId}`}
-                    checked={field.is_required || false}
-                    onCheckedChange={(checked) => updateField(field.tempId, { is_required: checked })}
-                  />
-                  <Label htmlFor={`field-required-${field.tempId}`}>必填欄位</Label>
-                </div>
-
-                {/* 選項設定 - 只在focused時顯示 */}
-                {needsOptions && isFocused && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>選項設定</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          addOption(field.tempId)
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        新增選項
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {field.options?.map((option) => (
-                        <div key={option.tempId} className="flex items-center gap-2">
-                          <Input
-                            value={option.option_label}
-                            onChange={(e) => updateOption(field.tempId, option.tempId, { option_label: e.target.value })}
-                            placeholder="選項標籤"
-                            className="flex-1"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removeOption(field.tempId, option.tempId)
-                            }}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Grid配置 - 只在focused時顯示 */}
-                {needsGridOptions && isFocused && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>行配置</Label>
-                      <div className="space-y-2 mt-2">
-                        {field.grid_options?.rows?.map((row, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              value={row.label}
-                              onChange={(e) => {
-                                const newRows = [...(field.grid_options?.rows || [])]
-                                newRows[index] = { ...row, label: e.target.value }
-                                updateField(field.tempId, { 
-                                  grid_options: { 
-                                    rows: newRows,
-                                    columns: field.grid_options?.columns || []
-                                  } 
-                                })
-                              }}
-                              placeholder="行標籤"
-                              className="flex-1"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const newRows = [...(field.grid_options?.rows || [])]
-                                newRows.splice(index, 1)
-                                updateField(field.tempId, { 
-                                  grid_options: { 
-                                    rows: newRows,
-                                    columns: field.grid_options?.columns || []
-                                  } 
-                                })
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )) || []}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const newRows = [...(field.grid_options?.rows || []), { value: `row_${Date.now()}`, label: '' }]
-                            updateField(field.tempId, { 
-                              grid_options: { 
-                                rows: newRows,
-                                columns: field.grid_options?.columns || []
-                              } 
-                            })
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          新增行
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>列配置</Label>
-                      <div className="space-y-2 mt-2">
-                        {field.grid_options?.columns?.map((column, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              value={column.label}
-                              onChange={(e) => {
-                                const newColumns = [...(field.grid_options?.columns || [])]
-                                newColumns[index] = { ...column, label: e.target.value }
-                                updateField(field.tempId, { 
-                                  grid_options: { 
-                                    rows: field.grid_options?.rows || [],
-                                    columns: newColumns 
-                                  } 
-                                })
-                              }}
-                              placeholder="列標籤"
-                              className="flex-1"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const newColumns = [...(field.grid_options?.columns || [])]
-                                newColumns.splice(index, 1)
-                                updateField(field.tempId, { 
-                                  grid_options: { 
-                                    rows: field.grid_options?.rows || [],
-                                    columns: newColumns 
-                                  } 
-                                })
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )) || []}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const newColumns = [...(field.grid_options?.columns || []), { value: `col_${Date.now()}`, label: '' }]
-                            updateField(field.tempId, { 
-                              grid_options: { 
-                                rows: field.grid_options?.rows || [],
-                                columns: newColumns 
-                              } 
-                            })
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          新增列
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </Draggable>
-    )
   }
 
   if (!hasEditPerm) {
@@ -602,51 +302,86 @@ function FormEditContent() {
 
                 <Separator />
 
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="required"
-                      checked={isRequired}
-                      onCheckedChange={setIsRequired}
-                    />
-                    <Label htmlFor="required">必填表單</Label>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="is-required">必填表單</Label>
+                  <Switch
+                    id="is-required"
+                    checked={isRequired}
+                    onCheckedChange={setIsRequired}
+                  />
+                </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="multiple"
-                      checked={allowMultipleSubmissions}
-                      onCheckedChange={setAllowMultipleSubmissions}
-                    />
-                    <Label htmlFor="multiple">允許多次提交</Label>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="allow-multiple">允許多次提交</Label>
+                  <Switch
+                    id="allow-multiple"
+                    checked={allowMultipleSubmissions}
+                    onCheckedChange={setAllowMultipleSubmissions}
+                  />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* 表單欄位編輯 */}
-          <div className="lg:col-span-2">
+          {/* 表單編輯區 */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Section Navigation */}
+            {sections.length > 0 && (
+              <FormSectionNavigation
+                sections={sections}
+                currentSectionIndex={currentSectionIndex}
+                onSectionChange={handleSectionChange}
+                onAddSection={addSection}
+                showAddButton={true}
+              />
+            )}
+
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>表單欄位</CardTitle>
-                    <CardDescription>點擊欄位來編輯，拖拽來調整順序</CardDescription>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center justify-between">
+                  <span>表單欄位編輯</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewMode(true)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    預覽
+                  </Button>
+                </CardTitle>
+                {sections.length > 0 && sections[currentSectionIndex] && (
+                  <CardDescription>
+                    編輯段落：{sections[currentSectionIndex].title || '未命名段落'}
+                    {sections[currentSectionIndex].description && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {sections[currentSectionIndex].description}
+                      </div>
+                    )}
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent>
-                {fields.length === 0 ? (
+                {currentSectionFields.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>尚未新增任何欄位</p>
+                    <p className="text-lg">此段落尚未新增任何欄位</p>
+                    <p className="text-sm mt-2">點擊下方按鈕開始新增欄位</p>
                   </div>
                 ) : (
                   <DragDropContext onDragEnd={onDragEnd}>
                     <Droppable droppableId="fields">
                       {(provided: DroppableProvided) => (
                         <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-                          {fields.map((field, index) => renderFieldEditor(field, index))}
+                          {currentSectionFields.map((field, index) => (
+                            <FormFieldCard
+                              key={field.tempId}
+                              field={field}
+                              fieldIndex={index}
+                              isFocused={focusedFieldId === field.tempId}
+                              onFocus={() => setFocusedFieldId(field.tempId)}
+                              onUpdate={(updates) => updateField(field.tempId, updates)}
+                              onRemove={() => removeField(field.tempId)}
+                            />
+                          ))}
                           {provided.placeholder}
                         </div>
                       )}
@@ -657,12 +392,16 @@ function FormEditContent() {
                 {/* 新增欄位按鈕 - 放在最下面 */}
                 <div className="mt-4 pt-4 border-t border-dashed">
                   <Button 
-                    onClick={() => addField()} 
+                    onClick={() => {
+                      const currentSection = sections[currentSectionIndex]
+                      addField(currentSection?.tempId)
+                    }} 
                     variant="outline" 
                     className="w-full"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    新增欄位
+                    新增欄位到{sections.length > 0 && sections[currentSectionIndex] ? 
+                      (sections[currentSectionIndex].title || '當前段落') : '表單'}
                   </Button>
                 </div>
               </CardContent>
@@ -671,170 +410,207 @@ function FormEditContent() {
         </div>
       ) : (
         /* 預覽模式 */
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{title || '未命名表單'}</CardTitle>
-            {description && <CardDescription className="mt-2 whitespace-pre-line text-sm">{description}</CardDescription>}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {fields.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="text-lg">表單尚未新增任何欄位</p>
+        <div className="space-y-6">
+          {/* Section Navigation in Preview */}
+          {sections.length > 0 && (
+            <FormSectionNavigation
+              sections={sections}
+              currentSectionIndex={currentSectionIndex}
+              onSectionChange={handleSectionChange}
+              onAddSection={() => {}} // No add in preview
+              showAddButton={false}
+            />
+          )}
+
+          <Card>
+            <CardHeader className="pb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl">{title || '未命名表單'}</CardTitle>
+                  {description && <CardDescription className="mt-2 whitespace-pre-line text-sm">{description}</CardDescription>}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewMode(false)}
+                >
+                  <Pen className="h-4 w-4 mr-2" />
+                  編輯
+                </Button>
               </div>
-            ) : (
-              fields.map((field: FormFieldWithId) => (
-                <div key={field.tempId} className="space-y-3 py-4 border-b border-gray-100 last:border-b-0">
-                  <Label className="text-lg font-medium">
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {field.help_text && (
-                    <p className="text-base text-muted-foreground">{field.help_text}</p>
-                  )}
-                  
-                  {/* 根據欄位類型渲染預覽 */}
-                  {field.field_type === 'text' && (
-                    <Input placeholder={field.placeholder} disabled className="text-base" />
-                  )}
-                  {field.field_type === 'textarea' && (
-                    <Textarea placeholder={field.placeholder} disabled rows={3} className="text-base" />
-                  )}
-                  {field.field_type === 'email' && (
-                    <Input type="email" placeholder={field.placeholder} disabled className="text-base" />
-                  )}
-                  {field.field_type === 'number' && (
-                    <Input type="number" placeholder={field.placeholder} disabled className="text-base" />
-                  )}
-                  {field.field_type === 'taiwan_id' && (
-                    <Input placeholder={field.placeholder || '請輸入身分證字號'} disabled className="text-base" />
-                  )}
-                  {field.field_type === 'phone' && (
-                    <Input placeholder={field.placeholder || '請輸入電話號碼'} disabled className="text-base" />
-                  )}
-                  {field.field_type === 'select' && (
-                    <Select disabled>
-                      <SelectTrigger className="text-base">
-                        <SelectValue placeholder={field.placeholder || '請選擇'} />
-                      </SelectTrigger>
-                    </Select>
-                  )}
-                  {field.field_type === 'multi-select' && (
-                    <div className="space-y-2">
-                      <Select disabled>
-                        <SelectTrigger className="text-base">
-                          <SelectValue placeholder={field.placeholder || '點擊選擇選項'} />
-                        </SelectTrigger>
-                      </Select>
-                      <div className="text-sm text-muted-foreground">
-                        多選下拉選單預覽 ({field.options?.length || 0} 個選項)
-                      </div>
-                    </div>
-                  )}
-                  {field.field_type === 'radio' && (
-                    <div className="space-y-3">
-                      {field.options?.map((option) => (
-                        <div key={option.tempId} className="flex items-center space-x-3">
-                          <input type="radio" disabled className="w-4 h-4" />
-                          <Label className="text-base">{option.option_label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {field.field_type === 'checkbox' && (
-                    <div className="space-y-3">
-                      {field.options?.map((option) => (
-                        <div key={option.tempId} className="flex items-center space-x-3">
-                          <input type="checkbox" disabled className="w-4 h-4" />
-                          <Label className="text-base">{option.option_label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {field.field_type === 'radio_grid' && (
-                    <div className="border rounded p-2">
-                      <div className="text-sm text-gray-600 mb-2">單選方格預覽</div>
-                      {field.grid_options?.rows && field.grid_options?.columns ? (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border-collapse text-sm">
-                            <thead>
-                              <tr>
-                                <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
-                                {field.grid_options.columns.map((col, idx) => (
-                                  <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
-                                    {col.label}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {field.grid_options.rows.map((row, idx) => (
-                                <tr key={idx}>
-                                  <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
-                                    {row.label}
-                                  </td>
-                                  {field.grid_options!.columns.map((col, colIdx) => (
-                                    <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
-                                      <input 
-                                        type="radio" 
-                                        name={`${field.tempId}_row_${idx}`}
-                                        value={col.value}
-                                        disabled 
-                                        className="w-4 h-4" 
-                                      />
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="text-gray-500 text-sm">請配置行列選項</div>
-                      )}
-                    </div>
-                  )}
-                  {field.field_type === 'checkbox_grid' && (
-                    <div className="border rounded p-2">
-                      <div className="text-sm text-gray-600 mb-2">核取方塊格預覽</div>
-                      {field.grid_options?.rows && field.grid_options?.columns ? (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border-collapse text-sm">
-                            <thead>
-                              <tr>
-                                <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
-                                {field.grid_options.columns.map((col, idx) => (
-                                  <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
-                                    {col.label}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {field.grid_options.rows.map((row, idx) => (
-                                <tr key={idx}>
-                                  <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
-                                    {row.label}
-                                  </td>
-                                  {field.grid_options!.columns.map((col, colIdx) => (
-                                    <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
-                                      <input type="checkbox" disabled className="w-4 h-4" />
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="text-gray-500 text-sm">請配置行列選項</div>
-                      )}
-                    </div>
+              {sections.length > 0 && sections[currentSectionIndex] && (
+                <div className="mt-4 pt-4 border-t">
+                  <h3 className="font-medium text-lg">
+                    {sections[currentSectionIndex].title || '未命名段落'}
+                  </h3>
+                  {sections[currentSectionIndex].description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {sections[currentSectionIndex].description}
+                    </p>
                   )}
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {currentSectionFields.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-lg">此段落沒有欄位</p>
+                </div>
+              ) : (
+                currentSectionFields.map((field: FormFieldWithId) => (
+                  <div key={field.tempId} className="space-y-3 py-4 border-b border-gray-100 last:border-b-0">
+                    <Label className="text-lg font-medium">
+                      {field.field_label}
+                      {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {field.help_text && (
+                      <p className="text-base text-muted-foreground">{field.help_text}</p>
+                    )}
+                    
+                    {/* 根據欄位類型渲染預覽 */}
+                    {field.field_type === 'text' && (
+                      <Input placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'textarea' && (
+                      <Textarea placeholder={field.placeholder} disabled rows={3} className="text-base" />
+                    )}
+                    {field.field_type === 'email' && (
+                      <Input type="email" placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'number' && (
+                      <Input type="number" placeholder={field.placeholder} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'taiwan_id' && (
+                      <Input placeholder={field.placeholder || '請輸入身分證字號'} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'phone' && (
+                      <Input placeholder={field.placeholder || '請輸入電話號碼'} disabled className="text-base" />
+                    )}
+                    {field.field_type === 'select' && (
+                      <Select disabled>
+                        <SelectTrigger className="text-base">
+                          <SelectValue placeholder={field.placeholder || '請選擇'} />
+                        </SelectTrigger>
+                      </Select>
+                    )}
+                    {field.field_type === 'multi-select' && (
+                      <div className="space-y-2">
+                        <Select disabled>
+                          <SelectTrigger className="text-base">
+                            <SelectValue placeholder={field.placeholder || '點擊選擇選項'} />
+                          </SelectTrigger>
+                        </Select>
+                        <div className="text-sm text-muted-foreground">
+                          多選下拉選單預覽 ({field.options?.length || 0} 個選項)
+                        </div>
+                      </div>
+                    )}
+                    {field.field_type === 'radio' && (
+                      <div className="space-y-3">
+                        {field.options?.map((option) => (
+                          <div key={option.tempId} className="flex items-center space-x-3">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <Label className="text-base">{option.option_label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {field.field_type === 'checkbox' && (
+                      <div className="space-y-3">
+                        {field.options?.map((option) => (
+                          <div key={option.tempId} className="flex items-center space-x-3">
+                            <input type="checkbox" disabled className="w-4 h-4" />
+                            <Label className="text-base">{option.option_label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {field.field_type === 'radio_grid' && (
+                      <div className="border rounded p-2">
+                        <div className="text-sm text-gray-600 mb-2">單選方格預覽</div>
+                        {field.grid_options?.rows && field.grid_options?.columns ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
+                                  {field.grid_options.columns.map((col, idx) => (
+                                    <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
+                                      {col.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {field.grid_options.rows.map((row, idx) => (
+                                  <tr key={idx}>
+                                    <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
+                                      {row.label}
+                                    </td>
+                                    {field.grid_options!.columns.map((col, colIdx) => (
+                                      <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
+                                        <input 
+                                          type="radio" 
+                                          name={`${field.tempId}_row_${idx}`}
+                                          value={col.value}
+                                          disabled 
+                                          className="w-4 h-4" 
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm">請配置行列選項</div>
+                        )}
+                      </div>
+                    )}
+                    {field.field_type === 'checkbox_grid' && (
+                      <div className="border rounded p-2">
+                        <div className="text-sm text-gray-600 mb-2">核取方塊格預覽</div>
+                        {field.grid_options?.rows && field.grid_options?.columns ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 p-3 bg-gray-50 min-w-0 w-fit"></th>
+                                  {field.grid_options.columns.map((col, idx) => (
+                                    <th key={idx} className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap text-center font-medium min-w-[120px]">
+                                      {col.label}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {field.grid_options.rows.map((row, idx) => (
+                                  <tr key={idx}>
+                                    <td className="border border-gray-300 p-3 bg-gray-50 whitespace-nowrap font-medium min-w-[150px]">
+                                      {row.label}
+                                    </td>
+                                    {field.grid_options!.columns.map((col, colIdx) => (
+                                      <td key={colIdx} className="border border-gray-300 p-3 text-center min-w-[120px]">
+                                        <input type="checkbox" disabled className="w-4 h-4" />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm">請配置行列選項</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

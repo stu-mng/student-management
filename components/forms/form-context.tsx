@@ -1,6 +1,6 @@
 "use client"
 
-import type { Form, FormField, FormFieldOption } from "@/app/api/types";
+import type { Form, FormField, FormFieldOption, FormSection } from "@/app/api/types";
 import { useAuth } from "@/components/auth-provider";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -8,9 +8,19 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { toast } from "sonner";
 
 // 從 useFormEditor 導入的類型
+export interface FormSectionWithId {
+  tempId: string
+  id?: string
+  title?: string
+  description?: string
+  order: number
+  fields?: FormFieldWithId[]
+}
+
 export interface FormFieldWithId {
   tempId: string
   id?: string
+  form_section_id?: string
   field_name: string
   field_label: string
   field_type: string
@@ -98,6 +108,7 @@ interface FormContextType {
   allowMultipleSubmissions: boolean
   submissionDeadline: Date | undefined
   status: string
+  sections: FormSectionWithId[]
   fields: FormFieldWithId[]
   previewMode: boolean
   focusedFieldId: string | null
@@ -116,8 +127,14 @@ interface FormContextType {
   setPreviewMode: (mode: boolean) => void
   setFocusedFieldId: (id: string | null) => void
   
+  // 分段操作
+  addSection: () => void
+  updateSection: (tempId: string, updates: Partial<FormSectionWithId>) => void
+  removeSection: (tempId: string) => void
+  onSectionDragEnd: (result: any) => void
+  
   // 欄位操作
-  addField: (insertIndex?: number) => void
+  addField: (sectionTempId?: string, insertIndex?: number) => void
   updateField: (tempId: string, updates: Partial<FormFieldWithId>) => void
   removeField: (tempId: string) => void
   duplicateField: (tempId: string) => void
@@ -127,8 +144,8 @@ interface FormContextType {
   onDragEnd: (result: any) => void
   
   // 保存操作
-    saveDraft: () => Promise<void>
-    publishForm: () => Promise<void>
+  saveDraft: () => Promise<void>
+  publishForm: () => Promise<void>
   
   // 工具方法
   cleanupEmptyFields: () => void
@@ -168,6 +185,7 @@ export function FormProvider({ children }: FormProviderProps) {
   const [allowMultipleSubmissions, setAllowMultipleSubmissions] = useState(false)
   const [submissionDeadline, setSubmissionDeadline] = useState<Date | undefined>(undefined)
   const [status, setStatus] = useState('')
+  const [sections, setSections] = useState<FormSectionWithId[]>([])
   const [fields, setFields] = useState<FormFieldWithId[]>([])
   const [previewMode, setPreviewMode] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -226,40 +244,53 @@ export function FormProvider({ children }: FormProviderProps) {
       setSubmissionDeadline(new Date(formData.submission_deadline))
     }
     
-    // 設定欄位
-    if (formData.fields && formData.fields.length > 0) {
-      const formFields: FormFieldWithId[] = formData.fields
-        .sort((a, b) => a.display_order - b.display_order)
-        .map((field: FormField) => ({
-          tempId: `existing_${field.id}`,
-          id: field.id,
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required || false,
-          is_active: field.is_active !== false,
-          placeholder: field.placeholder || '',
-          help_text: field.help_text || '',
-          default_value: field.default_value || '',
-          min_length: field.min_length || undefined,
-          max_length: field.max_length || undefined,
-          pattern: field.pattern || '',
-          options: field.form_field_options?.map((option: FormFieldOption) => ({
-            tempId: `existing_option_${option.id}`,
-            id: option.id,
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: option.display_order,
-            is_active: option.is_active !== false
-          })) || [],
-          grid_options: field.grid_options || {
-            rows: [],
-            columns: []
-          }
+    // 設定分段和欄位 - 使用 API 返回的 sections 結構
+    if (formData.sections && formData.sections.length > 0) {
+      const formSections: FormSectionWithId[] = formData.sections
+        .sort((a, b) => a.order - b.order)
+        .map((section: FormSection) => ({
+          tempId: `existing_${section.id}`,
+          id: section.id,
+          title: section.title || '',
+          description: section.description || '',
+          order: section.order,
+          fields: section.fields?.map((field: FormField) => ({
+            tempId: `existing_${field.id}`,
+            id: field.id,
+            form_section_id: field.form_section_id,
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            display_order: field.display_order,
+            is_required: field.is_required || false,
+            is_active: field.is_active !== false,
+            placeholder: field.placeholder || '',
+            help_text: field.help_text || '',
+            default_value: field.default_value || '',
+            min_length: field.min_length || undefined,
+            max_length: field.max_length || undefined,
+            pattern: field.pattern || '',
+            options: field.form_field_options?.map((option: FormFieldOption) => ({
+              tempId: `existing_option_${option.id}`,
+              id: option.id,
+              option_value: option.option_value,
+              option_label: option.option_label,
+              display_order: option.display_order,
+              is_active: option.is_active !== false
+            })) || [],
+            grid_options: field.grid_options || {
+              rows: [],
+              columns: []
+            }
+          })).sort((a, b) => a.display_order - b.display_order) || []
         }))
-      setFields(formFields)
+      setSections(formSections)
+      
+      // 將所有欄位展平為一個陣列，用於向後兼容
+      const allFields: FormFieldWithId[] = formSections.flatMap(section => section.fields || [])
+      setFields(allFields)
     } else {
+      setSections([])
       setFields([])
     }
 
@@ -272,24 +303,30 @@ export function FormProvider({ children }: FormProviderProps) {
         isRequired: formData.is_required || false,
         allowMultipleSubmissions: formData.allow_multiple_submissions || false,
         submissionDeadline: formData.submission_deadline,
-        fields: formData.fields?.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required,
-          is_active: field.is_active,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          options: field.form_field_options?.map((option, index) => ({
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: index,
-            is_active: option.is_active
+        sections: formData.sections?.map(section => ({
+          title: section.title,
+          description: section.description,
+          order: section.order,
+          fields: section.fields?.map(field => ({
+            form_section_id: field.form_section_id,
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            display_order: field.display_order,
+            is_required: field.is_required,
+            is_active: field.is_active,
+            placeholder: field.placeholder,
+            help_text: field.help_text,
+            default_value: field.default_value,
+            min_length: field.min_length,
+            max_length: field.max_length,
+            pattern: field.pattern,
+            options: field.form_field_options?.map((option, index) => ({
+              option_value: option.option_value,
+              option_label: option.option_label,
+              display_order: index,
+              is_active: option.is_active
+            }))
           }))
         })) || []
       })
@@ -299,6 +336,8 @@ export function FormProvider({ children }: FormProviderProps) {
 
   // 檢查未保存變更
   const checkForUnsavedChanges = useCallback(() => {
+    if (!initialStateRef.current) return false
+
     const currentState = JSON.stringify({
       title,
       description,
@@ -306,7 +345,13 @@ export function FormProvider({ children }: FormProviderProps) {
       isRequired,
       allowMultipleSubmissions,
       submissionDeadline: submissionDeadline?.toISOString(),
+      sections: sections.map(section => ({
+        title: section.title,
+        description: section.description,
+        order: section.order
+      })),
       fields: fields.map(field => ({
+        form_section_id: field.form_section_id,
         field_name: field.field_name,
         field_label: field.field_label,
         field_type: field.field_type,
@@ -331,7 +376,7 @@ export function FormProvider({ children }: FormProviderProps) {
     const hasChanges = initialStateRef.current !== currentState
     setHasUnsavedChanges(hasChanges)
     return hasChanges
-  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, fields])
+  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, sections, fields])
 
   const fetchForm = async () => {
     try {
@@ -395,7 +440,7 @@ export function FormProvider({ children }: FormProviderProps) {
     if (initialStateRef.current) {
       checkForUnsavedChanges()
     }
-  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, fields, checkForUnsavedChanges])
+  }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, sections, fields, checkForUnsavedChanges])
 
   const hasEditPermission = useCallback(() => {
     if (!user || !form) return false
@@ -458,10 +503,14 @@ export function FormProvider({ children }: FormProviderProps) {
   }
 
   // 欄位編輯方法
-  const addField = (insertIndex?: number) => {
+  const addField = (sectionTempId?: string, insertIndex?: number) => {
+    const fieldCount = fields.length + 1
+    const defaultFieldName = `field_${fieldCount}`
+    
     const newField: FormFieldWithId = {
       tempId: generateTempId(),
-      field_name: '',
+      form_section_id: sectionTempId,
+      field_name: defaultFieldName,
       field_label: '',
       field_type: 'text',
       display_order: insertIndex !== undefined ? insertIndex : fields.length,
@@ -641,30 +690,37 @@ export function FormProvider({ children }: FormProviderProps) {
         title,
         description,
         form_type: formType,
-        status: 'draft',
         is_required: isRequired,
         allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
-        fields: activeFields.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required,
-          is_active: field.is_active,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          options: field.options?.map((option, index) => ({
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: index,
-            is_active: option.is_active
-          })),
-          grid_options: field.grid_options
+        submission_deadline: submissionDeadline?.toISOString(),
+        status: 'draft',
+        sections: sections.map(section => ({
+          title: section.title || '',
+          description: section.description || '',
+          order: section.order,
+          fields: activeFields
+            .filter(field => field.form_section_id === section.id || (!field.form_section_id && section.order === 1))
+            .map(field => ({
+              field_name: field.field_name,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              display_order: field.display_order,
+              is_required: field.is_required,
+              is_active: field.is_active,
+              placeholder: field.placeholder || '',
+              help_text: field.help_text || '',
+              default_value: field.default_value,
+              min_length: field.min_length,
+              max_length: field.max_length,
+              pattern: field.pattern,
+              options: field.options?.map((option, index) => ({
+                option_value: option.option_value,
+                option_label: option.option_label,
+                display_order: index,
+                is_active: option.is_active
+              })) || [],
+              grid_options: field.grid_options || { rows: [], columns: [] }
+            }))
         }))
       }
 
@@ -677,7 +733,9 @@ export function FormProvider({ children }: FormProviderProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to save draft')
+        const errorData = await response.json()
+        console.error('Save draft error:', errorData)
+        throw new Error(errorData.error || 'Failed to save draft')
       }
 
       toast.success('草稿已保存')
@@ -736,30 +794,37 @@ export function FormProvider({ children }: FormProviderProps) {
         title,
         description,
         form_type: formType,
-        status: 'active',
         is_required: isRequired,
         allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline ? submissionDeadline.toISOString() : undefined,
-        fields: activeFields.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order,
-          is_required: field.is_required,
-          is_active: field.is_active,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          options: field.options?.map((option, index) => ({
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: index,
-            is_active: option.is_active
-          })),
-          grid_options: field.grid_options
+        submission_deadline: submissionDeadline?.toISOString(),
+        status: 'active',
+        sections: sections.map(section => ({
+          title: section.title || '',
+          description: section.description || '',
+          order: section.order,
+          fields: activeFields
+            .filter(field => field.form_section_id === section.id || (!field.form_section_id && section.order === 1))
+            .map(field => ({
+              field_name: field.field_name,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              display_order: field.display_order,
+              is_required: field.is_required,
+              is_active: field.is_active,
+              placeholder: field.placeholder || '',
+              help_text: field.help_text || '',
+              default_value: field.default_value,
+              min_length: field.min_length,
+              max_length: field.max_length,
+              pattern: field.pattern,
+              options: field.options?.map((option, index) => ({
+                option_value: option.option_value,
+                option_label: option.option_label,
+                display_order: index,
+                is_active: option.is_active
+              })) || [],
+              grid_options: field.grid_options || { rows: [], columns: [] }
+            }))
         }))
       }
 
@@ -772,7 +837,9 @@ export function FormProvider({ children }: FormProviderProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to publish form')
+        const errorData = await response.json()
+        console.error('Publish form error:', errorData)
+        throw new Error(errorData.error || 'Failed to publish form')
       }
 
       toast.success('表單已發布')
@@ -881,6 +948,7 @@ export function FormProvider({ children }: FormProviderProps) {
     allowMultipleSubmissions,
     submissionDeadline,
     status,
+    sections,
     fields,
     previewMode,
     focusedFieldId,
@@ -898,6 +966,38 @@ export function FormProvider({ children }: FormProviderProps) {
     setSubmissionDeadline,
     setPreviewMode,
     setFocusedFieldId,
+    
+    // 分段操作
+    addSection: () => {
+      const newSection: FormSectionWithId = {
+        tempId: generateTempId(),
+        order: sections.length,
+        fields: []
+      }
+      setSections([...sections, newSection])
+    },
+    updateSection: (tempId: string, updates: Partial<FormSectionWithId>) => {
+      setSections(sections.map(section =>
+        section.tempId === tempId ? { ...section, ...updates } : section
+      ))
+    },
+    removeSection: (tempId: string) => {
+      setSections(sections.filter(section => section.tempId !== tempId))
+    },
+    onSectionDragEnd: (result: any) => {
+      if (!result.destination) return
+
+      const items = Array.from(sections)
+      const [reorderedItem] = items.splice(result.source.index, 1)
+      items.splice(result.destination.index, 0, reorderedItem)
+
+      const updatedItems = items.map((item, index) => ({
+        ...item,
+        order: index
+      }))
+
+      setSections(updatedItems)
+    },
     
     // 欄位操作
     addField,

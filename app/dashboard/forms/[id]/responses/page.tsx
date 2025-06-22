@@ -254,11 +254,13 @@ export default function FormResponsesPage() {
       field_type: string
     }
   }) => {
-    if (!form?.fields || !fieldResponse.field_value) {
+    // 從 sections 中獲取所有欄位
+    const allFields = form?.sections?.flatMap(section => section.fields || []) || []
+    if (!allFields.length || !fieldResponse.field_value) {
       return '-'
     }
     
-    const field = form.fields.find(f => f.id === fieldResponse.field.id)
+    const field = allFields.find(f => f.id === fieldResponse.field.id)
     if (!field?.grid_options) {
       return '-'
     }
@@ -311,11 +313,13 @@ export default function FormResponsesPage() {
   const renderGridOverviewValue = (response: {
     field_value: string | null
   }, fieldId: string) => {
-    if (!form?.fields || !response.field_value) {
+    // 從 sections 中獲取所有欄位
+    const allFields = form?.sections?.flatMap(section => section.fields || []) || []
+    if (!allFields.length || !response.field_value) {
       return '-'
     }
     
-    const field = form.fields.find(f => f.id === fieldId)
+    const field = allFields.find(f => f.id === fieldId)
     if (!field?.grid_options) {
       return '-'
     }
@@ -366,12 +370,14 @@ export default function FormResponsesPage() {
 
   // 計算選擇類型欄位的統計資訊 - 用於總覽頁面
   const renderChoiceStatistics = (field: FieldOverview) => {
-    if (!form?.fields) {
+    // 從 sections 中獲取所有欄位
+    const allFields = form?.sections?.flatMap(section => section.fields || []) || []
+    if (!allFields.length) {
       console.log('No form fields available for', field.field_label)
       return null
     }
     
-    const formField = form.fields.find(f => f.id === field.field_id)
+    const formField = allFields.find(f => f.id === field.field_id)
     if (!formField) {
       console.log('Form field not found for', field.field_label, field.field_id)
       return null
@@ -578,11 +584,12 @@ export default function FormResponsesPage() {
 
   // 計算 grid 欄位的統計資訊 - 用於總覽頁面
   const renderGridStatistics = (field: FieldOverview) => {
-    if (!form?.fields) {
+    if (!form?.sections) {
       return null
     }
     
-    const formField = form.fields.find(f => f.id === field.field_id)
+    const allFields = form.sections.flatMap(section => section.fields || [])
+    const formField = allFields.find(f => f.id === field.field_id)
     if (!formField?.grid_options) {
       return null
     }
@@ -695,7 +702,7 @@ export default function FormResponsesPage() {
           
           for (const [rowValue, columnValue] of Object.entries(gridData)) {
             if (statistics[rowValue]) {
-              if (field.field_type === 'checkbox_grid' && Array.isArray(columnValue)) {
+              if (formField.field_type === 'checkbox_grid' && Array.isArray(columnValue)) {
                 columnValue.forEach(val => {
                   if (statistics[rowValue][val] !== undefined) {
                     statistics[rowValue][val]++
@@ -791,7 +798,7 @@ export default function FormResponsesPage() {
           if (!gridData || typeof gridData !== 'object') return
           
           for (const [rowValue, columnValue] of Object.entries(gridData)) {
-            if (field.field_type === 'checkbox_grid' && Array.isArray(columnValue)) {
+            if (formField.field_type === 'checkbox_grid' && Array.isArray(columnValue)) {
               columnValue.forEach(val => {
                 if (statistics[val] && statistics[val][rowValue] !== undefined) {
                   statistics[val][rowValue]++

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // 只有管理員和計畫主持可以創建表單
     const currentUserRole = (userData.role as unknown as Role)?.name;
-    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
+    if (!['admin', 'root', 'class-teacher', 'manager'].includes(currentUserRole)) {
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       is_required = false,
       allow_multiple_submissions = false,
       submission_deadline,
-      fields = []
+      sections = []
     } = body;
 
     // 驗證必要欄位
@@ -90,121 +90,182 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 如果有欄位定義，創建表單欄位
-    if (fields.length > 0) {
-      const formFields = fields.map((field, index) => ({
-        form_id: form.id,
-        field_name: field.field_name,
-        field_label: field.field_label,
-        field_type: field.field_type,
-        display_order: field.display_order || index,
-        is_required: field.is_required || false,
-        is_active: field.is_active !== false,
-        placeholder: field.placeholder,
-        help_text: field.help_text,
-        validation_rules: field.validation_rules,
-        conditional_logic: field.conditional_logic,
-        default_value: field.default_value,
-        min_length: field.min_length,
-        max_length: field.max_length,
-        pattern: field.pattern,
-        student_field_mapping: field.student_field_mapping,
-        auto_populate_from: field.auto_populate_from,
-      }));
+    // 創建表單分段和欄位
+    if (sections.length > 0) {
+      for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+        const section = sections[sectionIndex];
+        
+        // 創建分段
+        const { data: createdSection, error: sectionError } = await supabase
+          .from('form_sections')
+          .insert({
+            form_id: form.id,
+            title: section.title || `區段 ${sectionIndex + 1}`,
+            description: section.description,
+            order: section.order || sectionIndex + 1,
+          })
+          .select()
+          .single();
 
-      const { data: createdFields, error: fieldsError } = await supabase
-        .from('form_fields')
-        .insert(formFields)
-        .select();
-
-      if (fieldsError) {
-        console.error('Error creating form fields:', fieldsError);
-        // 如果欄位創建失敗，刪除已創建的表單
-        await supabase.from('forms').delete().eq('id', form.id);
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to create form fields' },
-          { status: 500 }
-        );
-      }
-
-      // 為有選項的欄位創建選項
-      for (const field of fields) {
-        const fieldData = createdFields?.find(f => f.field_name === field.field_name);
-        if (!fieldData) continue;
-
-        // 處理一般選項（select, radio, checkbox）
-        if (field.options && field.options.length > 0) {
-          const options = field.options.map((option, index) => ({
-            field_id: fieldData.id,
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: option.display_order || index,
-            is_active: option.is_active !== false,
-            option_type: 'standard'
-          }));
-
-          const { error: optionsError } = await supabase
-            .from('form_field_options')
-            .insert(options);
-
-          if (optionsError) {
-            console.error('Error creating field options:', optionsError);
-          }
+        if (sectionError) {
+          console.error('Error creating form section:', sectionError);
+          // 如果分段創建失敗，刪除已創建的表單
+          await supabase.from('forms').delete().eq('id', form.id);
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Failed to create form sections' },
+            { status: 500 }
+          );
         }
 
-        // 處理 grid 選項（radio_grid, checkbox_grid）
-        if (field.grid_options && ['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
-          const gridOptions: Array<{
-            field_id: string;
-            option_value: string;
-            option_label: string;
-            option_type: string;
-            row_label?: string;
-            column_label?: string;
-            display_order: number;
-            is_active: boolean;
-          }> = [];
-
-          // 添加行選項
-          if (field.grid_options.rows) {
-            field.grid_options.rows.forEach((row, index) => {
-              gridOptions.push({
-                field_id: fieldData.id,
-                option_value: row.value,
-                option_label: row.label,
-                option_type: 'grid_row',
-                row_label: row.label,
-                display_order: index,
-                is_active: true
-              });
-            });
+        // 如果該分段有欄位，創建欄位
+        if (section.fields && section.fields.length > 0) {
+          // 驗證欄位資料
+          for (const field of section.fields) {
+            if (!field.field_name || !field.field_label || !field.field_type) {
+              console.error('Invalid field data:', field);
+              await supabase.from('forms').delete().eq('id', form.id);
+              return NextResponse.json<ErrorResponse>(
+                { error: 'Missing required field properties: field_name, field_label, field_type' },
+                { status: 400 }
+              );
+            }
           }
 
-          // 添加列選項
-          if (field.grid_options.columns) {
-            field.grid_options.columns.forEach((column, index) => {
-              gridOptions.push({
-                field_id: fieldData.id,
-                option_value: column.value,
-                option_label: column.label,
-                option_type: 'grid_column',
-                column_label: column.label,
-                display_order: index,
-                is_active: true
-              });
-            });
+          const formFields = section.fields.map((field, fieldIndex) => ({
+            form_id: form.id,
+            form_section_id: createdSection.id,
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            display_order: field.display_order || fieldIndex,
+            is_required: field.is_required || false,
+            is_active: field.is_active !== false,
+            placeholder: field.placeholder,
+            help_text: field.help_text,
+            validation_rules: field.validation_rules,
+            conditional_logic: field.conditional_logic,
+            default_value: field.default_value,
+            min_length: field.min_length,
+            max_length: field.max_length,
+            pattern: field.pattern,
+            student_field_mapping: field.student_field_mapping,
+            auto_populate_from: field.auto_populate_from,
+          }));
+
+          const { data: createdFields, error: fieldsError } = await supabase
+            .from('form_fields')
+            .insert(formFields)
+            .select();
+
+          if (fieldsError) {
+            console.error('Error creating form fields:', fieldsError);
+            // 如果欄位創建失敗，刪除已創建的表單
+            await supabase.from('forms').delete().eq('id', form.id);
+            return NextResponse.json<ErrorResponse>(
+              { error: 'Failed to create form fields' },
+              { status: 500 }
+            );
           }
 
-          if (gridOptions.length > 0) {
-            const { error: gridOptionsError } = await supabase
-              .from('form_field_options')
-              .insert(gridOptions);
+          // 為有選項的欄位創建選項
+          for (const field of section.fields) {
+            const fieldData = createdFields?.find(f => f.field_name === field.field_name);
+            if (!fieldData) continue;
 
-            if (gridOptionsError) {
-              console.error('Error creating grid options:', gridOptionsError);
+            // 處理一般選項（select, radio, checkbox）
+            if (field.options && field.options.length > 0) {
+              const options = field.options.map((option, index) => ({
+                field_id: fieldData.id,
+                option_value: option.option_value,
+                option_label: option.option_label,
+                display_order: option.display_order || index,
+                is_active: option.is_active !== false,
+                option_type: 'standard'
+              }));
+
+              const { error: optionsError } = await supabase
+                .from('form_field_options')
+                .insert(options);
+
+              if (optionsError) {
+                console.error('Error creating field options:', optionsError);
+              }
+            }
+
+            // 處理 grid 選項（radio_grid, checkbox_grid）
+            if (field.grid_options && ['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+              const gridOptions: Array<{
+                field_id: string;
+                option_value: string;
+                option_label: string;
+                option_type: string;
+                row_label?: string;
+                column_label?: string;
+                display_order: number;
+                is_active: boolean;
+              }> = [];
+
+              // 添加行選項
+              if (field.grid_options.rows) {
+                field.grid_options.rows.forEach((row, index) => {
+                  gridOptions.push({
+                    field_id: fieldData.id,
+                    option_value: row.value,
+                    option_label: row.label,
+                    option_type: 'grid_row',
+                    row_label: row.label,
+                    display_order: index,
+                    is_active: true
+                  });
+                });
+              }
+
+              // 添加列選項
+              if (field.grid_options.columns) {
+                field.grid_options.columns.forEach((column, index) => {
+                  gridOptions.push({
+                    field_id: fieldData.id,
+                    option_value: column.value,
+                    option_label: column.label,
+                    option_type: 'grid_column',
+                    column_label: column.label,
+                    display_order: index,
+                    is_active: true
+                  });
+                });
+              }
+
+              if (gridOptions.length > 0) {
+                const { error: gridOptionsError } = await supabase
+                  .from('form_field_options')
+                  .insert(gridOptions);
+
+                if (gridOptionsError) {
+                  console.error('Error creating grid options:', gridOptionsError);
+                }
+              }
             }
           }
         }
+      }
+    } else {
+      // 如果沒有提供 sections，創建一個預設分段
+      const { error: defaultSectionError } = await supabase
+        .from('form_sections')
+        .insert({
+          form_id: form.id,
+          title: '預設區段',
+          description: '此區段包含所有表單欄位',
+          order: 1,
+        });
+
+      if (defaultSectionError) {
+        console.error('Error creating default section:', defaultSectionError);
+        await supabase.from('forms').delete().eq('id', form.id);
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Failed to create default section' },
+          { status: 500 }
+        );
       }
     }
 
@@ -212,23 +273,20 @@ export async function POST(request: NextRequest) {
     const { data: rolesData, error: rolesError } = await supabase
       .from('roles')
       .select('id, name, order')
-      .in('name', ['admin', 'manager']);
+      .in('name', ['root', 'admin', 'manager']);
 
     if (rolesError) {
       console.error('Error fetching roles for permissions:', rolesError);
     } else if (rolesData) {
       const accessPermissions = [];
       
-      // 獲取角色資訊以進行權限檢查
-      const adminRole = rolesData.find(r => r.order === 1); // admin role
-      const managerRole = rolesData.find(r => r.order === 2); // manager role
-      
-      if (adminRole) {
-        accessPermissions.push({ form_id: form.id, role_id: adminRole.id, access_type: 'edit' });
-      }
-      if (managerRole) {
-        accessPermissions.push({ form_id: form.id, role_id: managerRole.id, access_type: 'edit' });
-      }
+      accessPermissions.push({ form_id: form.id, role_id: 0, access_type: 'edit' });
+      accessPermissions.push({ form_id: form.id, role_id: 1, access_type: 'edit' });
+      accessPermissions.push({ form_id: form.id, role_id: 2, access_type: 'edit' });
+      accessPermissions.push({ form_id: form.id, role_id: 3, access_type: 'edit' });
+      accessPermissions.push({ form_id: form.id, role_id: 4, access_type: 'read' });
+      accessPermissions.push({ form_id: form.id, role_id: 5, access_type: 'read' });
+      accessPermissions.push({ form_id: form.id, role_id: 6, access_type: 'read' });
 
       if (accessPermissions.length > 0) {
         const { error: accessError } = await supabase

@@ -1,14 +1,15 @@
 import type {
-    ErrorResponse,
-    ExtendedFormFieldOption,
-    FormDetailResponse,
-    FormFieldCreateRequest,
-    FormFieldOption,
-    FormFieldOptionCreateRequest,
-    FormUpdateRequest,
-    Role,
-    RolePermission,
-    SuccessResponse
+  ErrorResponse,
+  ExtendedFormFieldOption,
+  FormDetailResponse,
+  FormField,
+  FormFieldCreateRequest,
+  FormFieldOption,
+  FormFieldOptionCreateRequest,
+  FormUpdateRequest,
+  Role,
+  RolePermission,
+  SuccessResponse
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import type { NextRequest } from 'next/server';
@@ -114,30 +115,34 @@ export async function GET(
       return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // 獲取表單欄位
-    const { data: fields, error: fieldsError } = await supabase
-      .from('form_fields')
+    // 獲取表單分段和欄位 - 直接從 sections join fields
+    const { data: sections, error: sectionsError } = await supabase
+      .from('form_sections')
       .select(`
         *,
-        form_field_options (
-          id,
-          option_value,
-          option_label,
-          option_type,
-          row_label,
-          column_label,
-          display_order,
-          is_active
+        fields:form_fields!form_fields_form_section_id_fkey(
+          *,
+          form_field_options (
+            id,
+            option_value,
+            option_label,
+            option_type,
+            row_label,
+            column_label,
+            display_order,
+            is_active
+          )
         )
       `)
       .eq('form_id', id)
-      .eq('is_active', true)
-      .order('display_order');
+      .eq('fields.is_active', true)
+      .order('order')
+      .order('display_order', { referencedTable: 'fields' });
 
-    if (fieldsError) {
-      console.error('Error fetching form fields:', fieldsError);
+    if (sectionsError) {
+      console.error('Error fetching form sections:', sectionsError);
       return NextResponse.json<ErrorResponse>(
-        { error: 'Failed to fetch form fields' },
+        { error: 'Failed to fetch form sections' },
         { status: 500 }
       );
     }
@@ -177,36 +182,193 @@ export async function GET(
       }
     }
 
-    // 整理欄位資料，將選項排序並重建 grid_options
-    const formattedFields = fields?.map(field => {
-      const sortedOptions = field.form_field_options?.sort((a: FormFieldOption, b: FormFieldOption) => a.display_order - b.display_order) || [];
-      
-      // 如果是 grid 類型欄位，重建 grid_options 結構
-      let gridOptions = undefined;
-      if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
-        const rowOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_row');
-        const columnOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_column');
+    // 處理 sections 資料，整理欄位選項
+    let sectionsWithFields = sections?.map(section => {
+      const formattedFields = section.fields?.map((field: FormField & { form_field_options?: ExtendedFormFieldOption[] }) => {
+        const sortedOptions = field.form_field_options?.sort((a: FormFieldOption, b: FormFieldOption) => a.display_order - b.display_order) || [];
         
-        if (rowOptions.length > 0 || columnOptions.length > 0) {
-          gridOptions = {
-            rows: rowOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
-              value: opt.option_value,
-              label: opt.option_label
-            })),
-            columns: columnOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
-              value: opt.option_value,
-              label: opt.option_label
-            }))
-          };
+        // 如果是 grid 類型欄位，重建 grid_options 結構
+        let gridOptions = undefined;
+        if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+          const rowOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_row');
+          const columnOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_column');
+          
+          if (rowOptions.length > 0 || columnOptions.length > 0) {
+            gridOptions = {
+              rows: rowOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                value: opt.option_value,
+                label: opt.option_label
+              })),
+              columns: columnOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                value: opt.option_value,
+                label: opt.option_label
+              }))
+            };
+          }
         }
-      }
+
+        return {
+          ...field,
+          form_field_options: sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type !== 'grid_row' && opt.option_type !== 'grid_column'),
+          grid_options: gridOptions
+        };
+      }) || [];
 
       return {
-        ...field,
-        form_field_options: sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type !== 'grid_row' && opt.option_type !== 'grid_column'),
-        grid_options: gridOptions
+        ...section,
+        fields: formattedFields
       };
     }) || [];
+
+    // 檢查是否有欄位沒有分配到任何 section（orphaned fields）
+    const { data: orphanedFields, error: orphanError } = await supabase
+      .from('form_fields')
+      .select(`
+        *,
+        form_field_options (
+          id,
+          option_value,
+          option_label,
+          option_type,
+          row_label,
+          column_label,
+          display_order,
+          is_active
+        )
+      `)
+      .eq('form_id', id)
+      .eq('is_active', true)
+      .is('form_section_id', null);
+
+    if (orphanError) {
+      console.error('Error fetching orphaned fields:', orphanError);
+    }
+
+    // Handle edge cases for form data integrity
+    const hasOrphanedFields = orphanedFields && orphanedFields.length > 0;
+    const allFields = sectionsWithFields.flatMap(s => s.fields || []);
+    const totalFieldsCount = allFields.length + (orphanedFields?.length || 0);
+
+    // Case 1: Form has fields but no sections - create a default section
+    if (totalFieldsCount > 0 && (!sections || sections.length === 0)) {
+      const { data: newSection, error: sectionError } = await supabase
+        .from('form_sections')
+        .insert({
+          form_id: id,
+          title: '表單內容',
+          description: null,
+          order: 0
+        })
+        .select()
+        .single();
+        
+      if (!sectionError && newSection) {
+        // Update all orphaned fields to belong to this new section
+        if (hasOrphanedFields) {
+          const { error: updateFieldsError } = await supabase
+            .from('form_fields')
+            .update({ form_section_id: newSection.id })
+            .in('id', orphanedFields.map(f => f.id));
+            
+          if (!updateFieldsError) {
+            // Format orphaned fields
+            const formattedOrphanedFields = orphanedFields.map(field => {
+              const sortedOptions = field.form_field_options?.sort((a: FormFieldOption, b: FormFieldOption) => a.display_order - b.display_order) || [];
+              
+              let gridOptions = undefined;
+              if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+                const rowOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_row');
+                const columnOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_column');
+                
+                if (rowOptions.length > 0 || columnOptions.length > 0) {
+                  gridOptions = {
+                    rows: rowOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                      value: opt.option_value,
+                      label: opt.option_label
+                    })),
+                    columns: columnOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                      value: opt.option_value,
+                      label: opt.option_label
+                    }))
+                  };
+                }
+              }
+
+              return {
+                ...field,
+                form_field_options: sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type !== 'grid_row' && opt.option_type !== 'grid_column'),
+                grid_options: gridOptions,
+                form_section_id: newSection.id
+              };
+            });
+
+            sectionsWithFields = [{
+              ...newSection,
+              fields: formattedOrphanedFields
+            }];
+          }
+        } else {
+          sectionsWithFields = [{
+            ...newSection,
+            fields: []
+          }];
+        }
+      }
+    }
+    
+    // Case 2: Fix orphaned fields by assigning them to the first section
+    else if (hasOrphanedFields && sections && sections.length > 0) {
+      const firstSectionId = sections[0].id;
+      
+      const { error: updateError } = await supabase
+        .from('form_fields')
+        .update({ form_section_id: firstSectionId })
+        .in('id', orphanedFields.map(f => f.id));
+        
+      if (!updateError) {
+        // Format orphaned fields and add to first section
+        const formattedOrphanedFields = orphanedFields.map(field => {
+          const sortedOptions = field.form_field_options?.sort((a: FormFieldOption, b: FormFieldOption) => a.display_order - b.display_order) || [];
+          
+          let gridOptions = undefined;
+          if (['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
+            const rowOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_row');
+            const columnOptions = sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type === 'grid_column');
+            
+            if (rowOptions.length > 0 || columnOptions.length > 0) {
+              gridOptions = {
+                rows: rowOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                  value: opt.option_value,
+                  label: opt.option_label
+                })),
+                columns: columnOptions.map((opt: FormFieldOption & { option_value: string; option_label: string }) => ({
+                  value: opt.option_value,
+                  label: opt.option_label
+                }))
+              };
+            }
+          }
+
+          return {
+            ...field,
+            form_field_options: sortedOptions.filter((opt: FormFieldOption & { option_type?: string }) => opt.option_type !== 'grid_row' && opt.option_type !== 'grid_column'),
+            grid_options: gridOptions,
+            form_section_id: firstSectionId
+          };
+        });
+
+        // Update the first section to include the fixed fields
+        sectionsWithFields = sectionsWithFields.map((section, index) => {
+          if (index === 0) {
+            return {
+              ...section,
+              fields: [...(section.fields || []), ...formattedOrphanedFields]
+            };
+          }
+          return section;
+        });
+      }
+    }
 
     // 檢查當前用戶是否已經提交回應
     let submitted = false;
@@ -218,7 +380,12 @@ export async function GET(
       .eq('submission_status', 'submitted')
       .single();
 
-    if (!responseError && existingResponse) {
+    if (responseError && responseError.code !== 'PGRST116') {
+      console.error('Error checking form response:', responseError);
+    }
+
+    // 如果已經提交過，則 submitted = true
+    if (existingResponse) {
       submitted = true;
     }
 
@@ -226,7 +393,7 @@ export async function GET(
       success: true,
       data: {
         ...form,
-        fields: formattedFields,
+        sections: sectionsWithFields,
         access_type: accessType,
         permissions: permissions,
         submitted: submitted,
@@ -337,7 +504,7 @@ export async function PUT(
       is_required,
       allow_multiple_submissions,
       submission_deadline,
-      fields = []
+      sections = []
     } = body;
 
     // 更新表單基本資訊
@@ -373,128 +540,133 @@ export async function PUT(
       );
     }
 
-    // 如果提供了欄位資料，更新欄位（使用更新而非刪除重建的方式）
-    if (fields.length > 0) {
-      // 獲取現有欄位
-      const { data: existingFields, error: getFieldsError } = await supabase
-        .from('form_fields')
+    // 如果提供了 sections 資料，更新區段和欄位
+    if (sections.length > 0) {
+      // 獲取現有區段
+      const { error: getSectionsError } = await supabase
+        .from('form_sections')
         .select(`
           *,
-          form_field_options (
-            id,
-            option_value,
-            option_label,
-            option_type,
-            row_label,
-            column_label,
-            display_order,
-            is_active
+          fields:form_fields!form_fields_form_section_id_fkey(
+            *,
+            form_field_options (
+              id,
+              option_value,
+              option_label,
+              option_type,
+              row_label,
+              column_label,
+              display_order,
+              is_active
+            )
           )
         `)
         .eq('form_id', id);
 
-      if (getFieldsError) {
-        console.error('Error getting existing fields:', getFieldsError);
+      if (getSectionsError) {
+        console.error('Error getting existing sections:', getSectionsError);
         return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to get existing fields' },
+          { error: 'Failed to get existing sections' },
           { status: 500 }
         );
       }
 
-      const existingFieldsMap = new Map(existingFields?.map(f => [f.field_name, f]) || []);
-      const newFieldNames = new Set(fields.map(f => f.field_name));
+      // 處理區段更新邏輯 - 這裡可以根據需要實現更複雜的邏輯
+      // 目前簡化處理：刪除所有現有區段和欄位，然後重新創建
+      // 在生產環境中，建議使用更精細的更新策略
 
-      // 1. 處理現有欄位的更新和停用
-      for (const existingField of existingFields || []) {
-        if (newFieldNames.has(existingField.field_name)) {
-          // 欄位仍存在，進行更新
-          const newFieldData = fields.find(f => f.field_name === existingField.field_name);
-          if (newFieldData) {
-            const fieldUpdateData = {
-              field_label: newFieldData.field_label,
-              field_type: newFieldData.field_type,
-              display_order: newFieldData.display_order || 0,
-              is_required: newFieldData.is_required || false,
-              is_active: newFieldData.is_active !== false,
-              placeholder: newFieldData.placeholder,
-              help_text: newFieldData.help_text,
-              validation_rules: newFieldData.validation_rules,
-              conditional_logic: newFieldData.conditional_logic,
-              default_value: newFieldData.default_value,
-              min_length: newFieldData.min_length,
-              max_length: newFieldData.max_length,
-              pattern: newFieldData.pattern,
-              student_field_mapping: newFieldData.student_field_mapping,
-              auto_populate_from: newFieldData.auto_populate_from,
-            };
+      // 先刪除現有區段（CASCADE 會自動刪除相關欄位）
+      const { error: deleteSectionsError } = await supabase
+        .from('form_sections')
+        .delete()
+        .eq('form_id', id);
 
-            const { error: updateFieldError } = await supabase
-              .from('form_fields')
-              .update(fieldUpdateData)
-              .eq('id', existingField.id);
-
-            if (updateFieldError) {
-              console.error('Error updating field:', updateFieldError);
-            }
-
-            // 更新欄位選項
-            await updateFieldOptions(supabase, existingField.id, newFieldData, existingField.form_field_options || []);
-          }
-        } else {
-          // 欄位不再存在，標記為停用而不是刪除
-          const { error: deactivateFieldError } = await supabase
-            .from('form_fields')
-            .update({ is_active: false })
-            .eq('id', existingField.id);
-
-          if (deactivateFieldError) {
-            console.error('Error deactivating field:', deactivateFieldError);
-          }
-        }
+      if (deleteSectionsError) {
+        console.error('Error deleting existing sections:', deleteSectionsError);
+        return NextResponse.json<ErrorResponse>(
+          { error: 'Failed to delete existing sections' },
+          { status: 500 }
+        );
       }
 
-      // 2. 處理新增的欄位
-      const newFields = fields.filter(f => !existingFieldsMap.has(f.field_name));
-      if (newFields.length > 0) {
-        const formFields = newFields.map((field, index) => ({
-          form_id: id,
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          display_order: field.display_order || index,
-          is_required: field.is_required || false,
-          is_active: field.is_active !== false,
-          placeholder: field.placeholder,
-          help_text: field.help_text,
-          validation_rules: field.validation_rules,
-          conditional_logic: field.conditional_logic,
-          default_value: field.default_value,
-          min_length: field.min_length,
-          max_length: field.max_length,
-          pattern: field.pattern,
-          student_field_mapping: field.student_field_mapping,
-          auto_populate_from: field.auto_populate_from,
-        }));
+      // 重新創建區段和欄位
+      for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+        const section = sections[sectionIndex];
+        
+        // 創建分段
+        const { data: createdSection, error: sectionError } = await supabase
+          .from('form_sections')
+          .insert({
+            form_id: id,
+            title: section.title || `區段 ${sectionIndex + 1}`,
+            description: section.description,
+            order: section.order || sectionIndex + 1,
+          })
+          .select()
+          .single();
 
-        const { data: createdFields, error: fieldsError } = await supabase
-          .from('form_fields')
-          .insert(formFields)
-          .select();
-
-        if (fieldsError) {
-          console.error('Error creating form fields:', fieldsError);
+        if (sectionError) {
+          console.error('Error creating form section:', sectionError);
           return NextResponse.json<ErrorResponse>(
-            { error: 'Failed to create form fields' },
+            { error: 'Failed to create form sections' },
             { status: 500 }
           );
         }
 
-        // 為新欄位創建選項
-        for (const field of newFields) {
-          const fieldData = createdFields?.find(f => f.field_name === field.field_name);
-          if (!fieldData) continue;
+        // 如果該分段有欄位，創建欄位
+        if (section.fields && section.fields.length > 0) {
+          // 驗證欄位資料
+          for (const field of section.fields) {
+            if (!field.field_name || !field.field_label || !field.field_type) {
+              console.error('Invalid field data:', field);
+              return NextResponse.json<ErrorResponse>(
+                { error: 'Missing required field properties: field_name, field_label, field_type' },
+                { status: 400 }
+              );
+            }
+          }
 
-          await createFieldOptions(supabase, fieldData.id, field);
+          const formFields = section.fields.map((field, fieldIndex) => ({
+            form_id: id,
+            form_section_id: createdSection.id,
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            display_order: field.display_order || fieldIndex,
+            is_required: field.is_required || false,
+            is_active: field.is_active !== false,
+            placeholder: field.placeholder,
+            help_text: field.help_text,
+            validation_rules: field.validation_rules,
+            conditional_logic: field.conditional_logic,
+            default_value: field.default_value,
+            min_length: field.min_length,
+            max_length: field.max_length,
+            pattern: field.pattern,
+            student_field_mapping: field.student_field_mapping,
+            auto_populate_from: field.auto_populate_from,
+          }));
+
+          const { data: createdFields, error: fieldsError } = await supabase
+            .from('form_fields')
+            .insert(formFields)
+            .select();
+
+          if (fieldsError) {
+            console.error('Error creating form fields:', fieldsError);
+            return NextResponse.json<ErrorResponse>(
+              { error: 'Failed to create form fields' },
+              { status: 500 }
+            );
+          }
+
+          // 為有選項的欄位創建選項
+          for (const field of section.fields) {
+            const fieldData = createdFields?.find(f => f.field_name === field.field_name);
+            if (!fieldData) continue;
+
+            await createFieldOptions(supabase, fieldData.id, field);
+          }
         }
       }
     }
@@ -510,123 +682,6 @@ export async function PUT(
       { error: 'Internal server error' },
       { status: 500 }
     );
-  }
-}
-
-// 輔助函數：更新欄位選項
-async function updateFieldOptions(
-  supabase: SupabaseClient,
-  fieldId: string,
-  newFieldData: FormFieldCreateRequest,
-  existingOptions: ExtendedFormFieldOption[]
-) {
-  // 處理一般選項
-  if (newFieldData.options && newFieldData.options.length > 0) {
-    const existingOptionsMap = new Map(existingOptions.filter(o => o.option_type === 'standard' || !o.option_type).map(o => [o.option_value, o]));
-    const newOptionValues = new Set(newFieldData.options.map((o: FormFieldOptionCreateRequest) => o.option_value));
-
-    // 停用不再存在的選項
-    for (const existingOption of existingOptions.filter(o => o.option_type === 'standard' || !o.option_type)) {
-      if (!newOptionValues.has(existingOption.option_value)) {
-        await supabase
-          .from('form_field_options')
-          .update({ is_active: false })
-          .eq('id', existingOption.id);
-      }
-    }
-
-    // 更新或創建選項
-    for (let index = 0; index < newFieldData.options.length; index++) {
-      const option = newFieldData.options[index];
-      const existingOption = existingOptionsMap.get(option.option_value);
-      if (existingOption) {
-        // 更新現有選項
-        await supabase
-          .from('form_field_options')
-          .update({
-            option_label: option.option_label,
-            display_order: option.display_order || index,
-            is_active: option.is_active !== false,
-          })
-          .eq('id', existingOption.id);
-      } else {
-        // 創建新選項
-        await supabase
-          .from('form_field_options')
-          .insert({
-            field_id: fieldId,
-            option_value: option.option_value,
-            option_label: option.option_label,
-            display_order: option.display_order || index,
-            is_active: option.is_active !== false,
-            option_type: 'standard'
-          });
-      }
-    }
-  } else {
-    // 如果沒有提供選項，停用所有現有的一般選項
-    await supabase
-      .from('form_field_options')
-      .update({ is_active: false })
-      .eq('field_id', fieldId)
-      .in('option_type', ['standard', null]);
-  }
-
-  // 處理 grid 選項
-  if (newFieldData.grid_options && ['radio_grid', 'checkbox_grid'].includes(newFieldData.field_type)) {
-    // 停用所有現有的 grid 選項
-    await supabase
-      .from('form_field_options')
-      .update({ is_active: false })
-      .eq('field_id', fieldId)
-      .in('option_type', ['grid_row', 'grid_column']);
-
-    const gridOptions: Array<{
-      field_id: string;
-      option_value: string;
-      option_label: string;
-      option_type: string;
-      row_label?: string;
-      column_label?: string;
-      display_order: number;
-      is_active: boolean;
-    }> = [];
-
-    // 添加行選項
-    if (newFieldData.grid_options.rows) {
-      newFieldData.grid_options.rows.forEach((row: { value: string; label: string }, index: number) => {
-        gridOptions.push({
-          field_id: fieldId,
-          option_value: row.value,
-          option_label: row.label,
-          option_type: 'grid_row',
-          row_label: row.label,
-          display_order: index,
-          is_active: true
-        });
-      });
-    }
-
-    // 添加列選項
-    if (newFieldData.grid_options.columns) {
-      newFieldData.grid_options.columns.forEach((column: { value: string; label: string }, index: number) => {
-        gridOptions.push({
-          field_id: fieldId,
-          option_value: column.value,
-          option_label: column.label,
-          option_type: 'grid_column',
-          column_label: column.label,
-          display_order: index,
-          is_active: true
-        });
-      });
-    }
-
-    if (gridOptions.length > 0) {
-      await supabase
-        .from('form_field_options')
-        .insert(gridOptions);
-    }
   }
 }
 
