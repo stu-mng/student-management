@@ -128,7 +128,7 @@ interface FormContextType {
   setFocusedFieldId: (id: string | null) => void
   
   // 分段操作
-  addSection: () => void
+  addSection: (onSectionAdded?: (newSectionIndex: number) => void) => void
   updateSection: (tempId: string, updates: Partial<FormSectionWithId>) => void
   removeSection: (tempId: string) => void
   onSectionDragEnd: (result: any) => void
@@ -695,12 +695,18 @@ export function FormProvider({ children }: FormProviderProps) {
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'draft',
         sections: sections.map(section => ({
+          id: section.id,
           title: section.title || '',
           description: section.description || '',
           order: section.order,
           fields: activeFields
-            .filter(field => field.form_section_id === section.id || (!field.form_section_id && section.order === 1))
+            .filter(field => 
+              field.form_section_id === section.id || 
+              field.form_section_id === section.tempId ||
+              (!field.form_section_id && section.order === 0)
+            )
             .map(field => ({
+              id: field.id,
               field_name: field.field_name,
               field_label: field.field_label,
               field_type: field.field_type,
@@ -714,6 +720,7 @@ export function FormProvider({ children }: FormProviderProps) {
               max_length: field.max_length,
               pattern: field.pattern,
               options: field.options?.map((option, index) => ({
+                id: option.id,
                 option_value: option.option_value,
                 option_label: option.option_label,
                 display_order: index,
@@ -799,12 +806,18 @@ export function FormProvider({ children }: FormProviderProps) {
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'active',
         sections: sections.map(section => ({
+          id: section.id,
           title: section.title || '',
           description: section.description || '',
           order: section.order,
           fields: activeFields
-            .filter(field => field.form_section_id === section.id || (!field.form_section_id && section.order === 1))
+            .filter(field => 
+              field.form_section_id === section.id || 
+              field.form_section_id === section.tempId ||
+              (!field.form_section_id && section.order === 0)
+            )
             .map(field => ({
+              id: field.id,
               field_name: field.field_name,
               field_label: field.field_label,
               field_type: field.field_type,
@@ -818,6 +831,7 @@ export function FormProvider({ children }: FormProviderProps) {
               max_length: field.max_length,
               pattern: field.pattern,
               options: field.options?.map((option, index) => ({
+                id: option.id,
                 option_value: option.option_value,
                 option_label: option.option_label,
                 display_order: index,
@@ -968,13 +982,19 @@ export function FormProvider({ children }: FormProviderProps) {
     setFocusedFieldId,
     
     // 分段操作
-    addSection: () => {
+    addSection: (onSectionAdded?: (newSectionIndex: number) => void) => {
       const newSection: FormSectionWithId = {
         tempId: generateTempId(),
         order: sections.length,
         fields: []
       }
-      setSections([...sections, newSection])
+      const newSections = [...sections, newSection]
+      setSections(newSections)
+      
+      // 執行回調函數，傳入新區段的索引
+      if (onSectionAdded) {
+        onSectionAdded(newSections.length - 1)
+      }
     },
     updateSection: (tempId: string, updates: Partial<FormSectionWithId>) => {
       setSections(sections.map(section =>
@@ -982,6 +1002,27 @@ export function FormProvider({ children }: FormProviderProps) {
       ))
     },
     removeSection: (tempId: string) => {
+      // 刪除段落關聯的所有欄位
+      const sectionToRemove = sections.find(section => section.tempId === tempId)
+      if (sectionToRemove) {
+        const remainingFields = fields.filter(field => 
+          !(field.form_section_id === sectionToRemove.id || 
+            field.form_section_id === sectionToRemove.tempId ||
+            (!field.form_section_id && sectionToRemove.order === 0))
+        )
+        setFields(remainingFields)
+        
+        // 如果刪除的是當前聚焦的欄位，清除聚焦狀態
+        const fieldsToDelete = fields.filter(field => 
+          field.form_section_id === sectionToRemove.id || 
+          field.form_section_id === sectionToRemove.tempId ||
+          (!field.form_section_id && sectionToRemove.order === 0)
+        )
+        if (fieldsToDelete.some(field => field.tempId === focusedFieldId)) {
+          setFocusedFieldId(null)
+        }
+      }
+      
       setSections(sections.filter(section => section.tempId !== tempId))
     },
     onSectionDragEnd: (result: any) => {

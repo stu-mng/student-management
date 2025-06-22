@@ -5,7 +5,6 @@ import type {
   FormField,
   FormFieldCreateRequest,
   FormFieldOption,
-  FormFieldOptionCreateRequest,
   FormUpdateRequest,
   Role,
   RolePermission,
@@ -542,8 +541,8 @@ export async function PUT(
 
     // 如果提供了 sections 資料，更新區段和欄位
     if (sections.length > 0) {
-      // 獲取現有區段
-      const { error: getSectionsError } = await supabase
+      // 獲取現有區段和欄位
+      const { data: existingSections, error: getSectionsError } = await supabase
         .from('form_sections')
         .select(`
           *,
@@ -571,51 +570,76 @@ export async function PUT(
         );
       }
 
-      // 處理區段更新邏輯 - 這裡可以根據需要實現更複雜的邏輯
-      // 目前簡化處理：刪除所有現有區段和欄位，然後重新創建
-      // 在生產環境中，建議使用更精細的更新策略
+      // 智能更新策略：保留現有數據，僅更新變更的部分
+      const existingSectionMap = new Map(existingSections?.map(s => [s.id, s]) || []);
+      const existingFieldMap = new Map();
+      const existingFieldByIdMap = new Map();
+      const existingFieldByNameMap = new Map();
+      
+      existingSections?.forEach(section => {
+        section.fields?.forEach((field: FormField) => {
+          // 建立多種查找方式
+          existingFieldByIdMap.set(field.id, field);
+          existingFieldByNameMap.set(`${field.form_id}-${field.field_name}`, field);
+          existingFieldMap.set(`${section.id}-${field.field_name}`, field);
+        });
+      });
 
-      // 先刪除現有區段（CASCADE 會自動刪除相關欄位）
-      const { error: deleteSectionsError } = await supabase
-        .from('form_sections')
-        .delete()
-        .eq('form_id', id);
-
-      if (deleteSectionsError) {
-        console.error('Error deleting existing sections:', deleteSectionsError);
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to delete existing sections' },
-          { status: 500 }
-        );
-      }
-
-      // 重新創建區段和欄位
+      // 處理區段更新
       for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
         const section = sections[sectionIndex];
+        let sectionId: string;
         
-        // 創建分段
-        const { data: createdSection, error: sectionError } = await supabase
-          .from('form_sections')
-          .insert({
-            form_id: id,
-            title: section.title || `區段 ${sectionIndex + 1}`,
-            description: section.description,
-            order: section.order || sectionIndex + 1,
-          })
-          .select()
-          .single();
+        // 如果是現有區段（有 id 或 tempId 對應），更新它
+        const existingSection = (section as any).id ? existingSectionMap.get((section as any).id) : 
+          existingSections?.find(es => es.order === (section.order || sectionIndex + 1));
+        
+        if (existingSection) {
+          // 更新現有區段
+          const { data: updatedSection, error: sectionError } = await supabase
+            .from('form_sections')
+            .update({
+              title: section.title || `區段 ${sectionIndex + 1}`,
+              description: section.description,
+              order: section.order || sectionIndex + 1,
+            })
+            .eq('id', existingSection.id)
+            .select()
+            .single();
 
-        if (sectionError) {
-          console.error('Error creating form section:', sectionError);
-          return NextResponse.json<ErrorResponse>(
-            { error: 'Failed to create form sections' },
-            { status: 500 }
-          );
+          if (sectionError) {
+            console.error('Error updating form section:', sectionError);
+            return NextResponse.json<ErrorResponse>(
+              { error: 'Failed to update form sections' },
+              { status: 500 }
+            );
+          }
+          sectionId = updatedSection.id;
+        } else {
+          // 創建新區段
+          const { data: createdSection, error: sectionError } = await supabase
+            .from('form_sections')
+            .insert({
+              form_id: id,
+              title: section.title || `區段 ${sectionIndex + 1}`,
+              description: section.description,
+              order: section.order || sectionIndex + 1,
+            })
+            .select()
+            .single();
+
+          if (sectionError) {
+            console.error('Error creating form section:', sectionError);
+            return NextResponse.json<ErrorResponse>(
+              { error: 'Failed to create form sections' },
+              { status: 500 }
+            );
+          }
+          sectionId = createdSection.id;
         }
 
-        // 如果該分段有欄位，創建欄位
+        // 處理欄位更新
         if (section.fields && section.fields.length > 0) {
-          // 驗證欄位資料
           for (const field of section.fields) {
             if (!field.field_name || !field.field_label || !field.field_type) {
               console.error('Invalid field data:', field);
@@ -624,49 +648,123 @@ export async function PUT(
                 { status: 400 }
               );
             }
+
+            // 改善欄位識別邏輯 - 優先使用ID，然後使用表單+欄位名稱組合
+            let existingField = null;
+            
+            // 方法1: 使用欄位ID查找（最可靠）
+            if ((field as any).id) {
+              existingField = existingFieldByIdMap.get((field as any).id);
+            }
+            
+            // 方法2: 使用表單ID + 欄位名稱查找（次選）
+            if (!existingField) {
+              existingField = existingFieldByNameMap.get(`${id}-${field.field_name}`);
+            }
+            
+            // 方法3: 在當前區段中查找同名欄位（最後選擇）
+            if (!existingField) {
+              existingField = existingFieldMap.get(`${sectionId}-${field.field_name}`);
+            }
+
+            if (existingField) {
+              console.log(`Updating existing field: ${field.field_name} (ID: ${existingField.id})`);
+              
+              // 更新現有欄位
+              const { error: fieldError } = await supabase
+                .from('form_fields')
+                .update({
+                  form_section_id: sectionId,
+                  field_name: field.field_name,
+                  field_label: field.field_label,
+                  field_type: field.field_type,
+                  display_order: field.display_order || 0,
+                  is_required: field.is_required || false,
+                  is_active: field.is_active !== false,
+                  placeholder: field.placeholder,
+                  help_text: field.help_text,
+                  validation_rules: field.validation_rules,
+                  conditional_logic: field.conditional_logic,
+                  default_value: field.default_value,
+                  min_length: field.min_length,
+                  max_length: field.max_length,
+                  pattern: field.pattern,
+                  student_field_mapping: field.student_field_mapping,
+                  auto_populate_from: field.auto_populate_from,
+                })
+                .eq('id', existingField.id);
+
+              if (fieldError) {
+                console.error('Error updating form field:', fieldError);
+                return NextResponse.json<ErrorResponse>(
+                  { error: 'Failed to update form fields' },
+                  { status: 500 }
+                );
+              }
+
+              // 更新欄位選項
+              await updateFieldOptions(supabase, existingField.id, field);
+            } else {
+              console.log(`Creating new field: ${field.field_name}`);
+              
+              // 創建新欄位
+              const { data: createdField, error: fieldError } = await supabase
+                .from('form_fields')
+                .insert({
+                  form_id: id,
+                  form_section_id: sectionId,
+                  field_name: field.field_name,
+                  field_label: field.field_label,
+                  field_type: field.field_type,
+                  display_order: field.display_order || 0,
+                  is_required: field.is_required || false,
+                  is_active: field.is_active !== false,
+                  placeholder: field.placeholder,
+                  help_text: field.help_text,
+                  validation_rules: field.validation_rules,
+                  conditional_logic: field.conditional_logic,
+                  default_value: field.default_value,
+                  min_length: field.min_length,
+                  max_length: field.max_length,
+                  pattern: field.pattern,
+                  student_field_mapping: field.student_field_mapping,
+                  auto_populate_from: field.auto_populate_from,
+                })
+                .select()
+                .single();
+
+              if (fieldError) {
+                console.error('Error creating form field:', fieldError);
+                return NextResponse.json<ErrorResponse>(
+                  { error: 'Failed to create form fields' },
+                  { status: 500 }
+                );
+              }
+
+              // 為新欄位創建選項
+              await updateFieldOptions(supabase, createdField.id, field);
+            }
           }
+        }
+      }
 
-          const formFields = section.fields.map((field, fieldIndex) => ({
-            form_id: id,
-            form_section_id: createdSection.id,
-            field_name: field.field_name,
-            field_label: field.field_label,
-            field_type: field.field_type,
-            display_order: field.display_order || fieldIndex,
-            is_required: field.is_required || false,
-            is_active: field.is_active !== false,
-            placeholder: field.placeholder,
-            help_text: field.help_text,
-            validation_rules: field.validation_rules,
-            conditional_logic: field.conditional_logic,
-            default_value: field.default_value,
-            min_length: field.min_length,
-            max_length: field.max_length,
-            pattern: field.pattern,
-            student_field_mapping: field.student_field_mapping,
-            auto_populate_from: field.auto_populate_from,
-          }));
+      // 標記已刪除的區段和欄位為非活躍狀態（而不是真正刪除）
+      const updatedSectionIds = sections.map((section, index) => {
+        const existingSection = (section as any).id ? existingSectionMap.get((section as any).id) : 
+          existingSections?.find(es => es.order === (section.order || index + 1));
+        return existingSection?.id;
+      }).filter(Boolean);
 
-          const { data: createdFields, error: fieldsError } = await supabase
+      if (existingSections && updatedSectionIds.length > 0) {
+        // 將未包含在更新中的區段標記為已刪除
+        const sectionsToDeactivate = existingSections.filter(s => !updatedSectionIds.includes(s.id));
+        
+        for (const section of sectionsToDeactivate) {
+          // 將該區段的所有欄位標記為非活躍
+          await supabase
             .from('form_fields')
-            .insert(formFields)
-            .select();
-
-          if (fieldsError) {
-            console.error('Error creating form fields:', fieldsError);
-            return NextResponse.json<ErrorResponse>(
-              { error: 'Failed to create form fields' },
-              { status: 500 }
-            );
-          }
-
-          // 為有選項的欄位創建選項
-          for (const field of section.fields) {
-            const fieldData = createdFields?.find(f => f.field_name === field.field_name);
-            if (!fieldData) continue;
-
-            await createFieldOptions(supabase, fieldData.id, field);
-          }
+            .update({ is_active: false })
+            .eq('form_section_id', section.id);
         }
       }
     }
@@ -685,78 +783,202 @@ export async function PUT(
   }
 }
 
-// 輔助函數：為新欄位創建選項
-async function createFieldOptions(supabase: SupabaseClient, fieldId: string, field: FormFieldCreateRequest) {
+// 輔助函數：智能更新欄位選項
+async function updateFieldOptions(supabase: SupabaseClient, fieldId: string, field: FormFieldCreateRequest) {
+  // 獲取現有選項
+  const { data: existingOptions, error: getOptionsError } = await supabase
+    .from('form_field_options')
+    .select('*')
+    .eq('field_id', fieldId);
+
+  if (getOptionsError) {
+    console.error('Error getting existing options:', getOptionsError);
+    return;
+  }
+
+  // 如果欄位沒有提供新的選項，不做任何更新
+  if (!field.options && !field.grid_options) {
+    return;
+  }
+
+  const existingOptionsMap = new Map(existingOptions?.map(opt => [opt.option_value, opt]) || []);
+  
   // 處理一般選項（select, radio, checkbox）
   if (field.options && field.options.length > 0) {
-    const options = field.options.map((option: FormFieldOptionCreateRequest, index: number) => ({
-      field_id: fieldId,
-      option_value: option.option_value,
-      option_label: option.option_label,
-      display_order: option.display_order || index,
-      is_active: option.is_active !== false,
-      option_type: 'standard'
-    }));
+    const newOptionValues = new Set(field.options.map(opt => opt.option_value));
+    
+    // 更新或創建選項
+    for (let index = 0; index < field.options.length; index++) {
+      const option = field.options[index];
+      const existingOption = existingOptionsMap.get(option.option_value);
+      
+      if (existingOption) {
+        // 更新現有選項
+        const { error: updateError } = await supabase
+          .from('form_field_options')
+          .update({
+            option_label: option.option_label,
+            display_order: option.display_order || index,
+            is_active: option.is_active !== false,
+            option_type: 'standard'
+          })
+          .eq('id', existingOption.id);
 
-    const { error: optionsError } = await supabase
-      .from('form_field_options')
-      .insert(options);
+        if (updateError) {
+          console.error('Error updating field option:', updateError);
+        }
+      } else {
+        // 創建新選項
+        const { error: insertError } = await supabase
+          .from('form_field_options')
+          .insert({
+            field_id: fieldId,
+            option_value: option.option_value,
+            option_label: option.option_label,
+            display_order: option.display_order || index,
+            is_active: option.is_active !== false,
+            option_type: 'standard'
+          });
 
-    if (optionsError) {
-      console.error('Error creating field options:', optionsError);
+        if (insertError) {
+          console.error('Error creating new field option:', insertError);
+        }
+      }
+    }
+
+    // 標記已刪除的選項為非活躍（不直接刪除以保留回應數據）
+    const optionsToDeactivate = existingOptions?.filter(opt => 
+      opt.option_type !== 'grid_row' && 
+      opt.option_type !== 'grid_column' && 
+      !newOptionValues.has(opt.option_value)
+    ) || [];
+
+    for (const option of optionsToDeactivate) {
+      const { error: deactivateError } = await supabase
+        .from('form_field_options')
+        .update({ is_active: false })
+        .eq('id', option.id);
+
+      if (deactivateError) {
+        console.error('Error deactivating field option:', deactivateError);
+      }
     }
   }
 
   // 處理 grid 選項（radio_grid, checkbox_grid）
   if (field.grid_options && ['radio_grid', 'checkbox_grid'].includes(field.field_type)) {
-    const gridOptions: Array<{
-      field_id: string;
-      option_value: string;
-      option_label: string;
-      option_type: string;
-      row_label?: string;
-      column_label?: string;
-      display_order: number;
-      is_active: boolean;
-    }> = [];
-
-    // 添加行選項
+    const newGridValues = new Set();
+    
+    // 收集所有新的 grid 選項值
     if (field.grid_options.rows) {
-      field.grid_options.rows.forEach((row: { value: string; label: string }, index: number) => {
-        gridOptions.push({
-          field_id: fieldId,
-          option_value: row.value,
-          option_label: row.label,
-          option_type: 'grid_row',
-          row_label: row.label,
-          display_order: index,
-          is_active: true
-        });
-      });
+      field.grid_options.rows.forEach(row => newGridValues.add(row.value));
     }
-
-    // 添加列選項
     if (field.grid_options.columns) {
-      field.grid_options.columns.forEach((column: { value: string; label: string }, index: number) => {
-        gridOptions.push({
-          field_id: fieldId,
-          option_value: column.value,
-          option_label: column.label,
-          option_type: 'grid_column',
-          column_label: column.label,
-          display_order: index,
-          is_active: true
-        });
-      });
+      field.grid_options.columns.forEach(col => newGridValues.add(col.value));
     }
 
-    if (gridOptions.length > 0) {
-      const { error: gridOptionsError } = await supabase
-        .from('form_field_options')
-        .insert(gridOptions);
+    // 處理行選項
+    if (field.grid_options.rows) {
+      for (let index = 0; index < field.grid_options.rows.length; index++) {
+        const row = field.grid_options.rows[index];
+        const existingOption = existingOptions?.find(opt => 
+          opt.option_type === 'grid_row' && opt.option_value === row.value
+        );
 
-      if (gridOptionsError) {
-        console.error('Error creating grid options:', gridOptionsError);
+        if (existingOption) {
+          // 更新現有行選項
+          const { error: updateError } = await supabase
+            .from('form_field_options')
+            .update({
+              option_label: row.label,
+              row_label: row.label,
+              display_order: index,
+              is_active: true
+            })
+            .eq('id', existingOption.id);
+
+          if (updateError) {
+            console.error('Error updating grid row option:', updateError);
+          }
+        } else {
+          // 創建新行選項
+          const { error: insertError } = await supabase
+            .from('form_field_options')
+            .insert({
+              field_id: fieldId,
+              option_value: row.value,
+              option_label: row.label,
+              option_type: 'grid_row',
+              row_label: row.label,
+              display_order: index,
+              is_active: true
+            });
+
+          if (insertError) {
+            console.error('Error creating new grid row option:', insertError);
+          }
+        }
+      }
+    }
+
+    // 處理列選項
+    if (field.grid_options.columns) {
+      for (let index = 0; index < field.grid_options.columns.length; index++) {
+        const column = field.grid_options.columns[index];
+        const existingOption = existingOptions?.find(opt => 
+          opt.option_type === 'grid_column' && opt.option_value === column.value
+        );
+
+        if (existingOption) {
+          // 更新現有列選項
+          const { error: updateError } = await supabase
+            .from('form_field_options')
+            .update({
+              option_label: column.label,
+              column_label: column.label,
+              display_order: index,
+              is_active: true
+            })
+            .eq('id', existingOption.id);
+
+          if (updateError) {
+            console.error('Error updating grid column option:', updateError);
+          }
+        } else {
+          // 創建新列選項
+          const { error: insertError } = await supabase
+            .from('form_field_options')
+            .insert({
+              field_id: fieldId,
+              option_value: column.value,
+              option_label: column.label,
+              option_type: 'grid_column',
+              column_label: column.label,
+              display_order: index,
+              is_active: true
+            });
+
+          if (insertError) {
+            console.error('Error creating new grid column option:', insertError);
+          }
+        }
+      }
+    }
+
+    // 標記已刪除的 grid 選項為非活躍
+    const gridOptionsToDeactivate = existingOptions?.filter(opt => 
+      (opt.option_type === 'grid_row' || opt.option_type === 'grid_column') && 
+      !newGridValues.has(opt.option_value)
+    ) || [];
+
+    for (const option of gridOptionsToDeactivate) {
+      const { error: deactivateError } = await supabase
+        .from('form_field_options')
+        .update({ is_active: false })
+        .eq('id', option.id);
+
+      if (deactivateError) {
+        console.error('Error deactivating grid option:', deactivateError);
       }
     }
   }

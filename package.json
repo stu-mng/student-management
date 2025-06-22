@@ -13,6 +13,7 @@
 		"@hello-pangea/dnd": "^18.0.1",
 		"@hookform/resolvers": "^3.3.4",
 		"@jaredreisinger/react-crossword": "^5.2.0",
+		"@radix-ui/react-alert-dialog": "^1.1.14",
 		"@radix-ui/react-avatar": "^1.1.7",
 		"@radix-ui/react-checkbox": "^1.2.3",
 		"@radix-ui/react-dialog": "^1.1.11",

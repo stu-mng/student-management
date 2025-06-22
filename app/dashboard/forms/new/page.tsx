@@ -31,8 +31,6 @@ function FormCreateContent() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [formType, setFormType] = useState('')
-  const [isPublic, setIsPublic] = useState(false)
-  const [allowAnonymous, setAllowAnonymous] = useState(false)
   const [allowMultipleSubmissions, setAllowMultipleSubmissions] = useState(false)
   const [submissionDeadline, setSubmissionDeadline] = useState('')
   
@@ -431,22 +429,6 @@ function FormCreateContent() {
                 <CardTitle>表單設定</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="public">公開表單</Label>
-                  <Switch
-                    id="public"
-                    checked={isPublic}
-                    onCheckedChange={setIsPublic}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="anonymous">允許匿名提交</Label>
-                  <Switch
-                    id="anonymous"
-                    checked={allowAnonymous}
-                    onCheckedChange={setAllowAnonymous}
-                  />
-                </div>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="multiple">允許多次提交</Label>
                   <Switch

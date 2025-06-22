@@ -103,7 +103,7 @@ export function FormFieldBuilder({ field, onUpdate }: FormFieldBuilderProps) {
     })
   }
 
-  const needsOptions = ['radio', 'checkbox', 'select', 'multiselect'].includes(field.field_type)
+  const needsOptions = ['radio', 'checkbox', 'select', 'multi-select'].includes(field.field_type)
   const needsGrid = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
 
   return (

@@ -1,7 +1,7 @@
 "use client"
 
 import type { FormFieldWithId } from "@/components/forms"
-import { FORM_TYPES, FormFieldCard, FormSectionNavigation, PermissionsModal, useFormContext } from "@/components/forms"
+import { FORM_TYPES, FormFieldCard, FormSectionEditor, FormSectionNavigation, PermissionsModal, useFormContext } from "@/components/forms"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -127,15 +127,19 @@ function FormEditContent() {
     addField,
     updateField,
     removeField,
-    addOption,
-    updateOption,
-    removeOption,
     onDragEnd,
     setPreviewMode,
   } = useFormContext()
 
   // 檢查用戶權限
   const hasEditPerm = hasEditPermission()
+
+  // 處理新增區段並自動跳轉
+  const handleAddSection = () => {
+    addSection((newSectionIndex: number) => {
+      setCurrentSectionIndex(newSectionIndex)
+    })
+  }
 
   // 處理段落切換
   const handleSectionChange = (index: number) => {
@@ -153,6 +157,7 @@ function FormEditContent() {
     
     return fields.filter(field => 
       field.form_section_id === currentSection.id || 
+      field.form_section_id === currentSection.tempId ||
       (!field.form_section_id && currentSectionIndex === 0)
     )
   }
@@ -331,8 +336,30 @@ function FormEditContent() {
                 sections={sections}
                 currentSectionIndex={currentSectionIndex}
                 onSectionChange={handleSectionChange}
-                onAddSection={addSection}
+                onAddSection={handleAddSection}
                 showAddButton={true}
+              />
+            )}
+
+            {/* Section Editor - 只在有段落時顯示 */}
+            {sections.length > 0 && sections[currentSectionIndex] && (
+              <FormSectionEditor
+                section={sections[currentSectionIndex]}
+                onUpdate={(updates) => updateSection(sections[currentSectionIndex].tempId, updates)}
+                onRemove={() => {
+                  const currentSection = sections[currentSectionIndex]
+                  removeSection(currentSection.tempId)
+                  
+                  // 刪除後調整當前索引
+                  if (sections.length > 1) {
+                    const newIndex = currentSectionIndex >= sections.length - 1 ? 
+                      sections.length - 2 : currentSectionIndex
+                    setCurrentSectionIndex(Math.max(0, newIndex))
+                  } else {
+                    setCurrentSectionIndex(0)
+                  }
+                }}
+                canRemove={sections.length > 1}
               />
             )}
 

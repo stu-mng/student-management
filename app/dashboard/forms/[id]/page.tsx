@@ -450,25 +450,8 @@ function FormEditView({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle>
             {editingResponseId ? '編輯回應' : '填寫表單'}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={onCancelEdit}
-                disabled={saving}
-              >
-                <X className="h-4 w-4 mr-2" />
-                取消
-              </Button>
-              <Button
-                onClick={onSaveResponse}
-                disabled={saving || deadlinePassed || hasValidationErrors()}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? '儲存中...' : '儲存'}
-              </Button>
-            </div>
           </CardTitle>
           {currentSection && (
             <CardDescription>
@@ -545,6 +528,25 @@ function FormEditView({
               </Button>
             </div>
           )}
+
+          {/* Action Buttons at Bottom */}
+          <div className="flex justify-end gap-2 pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={onCancelEdit}
+              disabled={saving}
+            >
+              <X className="h-4 w-4 mr-2" />
+              取消
+            </Button>
+            <Button
+              onClick={onSaveResponse}
+              disabled={saving || deadlinePassed || hasValidationErrors()}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? (editingResponseId ? '儲存中...' : '提交中...') : (editingResponseId ? '儲存' : '提交')}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
