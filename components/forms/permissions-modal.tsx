@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import { Edit } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -75,7 +76,7 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
         
         // 對於有全部權限的角色，默認設為編輯權限（除非特別設定）
         let defaultAccessType = null;
-        if (['root', 'admin', 'manager'].includes(role.value) && !existing) {
+        if (['root', 'admin', 'class-teacher', 'manager'].includes(role.value) && !existing) {
           defaultAccessType = 'edit';
         }
         
@@ -155,7 +156,7 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
           {permissions.map((permission) => {
             const roleLabel = availableRoles.find(r => r.value === permission.role.name)?.label || permission.role.name
             // 檢查是否為總是有權限的角色
-            const isAlwaysAllowed = ['root', 'admin', 'manager'].includes(permission.role.name);
+            const isAlwaysAllowed = ['root', 'admin', 'class-teacher', 'manager'].includes(permission.role.name);
             
             return (
               <div key={permission.role.name} className="flex items-center justify-between">
@@ -167,7 +168,7 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
                   }
                   disabled={isAlwaysAllowed}
                 >
-                  <SelectTrigger className={`w-32 ${isAlwaysAllowed ? 'opacity-75' : ''}`}>
+                  <SelectTrigger className={cn('w-32', isAlwaysAllowed && 'opacity-75')}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

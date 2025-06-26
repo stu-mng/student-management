@@ -131,6 +131,9 @@ function FormEditContent() {
     setPreviewMode,
   } = useFormContext()
 
+  console.log(sections)
+  console.log(fields)
+
   // 檢查用戶權限
   const hasEditPerm = hasEditPermission()
 

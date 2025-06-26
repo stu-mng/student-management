@@ -1,15 +1,16 @@
 "use client"
 
-import { ReactNode, useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, Save, Eye, MessageSquare, Edit, FileText, Settings, Trash2, Send } from "lucide-react"
-import { FormProvider, useFormContext } from "@/components/forms"
-import { useRouter, useParams } from "next/navigation"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { toast } from "sonner"
+import { FormProvider, useFormContext } from "@/components/forms";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Edit, Eye, MessageSquare, Save, Send, Settings, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface FormLayoutProps {
   children: ReactNode

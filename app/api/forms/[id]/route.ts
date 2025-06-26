@@ -92,7 +92,7 @@ export async function GET(
       accessType = 'edit';
     }
     // 2. 如果是 admin 或 root，給予編輯權限
-    else if (['admin', 'root'].includes(currentUserRole)) {
+    else if (['admin', 'root', 'class-teacher'].includes(currentUserRole)) {
       accessType = 'edit';
     }
     // 3. 檢查 user_form_access 表

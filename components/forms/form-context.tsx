@@ -473,7 +473,7 @@ export function FormProvider({ children }: FormProviderProps) {
     
     // 檢查表單權限設定
     if (form.permissions) {
-      const rolePermission = form.permissions.find((p: any) => p.role === userRole)
+      const rolePermission = form.permissions.find((p: any) => p.role.name === userRole)
       return rolePermission && rolePermission.access_type === 'edit'
     }
     
