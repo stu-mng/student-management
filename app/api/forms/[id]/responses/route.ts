@@ -31,7 +31,7 @@ export async function GET(
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
-        role:roles(name)
+        role:roles(id, name)
       `)
       .eq('id', user.id)
       .single();
@@ -62,9 +62,29 @@ export async function GET(
       );
     }
 
-    // 檢查權限：只有表單創建者、管理員或 root 可以查看回應
-    const userRole = (userData as unknown as UserData).role?.name || '';
-    const hasPermission = form.created_by === user.id || ['admin', 'root'].includes(userRole);
+    // 檢查權限：表單創建者、管理員、root、class-teacher 以及有表單編輯權限的用戶可以查看回應
+    const userRole = (userData as unknown as UserData).role;
+    const userRoleName = userRole?.name || '';
+    const userRoleId = userRole?.id;
+    let hasPermission = false;
+
+    // 1. 檢查基本權限：表單創建者、管理員、root、class-teacher
+    if (form.created_by === user.id || ['admin', 'root', 'class-teacher'].includes(userRoleName)) {
+      hasPermission = true;
+    }
+    // 2. 檢查表單編輯權限
+    else if (userRoleId) {
+      const { data: userAccess, error: accessError } = await supabase
+        .from('user_form_access')
+        .select('access_type')
+        .eq('form_id', id)
+        .eq('role_id', userRoleId)
+        .single();
+
+      if (!accessError && userAccess && userAccess.access_type === 'edit') {
+        hasPermission = true;
+      }
+    }
     
     if (!hasPermission) {
       return NextResponse.json<ErrorResponse>(

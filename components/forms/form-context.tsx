@@ -1,7 +1,8 @@
 "use client"
 
-import type { Form, FormField, FormFieldOption, FormSection } from "@/app/api/types";
+import type { Form, FormField, FormFieldOption, FormSection, Role, RolePermission, RolesListResponse } from "@/app/api/types";
 import { useAuth } from "@/components/auth-provider";
+import type { DropResult } from "@hello-pangea/dnd";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -132,7 +133,7 @@ interface FormContextType {
   addSection: (onSectionAdded?: (newSectionIndex: number) => void) => void
   updateSection: (tempId: string, updates: Partial<FormSectionWithId>) => void
   removeSection: (tempId: string) => void
-  onSectionDragEnd: (result: any) => void
+  onSectionDragEnd: (result: DropResult) => void
   
   // 欄位操作
   addField: (sectionTempId?: string, insertIndex?: number) => void
@@ -142,7 +143,7 @@ interface FormContextType {
   addOption: (fieldTempId: string) => void
   updateOption: (fieldTempId: string, optionTempId: string, updates: Partial<FormFieldOptionWithId>) => void
   removeOption: (fieldTempId: string, optionTempId: string) => void
-  onDragEnd: (result: any) => void
+  onDragEnd: (result: DropResult) => void
   
   // 保存操作
   saveDraft: () => Promise<void>
@@ -220,8 +221,8 @@ export function FormProvider({ children }: FormProviderProps) {
     try {
       const response = await fetch('/api/roles')
       if (response.ok) {
-        const result = await response.json()
-        const rolesList = result.data.map((role: any) => ({
+        const result: RolesListResponse = await response.json()
+        const rolesList = result.data.map((role: Role) => ({
           value: role.name,
           label: role.display_name || role.name
         }))
@@ -473,7 +474,7 @@ export function FormProvider({ children }: FormProviderProps) {
     
     // 檢查表單權限設定
     if (form.permissions) {
-      const rolePermission = form.permissions.find((p: any) => p.role.name === userRole)
+      const rolePermission = form.permissions.find((p: RolePermission) => p.role.name === userRole)
       return rolePermission && rolePermission.access_type === 'edit'
     }
     
@@ -629,7 +630,7 @@ export function FormProvider({ children }: FormProviderProps) {
     updateField(fieldTempId, { options: updatedOptions })
   }
 
-  const onDragEnd = (result: any) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
 
     const items = Array.from(fields)
@@ -1061,7 +1062,7 @@ export function FormProvider({ children }: FormProviderProps) {
       
       setSections(sections.filter(section => section.tempId !== tempId))
     },
-    onSectionDragEnd: (result: any) => {
+    onSectionDragEnd: (result: DropResult) => {
       if (!result.destination) return
 
       const items = Array.from(sections)
