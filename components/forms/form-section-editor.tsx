@@ -1,15 +1,15 @@
 "use client"
 
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -63,7 +63,12 @@ export function FormSectionEditor({
 
   // 獲取跳轉目標區段的標題
   const getTargetSectionTitle = (sectionId: string) => {
-    const targetSection = sections.find(s => s.tempId === sectionId)
+    const targetSection = sections.find(s => {
+      if (s.tempId.startsWith('existing_')) {
+        return s.tempId.split('existing_')[1] === sectionId
+      } 
+      return s.tempId === sectionId
+    })
     return targetSection?.title || '未命名區段'
   }
 
