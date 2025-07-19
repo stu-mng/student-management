@@ -1,6 +1,7 @@
-import { ErrorResponse, User } from '@/app/api/types';
+import type { ErrorResponse, User } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET /api/users/me
@@ -178,7 +179,6 @@ export async function PUT(request: NextRequest) {
 
     // 從用戶元數據獲取名稱和頭像
     const id = user.id;
-    const name = user.user_metadata?.name || user.user_metadata?.full_name;
     const avatar_url = user.user_metadata?.picture || user.user_metadata?.avatar_url;
     const now = new Date().toISOString();
 
@@ -187,7 +187,6 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .update({
         id,
-        name,
         avatar_url,
         updated_at: now,
         last_active: now

@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { formatDate } from "@/lib/utils"
-import { AlertTriangle, Calendar, CheckCircle, Clock, Edit, Plus, Save, X } from "lucide-react"
+import { AlertTriangle, Calendar, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, Plus, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -196,30 +196,48 @@ function FormInfoSidebar({
   getFormTypeBadge,
   getSubmissionStatusBadge
 }: FormInfoSidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   return (
     <div className="lg:col-span-1">
-      <Card>
+      <Card className="">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            表單資訊
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              表單資訊
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="h-6 w-6 p-0"
+            >
+              {isCollapsed ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <FormBasicInfo form={form} />
-          <FormDeadlineInfo form={form} />
-          <FormSettingsInfo 
-            form={form} 
-            getStatusBadge={getStatusBadge}
-            getFormTypeBadge={getFormTypeBadge}
-          />
-          <UserResponseStatus
-            form={form}
-            userResponses={userResponses}
-            loadingResponses={loadingResponses}
-            getSubmissionStatusBadge={getSubmissionStatusBadge}
-          />
-        </CardContent>
+        {!isCollapsed && (
+          <CardContent className="space-y-4">
+            <FormBasicInfo form={form} />
+            <FormDeadlineInfo form={form} />
+            <FormSettingsInfo 
+              form={form} 
+              getStatusBadge={getStatusBadge}
+              getFormTypeBadge={getFormTypeBadge}
+            />
+            <UserResponseStatus
+              form={form}
+              userResponses={userResponses}
+              loadingResponses={loadingResponses}
+              getSubmissionStatusBadge={getSubmissionStatusBadge}
+            />
+          </CardContent>
+        )}
       </Card>
     </div>
   )

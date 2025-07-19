@@ -224,7 +224,7 @@ function FormActionButtons() {
 
 // 頁面內容組件
 function FormLayoutContent({ children }: { children: ReactNode }) {
-  const { form, loading, error, pageTitle, refetchForm } = useFormContext()
+  const { loading, error, pageTitle, refetchForm } = useFormContext()
   const router = useRouter()
   // 載入中狀態
   if (loading) {
@@ -318,9 +318,6 @@ function FormLayoutContent({ children }: { children: ReactNode }) {
         </Button>
           <div>
             <h1 className="text-3xl font-bold">{pageTitle}</h1>
-            {form && (
-              <p className="text-muted-foreground mt-2">表單管理</p>
-            )}
           </div>
         </div>
         <FormActionButtons />

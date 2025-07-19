@@ -4,10 +4,13 @@ import { useAuth } from "@/components/auth-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserAvatar } from "@/components/user-avatar"
 import { formatRelativeTime, getRoleBgColor, getRoleDisplay, getRoleTextColor, hasEqualOrHigherPermission } from "@/lib/utils"
-import { AlertCircle, ArrowLeft, Calendar, CheckCircle, ChevronDown, ChevronUp, Clock, FileText, Mail, MapPin, XCircle } from "lucide-react"
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, FileText, Mail, MapPin, XCircle } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -73,7 +76,7 @@ interface FormResponse {
   reviewed_at?: string | null
   reviewed_by?: string | null
   review_notes?: string | null
-  metadata?: any
+  metadata?: Record<string, unknown>
   created_at?: string | null
   updated_at?: string | null
   forms?: {
@@ -95,7 +98,7 @@ interface UserProfileResponse {
   formResponses?: FormResponse[]
 }
 
-const ProfilePageSkeleton = () => {
+function ProfilePageSkeleton() {
   return (
     <div className="space-y-6">
     {/* Header with back button */}
@@ -189,6 +192,9 @@ export default function ProfilePage() {
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set())
   const [responseDetails, setResponseDetails] = useState<Record<string, FormFieldResponse[]>>({})
   const [loadingResponses, setLoadingResponses] = useState<Set<string>>(new Set())
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [isUpdatingName, setIsUpdatingName] = useState(false)
 
   const userId = params.id as string
 
@@ -317,6 +323,52 @@ export default function ProfilePage() {
 
     newExpandedResponses.add(responseId)
     setExpandedResponses(newExpandedResponses)
+  }
+
+  const handleEditName = async () => {
+    if (!editName.trim()) {
+      toast.error('請輸入有效的名稱')
+      return
+    }
+
+    try {
+      setIsUpdatingName(true)
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editName.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || '更新名稱失敗')
+      }
+
+      const updatedUser = await response.json()
+      
+      // 更新本地狀態
+      setProfileData(prev => prev ? {
+        ...prev,
+        user: updatedUser
+      } : null)
+
+      toast.success('名稱已成功更新')
+      setIsEditDialogOpen(false)
+      setEditName("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '更新名稱失敗')
+    } finally {
+      setIsUpdatingName(false)
+    }
+  }
+
+  const openEditDialog = () => {
+    setEditName(profileData?.user?.name || "")
+    setIsEditDialogOpen(true)
   }
 
   const renderResponseValue = (fieldResponse: FormFieldResponse) => {
@@ -454,6 +506,16 @@ export default function ProfilePage() {
                   >
                     {getRoleDisplay(user.role.name)}
                   </Badge>
+                )}
+                {isCurrentUser && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={openEditDialog}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
               <div className="space-y-1 text-sm text-muted-foreground">
@@ -605,6 +667,45 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Name Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>編輯名稱</DialogTitle>
+            <DialogDescription>
+              請輸入您的新名稱
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">名稱</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="請輸入您的名稱"
+                disabled={isUpdatingName}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isUpdatingName}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleEditName}
+              disabled={isUpdatingName || !editName.trim()}
+            >
+              {isUpdatingName ? '更新中...' : '更新'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
