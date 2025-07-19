@@ -65,7 +65,7 @@ export function FormSectionEditor({
   const getTargetSectionTitle = (sectionId: string) => {
     const targetSection = sections.find(s => {
       if (s.tempId.startsWith('existing_')) {
-        return s.tempId.split('existing_')[1] === sectionId
+        return s.id === sectionId
       } 
       return s.tempId === sectionId
     })

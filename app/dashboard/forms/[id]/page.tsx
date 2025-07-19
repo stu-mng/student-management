@@ -3,6 +3,17 @@
 import type { Form } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { FormFieldComponent, FormSectionNavigation, useFormContext } from "@/components/forms"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -615,27 +626,53 @@ function FormEditView({
 
           {/* Action Buttons at Bottom */}
           <div className="flex justify-end gap-2 pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={onCancelEdit}
-              disabled={saving}
-            >
-              <X className="h-4 w-4 mr-2" />
-              取消
-            </Button>
-            <Button
-              onClick={() => {
-                // 在提交時執行驗證並更新狀態
-                const hasErrors = performValidationAndUpdateState()
-                if (!hasErrors) {
-                  onSaveResponse()
-                }
-              }}
-              disabled={saving || deadlinePassed || checkHasValidationErrors()}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? (editingResponseId ? '儲存中...' : '提交中...') : (editingResponseId ? '儲存' : '提交')}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={saving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  清除
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>確認清除</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {editingResponseId 
+                      ? '確定要清除所有修改嗎？這將會丟失您目前的所有更改。'
+                      : '確定要清除所有填寫的內容嗎？這將會丟失您目前的所有輸入。'
+                    }
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onCancelEdit}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    確認清除
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {/* 編輯回覆時在所有頁面顯示，新填寫時只在最後一頁顯示 */}
+            {(editingResponseId || !form.sections || form.sections.length === 0 || currentSectionIndex === form.sections.length - 1) && (
+              <Button
+                onClick={() => {
+                  // 在提交時執行驗證並更新狀態
+                  const hasErrors = performValidationAndUpdateState()
+                  if (!hasErrors) {
+                    onSaveResponse()
+                  }
+                }}
+                disabled={saving || deadlinePassed || checkHasValidationErrors()}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? (editingResponseId ? '儲存中...' : '提交中...') : (editingResponseId ? '儲存' : '提交')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1099,7 +1136,7 @@ export default function FormDetailPage() {
         // Check if user has answered this field
         if (fieldValue) {
           // Find the selected option and check for jump logic
-          const selectedOption = field.form_field_options?.find((option: any) => 
+          const selectedOption = field.form_field_options?.find((option) => 
             option.option_value === fieldValue
           )
           
