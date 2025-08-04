@@ -13,6 +13,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
@@ -32,6 +33,8 @@ export function DatePicker({
   className 
 }: DatePickerProps) {
   const [isRepublicEra, setIsRepublicEra] = React.useState(false)
+  const [selectedYear, setSelectedYear] = React.useState<number>(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = React.useState<number>(new Date().getMonth())
 
   // 計算民國年範圍
   const currentYear = new Date().getFullYear()
@@ -91,20 +94,97 @@ export function DatePicker({
     }
   }
 
+  // 生成年份選項
+  const generateYearOptions = () => {
+    const years = []
+    const startYear = isRepublicEra ? 0 : 1900
+    const endYear = isRepublicEra ? republicYearRange : currentYear // 限制到今年
+    
+    for (let year = endYear; year >= startYear; year--) {
+      years.push(year)
+    }
+    return years
+  }
+
+  // 生成月份選項
+  const generateMonthOptions = () => {
+    return Array.from({ length: 12 }, (_, i) => i)
+  }
+
+  // 處理年份變更
+  const handleYearChange = (year: string) => {
+    const yearNum = parseInt(year)
+    setSelectedYear(yearNum)
+    
+    // 更新當前顯示的日期
+    const currentDate = getDisplayDate()
+    if (currentDate) {
+      const newDate = new Date(currentDate)
+      newDate.setFullYear(yearNum)
+      newDate.setMonth(selectedMonth)
+      handleDateSelect(newDate)
+    }
+  }
+
+  // 處理月份變更
+  const handleMonthChange = (month: string) => {
+    const monthNum = parseInt(month)
+    setSelectedMonth(monthNum)
+    
+    // 更新當前顯示的日期
+    const currentDate = getDisplayDate()
+    if (currentDate) {
+      const newDate = new Date(currentDate)
+      newDate.setFullYear(selectedYear)
+      newDate.setMonth(monthNum)
+      handleDateSelect(newDate)
+    }
+  }
+
+  // 更新選中的年月
+  React.useEffect(() => {
+    const displayDate = getDisplayDate()
+    if (displayDate) {
+      setSelectedYear(displayDate.getFullYear())
+      setSelectedMonth(displayDate.getMonth())
+    } else {
+      // 如果沒有選中的日期，設定為當前日期
+      const now = new Date()
+      if (isRepublicEra) {
+        setSelectedYear(now.getFullYear() - 1911)
+      } else {
+        setSelectedYear(now.getFullYear())
+      }
+      setSelectedMonth(now.getMonth())
+    }
+  }, [value, isRepublicEra])
+
+  // 處理西元年/民國年切換
+  const handleEraToggle = (checked: boolean) => {
+    setIsRepublicEra(checked)
+    
+    // 不重置已選擇的日期，只更新顯示用的年份
+    const displayDate = getDisplayDate()
+    if (displayDate) {
+      // 如果已經有選中的日期，只更新顯示用的年份
+      setSelectedYear(displayDate.getFullYear())
+      setSelectedMonth(displayDate.getMonth())
+    } else {
+      // 如果沒有選中的日期，設定為當前日期
+      const now = new Date()
+      if (checked) {
+        // 切換到民國年，顯示民國年格式
+        setSelectedYear(now.getFullYear() - 1911)
+      } else {
+        // 切換到西元年，顯示西元年格式
+        setSelectedYear(now.getFullYear())
+      }
+      setSelectedMonth(now.getMonth())
+    }
+  }
+
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="era-toggle"
-          checked={isRepublicEra}
-          onCheckedChange={setIsRepublicEra}
-          disabled={disabled}
-        />
-        <Label htmlFor="era-toggle" className="text-sm">
-          {isRepublicEra ? '民國年' : '西元年'}
-        </Label>
-      </div>
-      
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -119,7 +199,58 @@ export function DatePicker({
             {value ? formatDisplayText(getDisplayDate()!) : placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-4" align="start">
+          {/* 西元年/民國年切換 */}
+          <div className="flex items-center justify-between mb-4 pb-2 border-b">
+            <Label className="text-sm font-medium">日期格式</Label>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="era-toggle"
+                checked={isRepublicEra}
+                onCheckedChange={handleEraToggle}
+                disabled={disabled}
+              />
+              <Label htmlFor="era-toggle" className="text-sm">
+                {isRepublicEra ? '民國年' : '西元年'}
+              </Label>
+            </div>
+          </div>
+          
+          {/* 年份和月份快速選擇 */}
+          <div className="flex space-x-2 mb-4">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">年份</Label>
+              <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateYearOptions().map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {isRepublicEra ? `民國 ${year} 年` : `${year} 年`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">月份</Label>
+              <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateMonthOptions().map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      {format(new Date(2024, month), 'M 月', { locale: zhTW })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* 日曆 */}
           <Calendar
             mode="single"
             selected={getDisplayDate()}
@@ -128,7 +259,12 @@ export function DatePicker({
             locale={zhTW}
             showOutsideDays={false}
             fromYear={isRepublicEra ? 0 : 1900}
-            toYear={isRepublicEra ? republicYearRange : 2100}
+            toYear={isRepublicEra ? republicYearRange : currentYear}
+            month={new Date(selectedYear, selectedMonth)}
+            onMonthChange={(date) => {
+              setSelectedYear(date.getFullYear())
+              setSelectedMonth(date.getMonth())
+            }}
             classNames={{
               caption: "flex justify-center pt-1 relative items-center",
               caption_label: "text-sm font-medium",
