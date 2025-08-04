@@ -518,6 +518,14 @@ function FormEditContent() {
                     {field.field_type === 'phone' && (
                       <Input placeholder={field.placeholder || '請輸入電話號碼'} disabled className="text-base" />
                     )}
+                    {field.field_type === 'date' && (
+                      <div className="border rounded-md p-3 bg-muted/30">
+                        <div className="text-sm text-muted-foreground">日期選擇器預覽</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          支援西元年/民國年轉換
+                        </div>
+                      </div>
+                    )}
                     {field.field_type === 'select' && (
                       <Select disabled>
                         <SelectTrigger className="text-base">

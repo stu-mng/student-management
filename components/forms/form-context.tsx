@@ -67,6 +67,7 @@ export const FIELD_TYPES: FieldType[] = [
   { value: 'email', label: '電子郵件', category: '專用格式' },
   { value: 'phone', label: '電話號碼', category: '專用格式' },
   { value: 'taiwan_id', label: '身分證字號', category: '專用格式' },
+  { value: 'date', label: '日期', category: '專用格式' },
   
   // 選擇題型
   { value: 'radio', label: '單選題', category: '選擇題型' },

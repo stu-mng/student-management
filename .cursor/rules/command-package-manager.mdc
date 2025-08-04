@@ -1,0 +1,5 @@
+---
+alwaysApply: false
+description: use pnpm for package installation
+---
+If you were to run a package-related command, use pnpm.

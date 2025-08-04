@@ -4,6 +4,7 @@ import type { FormField, FormFieldOption } from "@/app/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -65,7 +66,9 @@ const validateEmail = (email: string): boolean => {
 
 interface FormFieldComponentProps {
   field: FormField
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (fieldId: string, value: any) => void
   hasError?: boolean
 }
@@ -73,7 +76,9 @@ interface FormFieldComponentProps {
 // Grid組件
 interface GridComponentProps {
   field: FormField
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (value: any) => void
   hasError?: boolean
   mode: 'radio' | 'checkbox'
@@ -260,6 +265,17 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
             required={field.is_required || false}
             rows={4}
             className={`text-base ${errorClass}`}
+          />
+        )
+
+      case 'date':
+        return (
+          <DatePicker
+            value={fieldValue ? new Date(fieldValue) : undefined}
+            onChange={(date) => onChange(field.id, date?.toISOString() || '')}
+            placeholder={field.placeholder || '請選擇日期'}
+            disabled={false}
+            className={errorClass}
           />
         )
 

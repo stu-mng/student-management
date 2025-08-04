@@ -15,6 +15,7 @@ export function FormFieldPreview({ field }: FormFieldPreviewProps) {
       'email': '電子郵件輸入',
       'phone': '電話號碼輸入',
       'taiwan_id': '身分證字號輸入',
+      'date': '日期選擇器',
       'radio': '單選題',
       'checkbox': '多選題',
       'select': '下拉選單',

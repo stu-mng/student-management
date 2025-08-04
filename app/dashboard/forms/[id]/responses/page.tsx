@@ -225,6 +225,23 @@ export default function FormResponsesPage() {
       return renderGridResponseValue(fieldResponse)
     }
     
+    // 處理日期欄位
+    if (fieldResponse.field.field_type === 'date' && fieldResponse.field_value) {
+      try {
+        const date = new Date(fieldResponse.field_value)
+        if (isNaN(date.getTime())) {
+          return fieldResponse.field_value
+        }
+        return date.toLocaleDateString('zh-TW', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      } catch (error) {
+        return fieldResponse.field_value
+      }
+    }
+    
     if (fieldResponse.field_values && Array.isArray(fieldResponse.field_values)) {
       return fieldResponse.field_values.join(', ')
     }
@@ -238,6 +255,23 @@ export default function FormResponsesPage() {
     // 處理 grid 類型欄位
     if (fieldType && ['radio_grid', 'checkbox_grid'].includes(fieldType) && fieldId) {
       return renderGridOverviewValue(response, fieldId)
+    }
+    
+    // 處理日期欄位
+    if (fieldType === 'date' && response.field_value) {
+      try {
+        const date = new Date(response.field_value)
+        if (isNaN(date.getTime())) {
+          return response.field_value
+        }
+        return date.toLocaleDateString('zh-TW', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      } catch (error) {
+        return response.field_value
+      }
     }
     
     if (response.field_values && Array.isArray(response.field_values)) {
