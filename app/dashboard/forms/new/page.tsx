@@ -497,7 +497,7 @@ function FormCreateContent() {
                   <CardTitle className="flex items-center justify-between">
                     欄位設定
                     <Button
-                      onClick={() => addField(currentSectionIndex)}
+                      onClick={(e) => { e.stopPropagation(); addField(currentSectionIndex) }}
                       size="sm"
                     >
                       <Plus className="h-4 w-4 mr-2" />

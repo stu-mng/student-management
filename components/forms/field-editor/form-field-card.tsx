@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import type { DraggableProvided } from "@hello-pangea/dnd"
 import { Draggable } from "@hello-pangea/dnd"
 import { GripVertical, Trash2 } from "lucide-react"
+import { useEffect } from "react"
 import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FIELD_TYPES } from "../form-context"
 import { FormFieldBuilder } from "./form-field-builder"
@@ -34,10 +35,40 @@ export function FormFieldCard({
 }: FormFieldCardProps) {
   const fieldType = FIELD_TYPES.find(t => t.value === field.field_type)
 
+  // Auto-focus the label input and scroll into view when this card becomes focused
+  useEffect(() => {
+    if (!isFocused) return
+    const input = document.getElementById(`label-${field.tempId}`) as HTMLInputElement | null
+    if (input) {
+      try {
+        input.focus({ preventScroll: true })
+      } catch {
+        input.focus()
+      }
+      if (typeof input.select === 'function') {
+        input.select()
+      }
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    // Fallback: focus and scroll the card itself
+    const card = document.getElementById(`field-card-${field.tempId}`) as HTMLElement | null
+    if (card) {
+      card.setAttribute('tabindex', '-1')
+      try {
+        ;(card as HTMLElement).focus({ preventScroll: true })
+      } catch {
+        ;(card as HTMLElement).focus()
+      }
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [isFocused, field.tempId])
+
   const CardWrapper = ({ children }: { children: React.ReactNode }) => {
     if (!isDraggable) {
       return (
-        <Card 
+          <Card 
+            id={`field-card-${field.tempId}`}
           className={`border transition-all duration-200 cursor-pointer relative ${
             isFocused ? 'border-l-4 border-l-purple-500 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
           }`}
@@ -57,6 +88,7 @@ export function FormFieldCard({
       <Draggable key={field.tempId} draggableId={field.tempId} index={fieldIndex}>
         {(provided: DraggableProvided) => (
           <Card 
+            id={`field-card-${field.tempId}`}
             ref={provided.innerRef}
             {...provided.draggableProps}
             className={`border transition-all duration-200 cursor-pointer relative ${
@@ -111,6 +143,7 @@ export function FormFieldCard({
   if (!isDraggable) {
     return (
       <Card 
+        id={`field-card-${field.tempId}`}
         className={`border transition-all duration-200 cursor-pointer relative ${
           isFocused ? 'border-l-4 border-l-purple-500 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
         }`}
@@ -157,6 +190,7 @@ export function FormFieldCard({
     <Draggable key={field.tempId} draggableId={field.tempId} index={fieldIndex}>
       {(provided: DraggableProvided) => (
         <Card 
+          id={`field-card-${field.tempId}`}
           ref={provided.innerRef}
           {...provided.draggableProps}
           className={`border transition-all duration-200 cursor-pointer relative ${

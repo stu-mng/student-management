@@ -424,7 +424,8 @@ function FormEditContent() {
                 {/* 新增欄位按鈕 - 放在最下面 */}
                 <div className="mt-4 pt-4 border-t border-dashed">
                   <Button 
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation()
                       const currentSection = sections[currentSectionIndex]
                       addField(currentSection?.tempId)
                     }} 
