@@ -21,7 +21,7 @@ export function Footer({ className }: { className?: string }) {
     <footer className={cn("w-full py-6 text-center text-sm text-muted-foreground bg-slate-50", className)}>
       <div className="container">
         <p className="flex items-center justify-center gap-2">
-            © {currentYear || 2024} 小學伴資料管理系統. All rights reserved.
+            © {currentYear || 2024} 興大學伴酷系統. All rights reserved.
         </p>
         
         <div className="mt-2 flex items-center justify-center gap-1">
