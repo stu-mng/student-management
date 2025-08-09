@@ -8,6 +8,8 @@ import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { buildFormPayload } from "./utils/form-save";
+import { reorderWithinSection } from "./utils/reorder";
 
 // 從 useFormEditor 導入的類型
 export interface FormSectionWithId {
@@ -637,34 +639,7 @@ export function FormProvider({ children }: FormProviderProps) {
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
-
-    // Scope the reorder strictly within the current section
-    const draggedTempId = result.draggableId
-    const draggedField = fields.find(f => f.tempId === draggedTempId)
-    if (!draggedField) return
-
-    const sameSection = (f: FormFieldWithId) => f.form_section_id === draggedField.form_section_id
-
-    // Collect global indexes of fields in the same section
-    const sectionIndexes = fields
-      .map((f, idx) => ({ f, idx }))
-      .filter(({ f }) => sameSection(f))
-      .map(({ idx }) => idx)
-
-    const from = sectionIndexes[result.source.index]
-    const to = sectionIndexes[result.destination.index]
-    if (from === undefined || to === undefined) return
-
-    const next = [...fields]
-    const sectionFields = sectionIndexes.map(i => next[i])
-    const [moved] = sectionFields.splice(result.source.index, 1)
-    sectionFields.splice(result.destination.index, 0, moved)
-
-    // Write back only this section in the new order
-    sectionIndexes.forEach((globalIdx, i) => {
-      next[globalIdx] = { ...sectionFields[i], display_order: i }
-    })
-
+    const next = reorderWithinSection(fields, result.draggableId, result.source.index, result.destination.index)
     setFields(next)
   }
 
@@ -724,62 +699,18 @@ export function FormProvider({ children }: FormProviderProps) {
     
     setSaving(true)
     try {
-      const activeFields = fields.filter(field => field.is_active !== false)
-      
-      // 計算全域 display_order
-      let globalDisplayOrder = 0
-      
-      const formData = {
+      const formData = buildFormPayload({
         title,
         description,
-        form_type: formType,
-        is_required: isRequired,
-        allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline?.toISOString(),
+        formType,
+        isRequired,
+        allowMultipleSubmissions,
+        submissionDeadline,
         status: 'draft',
-        sections: sections.map((section, sectionIndex) => {
-          const sectionFields = activeFields
-            .filter(field => 
-              field.form_section_id === section.id || 
-              field.form_section_id === section.tempId ||
-              (!field.form_section_id && section.order === 0)
-            )
-            .sort((a, b) => a.display_order - b.display_order) // 保持區段內順序
-            .map(field => ({
-              id: field.id,
-              field_name: field.field_name,
-              field_label: field.field_label,
-              field_type: field.field_type,
-              display_order: globalDisplayOrder++, // 使用全域順序
-              is_required: field.is_required,
-              is_active: field.is_active,
-              placeholder: field.placeholder || '',
-              help_text: field.help_text || '',
-              default_value: field.default_value,
-              min_length: field.min_length,
-              max_length: field.max_length,
-              pattern: field.pattern,
-              validation_rules: field.validation_rules,
-              options: field.options?.map((option, index) => ({
-                id: option.id,
-                option_value: option.option_value,
-                option_label: option.option_label,
-                display_order: index,
-                is_active: option.is_active,
-                jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
-              })) || [],
-              grid_options: field.grid_options || { rows: [], columns: [] }
-            }))
-          
-          return {
-            id: section.id,
-            title: section.title || '',
-            description: section.description || '',
-            order: sectionIndex + 1,
-            fields: sectionFields
-          }
-        })
-      }
+        sections,
+        fields,
+        resolveSectionId,
+      })
 
       const response = await fetch(`/api/forms/${form.id}`, {
         method: 'PUT',
@@ -806,7 +737,7 @@ export function FormProvider({ children }: FormProviderProps) {
         isRequired,
         allowMultipleSubmissions,
         submissionDeadline: submissionDeadline?.toISOString(),
-        fields: activeFields.map(field => ({
+        fields: fields.filter(f => f.is_active !== false).map(field => ({
           field_name: field.field_name,
           field_label: field.field_label,
           field_type: field.field_type,
@@ -847,62 +778,18 @@ export function FormProvider({ children }: FormProviderProps) {
     
     setPublishing(true)
     try {
-      const activeFields = fields.filter(field => field.is_active !== false)
-      
-      // 計算全域 display_order
-      let globalDisplayOrder = 0
-      
-      const formData = {
+      const formData = buildFormPayload({
         title,
         description,
-        form_type: formType,
-        is_required: isRequired,
-        allow_multiple_submissions: allowMultipleSubmissions,
-        submission_deadline: submissionDeadline?.toISOString(),
+        formType,
+        isRequired,
+        allowMultipleSubmissions,
+        submissionDeadline,
         status: 'active',
-        sections: sections.map((section, sectionIndex) => {
-          const sectionFields = activeFields
-            .filter(field => 
-              field.form_section_id === section.id || 
-              field.form_section_id === section.tempId ||
-              (!field.form_section_id && section.order === 0)
-            )
-            .sort((a, b) => a.display_order - b.display_order) // 保持區段內順序
-            .map(field => ({
-              id: field.id,
-              field_name: field.field_name,
-              field_label: field.field_label,
-              field_type: field.field_type,
-              display_order: globalDisplayOrder++, // 使用全域順序
-              is_required: field.is_required,
-              is_active: field.is_active,
-              placeholder: field.placeholder || '',
-              help_text: field.help_text || '',
-              default_value: field.default_value,
-              min_length: field.min_length,
-              max_length: field.max_length,
-              pattern: field.pattern,
-              validation_rules: field.validation_rules,
-              options: field.options?.map((option, index) => ({
-                id: option.id,
-                option_value: option.option_value,
-                option_label: option.option_label,
-                display_order: index,
-                is_active: option.is_active,
-                jump_to_section_id: option.jump_to_section_id ? resolveSectionId(option.jump_to_section_id) : undefined
-              })) || [],
-              grid_options: field.grid_options || { rows: [], columns: [] }
-            }))
-          
-          return {
-            id: section.id,
-            title: section.title || '',
-            description: section.description || '',
-            order: sectionIndex + 1,
-            fields: sectionFields
-          }
-        })
-      }
+        sections,
+        fields,
+        resolveSectionId,
+      })
 
       const response = await fetch(`/api/forms/${form.id}`, {
         method: 'PUT',
@@ -929,7 +816,7 @@ export function FormProvider({ children }: FormProviderProps) {
         isRequired,
         allowMultipleSubmissions,
         submissionDeadline: submissionDeadline?.toISOString(),
-        fields: activeFields.map(field => ({
+        fields: fields.filter(f => f.is_active !== false).map(field => ({
           field_name: field.field_name,
           field_label: field.field_label,
           field_type: field.field_type,
