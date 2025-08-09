@@ -193,7 +193,16 @@ function FormEditContent() {
   }
 
   return (
-    <div className="space-y-6" onClick={() => setFocusedFieldId(null)}>
+    <div
+      className="space-y-6"
+      onMouseDown={(e) => {
+        const target = e.target as HTMLElement
+        if (target && target.closest('.form-field-card')) {
+          return
+        }
+        setFocusedFieldId(null)
+      }}
+    >
       {!previewMode ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 表單設定 */}

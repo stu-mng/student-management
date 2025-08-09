@@ -5,6 +5,7 @@ import type {
   FormField,
   FormFieldCreateRequest,
   FormFieldOption,
+  FormSectionCreateRequest,
   FormUpdateRequest,
   Role,
   RolePermission,
@@ -587,14 +588,20 @@ export async function PUT(
         });
       });
 
+      // 準備全域欄位追蹤以支援刪除偵測
+      const allExistingFieldIds = new Set<string>();
+      existingSections?.forEach(s => s.fields?.forEach((f: FormField) => allExistingFieldIds.add(f.id)));
+      const activeFieldIds = new Set<string>();
+
       // 處理區段更新
       for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
-        const section = sections[sectionIndex];
+        const section = sections[sectionIndex] as FormSectionCreateRequest & { id?: string };
         let sectionId: string;
         
         // 如果是現有區段（有 id 或 tempId 對應），更新它
-        const existingSection = (section as any).id ? existingSectionMap.get((section as any).id) : 
-          existingSections?.find(es => es.order === (section.order || sectionIndex + 1));
+        const existingSection = section.id
+          ? existingSectionMap.get(section.id)
+          : existingSections?.find(es => es.order === (section.order || sectionIndex + 1));
         
         if (existingSection) {
           // 更新現有區段
@@ -642,7 +649,7 @@ export async function PUT(
 
         // 處理欄位更新
         if (section.fields && section.fields.length > 0) {
-          for (const field of section.fields) {
+          for (const field of section.fields as (FormFieldCreateRequest & { id?: string })[]) {
             if (!field.field_name || !field.field_label || !field.field_type) {
               console.error('Invalid field data:', field);
               return NextResponse.json<ErrorResponse>(
@@ -655,18 +662,21 @@ export async function PUT(
             let existingField = null;
             
             // 方法1: 使用欄位ID查找（最可靠）
-            if ((field as any).id) {
-              existingField = existingFieldByIdMap.get((field as any).id);
+            if (field.id) {
+              existingField = existingFieldByIdMap.get(field.id);
             }
             
-            // 方法2: 使用表單ID + 欄位名稱查找（次選）
-            if (!existingField) {
-              existingField = existingFieldByNameMap.get(`${id}-${field.field_name}`);
-            }
-            
-            // 方法3: 在當前區段中查找同名欄位（最後選擇）
+            // 方法2: 在當前區段中查找同名欄位（優先於全表單名稱匹配，避免跨段誤判）
             if (!existingField) {
               existingField = existingFieldMap.get(`${sectionId}-${field.field_name}`);
+            }
+            // 方法3: 使用表單ID + 欄位名稱查找（僅當唯一時）
+            if (!existingField) {
+              const candidate = existingFieldByNameMap.get(`${id}-${field.field_name}`)
+              // 僅當該名稱在整個表單內唯一且屬於同一區段時才採用
+              if (candidate && candidate.form_section_id === sectionId) {
+                existingField = candidate
+              }
             }
 
             if (existingField) {
@@ -703,6 +713,9 @@ export async function PUT(
                   { status: 500 }
                 );
               }
+
+              // 標記此欄位為仍然有效
+              activeFieldIds.add(existingField.id);
 
               // 更新欄位選項
               await updateFieldOptions(supabase, existingField.id, field);
@@ -743,6 +756,9 @@ export async function PUT(
                 );
               }
 
+              // 標記新建欄位為有效
+              activeFieldIds.add(createdField.id);
+
               // 為新欄位創建選項
               await updateFieldOptions(supabase, createdField.id, field);
             }
@@ -752,8 +768,10 @@ export async function PUT(
 
       // 標記已刪除的區段和欄位為非活躍狀態（而不是真正刪除）
       const updatedSectionIds = sections.map((section, index) => {
-        const existingSection = (section as any).id ? existingSectionMap.get((section as any).id) : 
-          existingSections?.find(es => es.order === (section.order || index + 1));
+        const s = section as FormSectionCreateRequest & { id?: string }
+        const existingSection = s.id
+          ? existingSectionMap.get(s.id)
+          : existingSections?.find(es => es.order === (s.order || index + 1));
         return existingSection?.id;
       }).filter(Boolean);
 
@@ -768,6 +786,15 @@ export async function PUT(
             .update({ is_active: false })
             .eq('form_section_id', section.id);
         }
+      }
+
+      // 將被刪除的欄位（存在於資料庫但不在本次 payload 中）標記為非活躍
+      const idsToDeactivate = Array.from(allExistingFieldIds).filter(id => !activeFieldIds.has(id));
+      if (idsToDeactivate.length > 0) {
+        await supabase
+          .from('form_fields')
+          .update({ is_active: false })
+          .in('id', idsToDeactivate);
       }
     }
 

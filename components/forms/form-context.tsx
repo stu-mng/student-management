@@ -2,6 +2,7 @@
 
 import type { Form, FormField, FormFieldOption, FormSection, Role, RolePermission, RolesListResponse } from "@/app/api/types";
 import { useAuth } from "@/components/auth-provider";
+import type { FormFieldValidationRules } from "@/types";
 import type { DropResult } from "@hello-pangea/dnd";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -34,6 +35,7 @@ export interface FormFieldWithId {
   min_length?: number
   max_length?: number
   pattern?: string
+  validation_rules?: FormFieldValidationRules
   options?: FormFieldOptionWithId[]
   grid_options?: {
     rows: Array<{ value: string; label: string }>
@@ -218,7 +220,7 @@ export function FormProvider({ children }: FormProviderProps) {
   }
 
   // 載入角色列表
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       const response = await fetch('/api/roles')
       if (response.ok) {
@@ -239,10 +241,10 @@ export function FormProvider({ children }: FormProviderProps) {
       ]
       setRoles(defaultRoles)
     }
-  }
+  }, [])
 
   // 初始化編輯狀態
-  const initializeEditState = (formData: Form) => {
+  const initializeEditState = useCallback((formData: Form) => {
     if (initializedRef.current === formData.id) return
 
     console.log('初始化編輯狀態:', formData.title)
@@ -294,6 +296,7 @@ export function FormProvider({ children }: FormProviderProps) {
               is_active: option.is_active !== false,
               jump_to_section_id: option.jump_to_section_id || undefined
             })) || [],
+            validation_rules: (field.validation_rules as unknown as FormFieldValidationRules) || undefined,
             grid_options: field.grid_options || {
               rows: [],
               columns: []
@@ -337,6 +340,7 @@ export function FormProvider({ children }: FormProviderProps) {
             min_length: field.min_length,
             max_length: field.max_length,
             pattern: field.pattern,
+            validation_rules: field.validation_rules,
             options: field.form_field_options?.map((option, index) => ({
               option_value: option.option_value,
               option_label: option.option_label,
@@ -349,7 +353,7 @@ export function FormProvider({ children }: FormProviderProps) {
       })
       initialStateRef.current = initialState
     }, 100)
-  }
+  }, [])
 
   // 檢查未保存變更
   const checkForUnsavedChanges = useCallback(() => {
@@ -396,7 +400,7 @@ export function FormProvider({ children }: FormProviderProps) {
     return hasChanges
   }, [title, description, formType, isRequired, allowMultipleSubmissions, submissionDeadline, sections, fields])
 
-  const fetchForm = async () => {
+  const fetchForm = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -426,7 +430,7 @@ export function FormProvider({ children }: FormProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [formId, pathname, initializeEditState])
 
   const refetchForm = async () => {
     // 保存當前初始化狀態，避免重新初始化編輯狀態
@@ -444,14 +448,14 @@ export function FormProvider({ children }: FormProviderProps) {
     }
     // 載入角色列表
     loadRoles()
-  }, [formId])
+  }, [formId, fetchForm, loadRoles])
 
   // 監聽路由變化，在進入編輯頁面時初始化編輯狀態
   useEffect(() => {
     if (form && pathname.includes('/edit') && !initializedRef.current) {
       initializeEditState(form)
     }
-  }, [form, pathname])
+  }, [form, pathname, initializeEditState])
 
   // 監聽變更
   useEffect(() => {
@@ -634,16 +638,34 @@ export function FormProvider({ children }: FormProviderProps) {
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
 
-    const items = Array.from(fields)
-    const [reorderedItem] = items.splice(result.source.index, 1)
-    items.splice(result.destination.index, 0, reorderedItem)
+    // Scope the reorder strictly within the current section
+    const draggedTempId = result.draggableId
+    const draggedField = fields.find(f => f.tempId === draggedTempId)
+    if (!draggedField) return
 
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      display_order: index
-    }))
+    const sameSection = (f: FormFieldWithId) => f.form_section_id === draggedField.form_section_id
 
-    setFields(updatedItems)
+    // Collect global indexes of fields in the same section
+    const sectionIndexes = fields
+      .map((f, idx) => ({ f, idx }))
+      .filter(({ f }) => sameSection(f))
+      .map(({ idx }) => idx)
+
+    const from = sectionIndexes[result.source.index]
+    const to = sectionIndexes[result.destination.index]
+    if (from === undefined || to === undefined) return
+
+    const next = [...fields]
+    const sectionFields = sectionIndexes.map(i => next[i])
+    const [moved] = sectionFields.splice(result.source.index, 1)
+    sectionFields.splice(result.destination.index, 0, moved)
+
+    // Write back only this section in the new order
+    sectionIndexes.forEach((globalIdx, i) => {
+      next[globalIdx] = { ...sectionFields[i], display_order: i }
+    })
+
+    setFields(next)
   }
 
   // 驗證表單
@@ -715,7 +737,7 @@ export function FormProvider({ children }: FormProviderProps) {
         allow_multiple_submissions: allowMultipleSubmissions,
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'draft',
-        sections: sections.map(section => {
+        sections: sections.map((section, sectionIndex) => {
           const sectionFields = activeFields
             .filter(field => 
               field.form_section_id === section.id || 
@@ -737,6 +759,7 @@ export function FormProvider({ children }: FormProviderProps) {
               min_length: field.min_length,
               max_length: field.max_length,
               pattern: field.pattern,
+              validation_rules: field.validation_rules,
               options: field.options?.map((option, index) => ({
                 id: option.id,
                 option_value: option.option_value,
@@ -752,7 +775,7 @@ export function FormProvider({ children }: FormProviderProps) {
             id: section.id,
             title: section.title || '',
             description: section.description || '',
-            order: section.order,
+            order: sectionIndex + 1,
             fields: sectionFields
           }
         })
@@ -796,6 +819,7 @@ export function FormProvider({ children }: FormProviderProps) {
           min_length: field.min_length,
           max_length: field.max_length,
           pattern: field.pattern,
+            validation_rules: field.validation_rules,
           options: field.options?.map((option, index) => ({
             option_value: option.option_value,
             option_label: option.option_label,
@@ -836,7 +860,7 @@ export function FormProvider({ children }: FormProviderProps) {
         allow_multiple_submissions: allowMultipleSubmissions,
         submission_deadline: submissionDeadline?.toISOString(),
         status: 'active',
-        sections: sections.map(section => {
+        sections: sections.map((section, sectionIndex) => {
           const sectionFields = activeFields
             .filter(field => 
               field.form_section_id === section.id || 
@@ -858,6 +882,7 @@ export function FormProvider({ children }: FormProviderProps) {
               min_length: field.min_length,
               max_length: field.max_length,
               pattern: field.pattern,
+              validation_rules: field.validation_rules,
               options: field.options?.map((option, index) => ({
                 id: option.id,
                 option_value: option.option_value,
@@ -873,7 +898,7 @@ export function FormProvider({ children }: FormProviderProps) {
             id: section.id,
             title: section.title || '',
             description: section.description || '',
-            order: section.order,
+            order: sectionIndex + 1,
             fields: sectionFields
           }
         })
@@ -917,6 +942,7 @@ export function FormProvider({ children }: FormProviderProps) {
           min_length: field.min_length,
           max_length: field.max_length,
           pattern: field.pattern,
+          validation_rules: field.validation_rules,
           options: field.options?.map((option, index) => ({
             option_value: option.option_value,
             option_label: option.option_label,

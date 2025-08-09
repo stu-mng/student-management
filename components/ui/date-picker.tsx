@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -257,7 +257,7 @@ export function DatePicker({
             onSelect={handleDateSelect}
             initialFocus
             locale={zhTW}
-            showOutsideDays={false}
+            showOutsideDays={true}
             fromYear={isRepublicEra ? 0 : 1900}
             toYear={isRepublicEra ? republicYearRange : currentYear}
             month={new Date(selectedYear, selectedMonth)}

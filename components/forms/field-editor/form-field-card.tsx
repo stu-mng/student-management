@@ -101,7 +101,7 @@ export function FormFieldCard({
               }
             }}
           >
-            <CardContent className="p-4">
+            <CardContent className="p-4 form-field-card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   {isDraggable && (
@@ -154,7 +154,7 @@ export function FormFieldCard({
           }
         }}
       >
-        <CardContent className="p-4">
+        <CardContent className="p-4 form-field-card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h4 className="font-medium">
@@ -203,7 +203,7 @@ export function FormFieldCard({
             }
           }}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-4 form-field-card">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div {...provided.dragHandleProps}>

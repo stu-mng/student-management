@@ -4,15 +4,15 @@ import type { Form } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { FormFieldComponent, FormSectionNavigation, useFormContext } from "@/components/forms"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -407,8 +407,15 @@ function FormEditView({
 
       if (!isEmpty && typeof value === 'string') {
         // Email validation
-        if (field.field_type === 'email' && !validateEmail(value)) {
-          hasErrors = true
+        if (field.field_type === 'email') {
+          const baseValid = validateEmail(value)
+          const rules = field.validation_rules as { type?: string; allowedDomains?: string[] } | undefined
+          const domainOk = rules?.allowedDomains && rules.allowedDomains.length > 0
+            ? rules.allowedDomains.some(d => value.toLowerCase().endsWith(`@${d.toLowerCase()}`))
+            : true
+          if (!baseValid || !domainOk) {
+            hasErrors = true
+          }
         }
 
         // Taiwan ID validation
@@ -419,6 +426,42 @@ function FormEditView({
         // Phone validation
         if (field.field_type === 'phone' && !validatePhoneNumber(value)) {
           hasErrors = true
+        }
+
+        // Number validation with rules
+        if (field.field_type === 'number') {
+          const n = Number(value)
+          const rules = field.validation_rules as { type?: string; min?: number; max?: number; integerOnly?: boolean } | undefined
+          if (Number.isNaN(n)) {
+            hasErrors = true
+          } else {
+            if (rules?.integerOnly && !Number.isInteger(n)) hasErrors = true
+            if (typeof rules?.min === 'number' && n < rules.min) hasErrors = true
+            if (typeof rules?.max === 'number' && n > rules.max) hasErrors = true
+          }
+        }
+
+        // Date validation with rules
+        if (field.field_type === 'date') {
+          const d = new Date(value)
+          if (Number.isNaN(d.getTime())) {
+            hasErrors = true
+          } else {
+            const toYMD = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate())
+            const today = toYMD(new Date())
+            const rules = field.validation_rules as { type?: string; minDate?: string; maxDate?: string; noPast?: boolean; noFuture?: boolean } | undefined
+            const dY = toYMD(d).getTime()
+            if (rules?.noPast && dY < today.getTime()) hasErrors = true
+            if (rules?.noFuture && dY > today.getTime()) hasErrors = true
+            if (rules?.minDate) {
+              const min = toYMD(new Date(rules.minDate)).getTime()
+              if (dY < min) hasErrors = true
+            }
+            if (rules?.maxDate) {
+              const max = toYMD(new Date(rules.maxDate)).getTime()
+              if (dY > max) hasErrors = true
+            }
+          }
         }
       }
     })

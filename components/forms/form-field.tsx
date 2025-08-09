@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import type { DateValidationRules, EmailValidationRules, FormFieldValidationRules, NumberValidationRules } from "@/types"
 import { X } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 // 台灣身分證字號驗證函數
 const validateTaiwanId = (id: string): boolean => {
@@ -164,6 +165,12 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
   const errorClass = hasError ? 'border-red-500 focus:border-red-500' : ''
   const [multiSelectOpen, setMultiSelectOpen] = useState(false)
 
+  // Extract typed validation rules
+  const validationRules = (field.validation_rules as unknown as FormFieldValidationRules | undefined)
+  const numberRules = useMemo(() => (validationRules && validationRules.type === 'number' ? (validationRules as NumberValidationRules) : undefined), [validationRules])
+  const emailRules = useMemo(() => (validationRules && validationRules.type === 'email' ? (validationRules as EmailValidationRules) : undefined), [validationRules])
+  const dateRules = useMemo(() => (validationRules && validationRules.type === 'date' ? (validationRules as DateValidationRules) : undefined), [validationRules])
+
   const renderFieldInput = () => {
     switch (field.field_type) {
       case 'text':
@@ -189,8 +196,12 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
               required={field.is_required || false}
               className={`text-base ${errorClass}`}
             />
-            {fieldValue && !validateEmail(fieldValue) && (
-              <p className="text-sm text-red-600">電子郵件格式不正確（必須包含 @ 符號）</p>
+            {fieldValue && (!validateEmail(fieldValue) || (emailRules?.allowedDomains && !emailRules.allowedDomains.some(d => fieldValue.toLowerCase().endsWith(`@${d.toLowerCase()}`)))) && (
+              <p className="text-sm text-red-600">
+                {!validateEmail(fieldValue)
+                  ? '電子郵件格式不正確（必須包含 @ 符號）'
+                  : `僅允許以下網域：${emailRules?.allowedDomains?.join('、')}`}
+              </p>
             )}
           </div>
         )
@@ -246,14 +257,25 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
 
       case 'number':
         return (
-          <Input
-            type="number"
-            value={fieldValue}
-            onChange={(e) => onChange(field.id, e.target.value)}
-            placeholder={field.placeholder || ''}
-            required={field.is_required || false}
-            className={`text-base ${errorClass}`}
-          />
+          <div className="space-y-2">
+            <Input
+              type="number"
+              value={fieldValue}
+              onChange={(e) => onChange(field.id, e.target.value)}
+              placeholder={field.placeholder || ''}
+              required={field.is_required || false}
+              className={`text-base ${errorClass}`}
+            />
+            {(() => {
+              if (fieldValue === '') return null
+              const n = Number(fieldValue)
+              if (Number.isNaN(n)) return <p className="text-sm text-red-600">必須為數字</p>
+              if (numberRules?.integerOnly && !Number.isInteger(n)) return <p className="text-sm text-red-600">必須為整數</p>
+              if (typeof numberRules?.min === 'number' && n < numberRules.min) return <p className="text-sm text-red-600">不得小於 {numberRules.min}</p>
+              if (typeof numberRules?.max === 'number' && n > numberRules.max) return <p className="text-sm text-red-600">不得大於 {numberRules.max}</p>
+              return null
+            })()}
+          </div>
         )
 
       case 'textarea':
@@ -270,13 +292,34 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
 
       case 'date':
         return (
-          <DatePicker
-            value={fieldValue ? new Date(fieldValue) : undefined}
-            onChange={(date) => onChange(field.id, date?.toISOString() || '')}
-            placeholder={field.placeholder || '請選擇日期'}
-            disabled={false}
-            className={errorClass}
-          />
+          <div className="space-y-2">
+            <DatePicker
+              value={fieldValue ? new Date(fieldValue) : undefined}
+              onChange={(date) => onChange(field.id, date?.toISOString() || '')}
+              placeholder={field.placeholder || '請選擇日期'}
+              disabled={false}
+              className={errorClass}
+            />
+            {(() => {
+              if (!fieldValue) return null
+              const d = new Date(fieldValue)
+              if (Number.isNaN(d.getTime())) return <p className="text-sm text-red-600">無效的日期</p>
+              const today = new Date()
+              const toYMD = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate())
+              const dY = toYMD(d).getTime()
+              if (dateRules?.noPast && dY < toYMD(today).getTime()) return <p className="text-sm text-red-600">不可為過去日期</p>
+              if (dateRules?.noFuture && dY > toYMD(today).getTime()) return <p className="text-sm text-red-600">不可為未來日期</p>
+              if (dateRules?.minDate) {
+                const min = toYMD(new Date(dateRules.minDate)).getTime()
+                if (dY < min) return <p className="text-sm text-red-600">日期不得早於 {dateRules.minDate}</p>
+              }
+              if (dateRules?.maxDate) {
+                const max = toYMD(new Date(dateRules.maxDate)).getTime()
+                if (dY > max) return <p className="text-sm text-red-600">日期不得晚於 {dateRules.maxDate}</p>
+              }
+              return null
+            })()}
+          </div>
         )
 
       case 'select':
