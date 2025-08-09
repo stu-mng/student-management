@@ -4,7 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { BarChart3, BookOpen, FileSpreadsheet, FileText, Link2, Settings, UserCog, Users } from "lucide-react"
+import { BarChart3, BookOpen, FileSpreadsheet, FileText, Link2, Mail, Settings, UserCog, Users } from "lucide-react"
 import Link from "next/link"
 
 // Create a styled title component for feature cards
@@ -57,6 +57,13 @@ export default function DashboardPage() {
       description: "從 Excel 或 CSV 檔案批量匯入小學伴資料",
       icon: <FileSpreadsheet className="h-8 w-8 text-amber-500" />,
       href: "/dashboard/admin/import",
+      allowedRoles: ["admin", "root", "class-teacher", "manager"]
+    },
+    {
+      title: "通知中心",
+      description: "撰寫通知並批次寄送給選取用戶",
+      icon: <Mail className="h-8 w-8 text-emerald-500" />,
+      href: "/dashboard/admin/notifications",
       allowedRoles: ["admin", "root", "class-teacher", "manager"]
     },
     {

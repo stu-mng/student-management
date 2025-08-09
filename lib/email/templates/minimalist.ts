@@ -18,7 +18,7 @@ export function renderMinimalEmail({ username, title, body }: MinimalEmailProps)
     .split('\n')
     .map((line) => `<p style="margin:0 0 12px 0; line-height:1.6;">${escapeHtml(line)}</p>`) // preserve basic paragraphs
     .join('')
-  const domainUrl = normalizeDomainUrl(process.env.APP_DOMAIN)
+  const domainUrl = normalizeDomainUrl(process.env.NEXT_PUBLIC_APP_DOMAIN)
 
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
