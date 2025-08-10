@@ -60,8 +60,8 @@ export default function AdminNotificationsPage() {
     const picked = forms.find(f => f.id === formId)
     if (!picked) return
     const link = `${computedDomain}/dashboard/forms/${picked.id}`
-    setTitle(`[提醒填寫] ${picked.title}`)
-    setBody(`${picked.title} 填寫提醒：\n\n請點擊以下連結進入填寫：\n${link}\n\n如果已經填寫請忽略此信件。`)
+    setTitle(`[表單提醒] 請填寫 ${picked.title}`)
+    setBody(`$提醒您填寫 {picked.title}\n\n請點擊以下連結進入填寫：\n${link}\n\n如果已經填寫請忽略此信件。`)
   }
 
   const toggleOne = (id: string, checked: boolean) => {
