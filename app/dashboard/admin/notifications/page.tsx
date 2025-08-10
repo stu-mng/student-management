@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
 import type { ColumnDef } from "@tanstack/react-table"
+import { ArrowUpDown } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
@@ -109,11 +110,35 @@ export default function AdminNotificationsPage() {
       },
     },
     {
-      accessorKey: "role",
-      header: "角色",
-      cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.role?.display_name || row.original.role?.name}</span>,
+      id: "role_name",
+      accessorFn: (row) => row.role?.name ?? "",
+      header: ({ column }) => (
+        <Button className="w-full rounded-none" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          角色
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">{row.original.role?.display_name || row.original.role?.name || "—"}</span>
+      ),
+      sortingFn: (a, b) => {
+        const aOrder = a.original.role?.order ?? 99
+        const bOrder = b.original.role?.order ?? 99
+        return aOrder - bOrder
+      },
     },
   ]
+
+  const roleOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    users.forEach((u) => {
+      const name = u.role?.name
+      if (name && !map.has(name)) {
+        map.set(name, u.role?.display_name || name)
+      }
+    })
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+  }, [users])
 
   const handleSend = async () => {
     if (!title || !body) {
@@ -209,7 +234,12 @@ export default function AdminNotificationsPage() {
           {loading ? (
             <div className="text-sm text-muted-foreground">載入中...</div>
           ) : (
-            <DataTable columns={columns} data={users} />
+            <DataTable 
+              columns={columns} 
+              data={users} 
+              filterableColumns={[{ id: 'role_name', title: '角色', options: roleOptions }]} 
+              initialState={{ sorting: [{ id: 'role_name', desc: false }] }}
+            />
           )}
 
           <div className="flex justify-end">
