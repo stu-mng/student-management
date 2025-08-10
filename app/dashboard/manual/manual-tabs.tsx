@@ -429,11 +429,24 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               
+              {/* 版本 2.3.0 - 新增 */}
+              <div className="border-l-4 border-emerald-500 pl-4 mb-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-emerald-500 text-white">v2.3.0</Badge>
+                  <span className="text-sm text-muted-foreground">2025 年 8 月 10 日 - 最新版本</span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">〔功能升級〕通知中心、表單功能升級、權限預覽</h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• 新增通知中心，統一接收系統與表單相關通知</li>
+                  <li>• 表單功能升級，包含表單區段、資料驗證、提示圖片等進階功能</li>
+                  <li>• 新增權限預覽，建立/分享前可模擬不同角色視角</li>
+                </ul>
+              </div>
               {/* 版本 2.2.0 - 新增 */}
               <div className="border-l-4 border-emerald-500 pl-4 mb-8">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="default" className="bg-emerald-500 text-white">v2.2.0</Badge>
-                  <span className="text-sm text-muted-foreground">2025 年 6 月 3 日 - 最新版本</span>
+                  <span className="text-sm text-muted-foreground">2025 年 6 月 3 日</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">〔重要修復〕表單編輯與權限管理優化</h3>
                 <ul className="space-y-1 text-sm">
