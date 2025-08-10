@@ -87,11 +87,8 @@
   "placeholder": "TEXT",                               // 佔位符文字
   "help_text": "TEXT",                                 // 幫助文字
   "validation_rules": "JSONB",                         // 驗證規則
-  "conditional_logic": "JSONB",                        // 條件顯示邏輯
-  "default_value": "TEXT",                             // 預設值
   "min_length": "INTEGER",                             // 最小長度
   "max_length": "INTEGER",                             // 最大長度
-  "pattern": "VARCHAR(255)",                           // 正規表達式驗證
   "student_field_mapping": "VARCHAR(100)",             // 對應到 students 表格的欄位名稱
   "auto_populate_from": "VARCHAR(100)",                // 自動從其他欄位填入
   "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT NOW()",

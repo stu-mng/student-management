@@ -183,12 +183,10 @@ export interface FormField {
   is_active?: boolean | null;
   placeholder?: string | null;
   help_text?: string | null;
+  help_image_url?: string | null;
   validation_rules?: Record<string, unknown>;
-  conditional_logic?: Record<string, unknown>;
-  default_value?: string | null;
   min_length?: number | null;
   max_length?: number | null;
-  pattern?: string | null;
   student_field_mapping?: string | null;
   auto_populate_from?: string | null;
   created_at?: string | null;
@@ -273,12 +271,10 @@ export interface FormFieldCreateRequest {
   is_active?: boolean;
   placeholder?: string;
   help_text?: string;
+  help_image_url?: string;
   validation_rules?: Record<string, unknown>;
-  conditional_logic?: Record<string, unknown>;
-  default_value?: string;
   min_length?: number;
   max_length?: number;
-  pattern?: string;
   student_field_mapping?: string;
   auto_populate_from?: string;
   options?: FormFieldOptionCreateRequest[];

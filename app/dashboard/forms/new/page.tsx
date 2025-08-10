@@ -4,7 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import type { FormFieldWithId, FormSectionWithId } from "@/components/forms"
 import { FORM_TYPES, FormCreatePermissionsModal, FormFieldCard, FormProvider, FormSectionEditor, FormSectionNavigation } from "@/components/forms"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,6 +14,7 @@ import { hasFormManagePermission } from "@/lib/utils"
 import type { DroppableProvided, DropResult } from "@hello-pangea/dnd"
 import { DragDropContext, Droppable } from "@hello-pangea/dnd"
 import { Plus } from "lucide-react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -131,6 +132,7 @@ function FormCreateContent() {
               is_active: true,
               placeholder: field.placeholder || '',
               help_text: field.help_text || '',
+              help_image_url: field.help_image_url || undefined,
               options: field.options?.map((opt, optIndex) => ({
                 option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
                 option_label: opt.option_label,
@@ -196,6 +198,7 @@ function FormCreateContent() {
               is_active: true,
               placeholder: field.placeholder || '',
               help_text: field.help_text || '',
+              help_image_url: field.help_image_url || undefined,
               options: field.options?.map((opt, optIndex) => ({
                 option_value: opt.option_value || opt.option_label || `option_${optIndex}`,
                 option_label: opt.option_label,
@@ -383,9 +386,10 @@ function FormCreateContent() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Sidebar - Form Settings */}
-          <div className="space-y-6">
+        {!isPreview ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Sidebar - Form Settings */}
+            <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>基本設定</CardTitle>
@@ -539,6 +543,76 @@ function FormCreateContent() {
             )}
           </div>
         </div>
+        ) : (
+          <div className="space-y-6">
+            <FormSectionNavigation
+              sections={sections}
+              currentSectionIndex={currentSectionIndex}
+              onSectionChange={setCurrentSectionIndex}
+              onAddSection={() => {}}
+              showAddButton={false}
+            />
+
+            <Card>
+              <CardHeader className="pb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">{title || '未命名表單'}</CardTitle>
+                    {description && <CardDescription className="mt-2 whitespace-pre-line text-sm">{description}</CardDescription>}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setIsPreview(false)}>
+                    編輯
+                  </Button>
+                </div>
+                {sections.length > 0 && sections[currentSectionIndex] && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h3 className="font-medium text-lg">{sections[currentSectionIndex].title || '未命名段落'}</h3>
+                    {sections[currentSectionIndex].description && (
+                      <p className="text-sm text-muted-foreground mt-1">{sections[currentSectionIndex].description}</p>
+                    )}
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(!currentSection?.fields || currentSection.fields.length === 0) ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-lg">此段落沒有欄位</p>
+                  </div>
+                ) : (
+                  currentSection.fields.map((field) => (
+                    <div key={field.tempId} className="space-y-3 py-4 border-b border-gray-100 last:border-b-0">
+                      <Label className="text-lg font-medium">
+                        {field.field_label}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {field.help_text && (
+                        <p className="text-base text-muted-foreground">{field.help_text}</p>
+                      )}
+                      {field.help_image_url && (
+                        <div>
+                          <Image src={field.help_image_url} alt="說明圖片" width={800} height={450} className="h-auto max-h-56 w-auto rounded border" unoptimized />
+                        </div>
+                      )}
+
+                      {field.field_type === 'text' && (
+                        <Input placeholder={field.placeholder} disabled className="text-base" />
+                      )}
+                      {field.field_type === 'textarea' && (
+                        <Textarea placeholder={field.placeholder} disabled rows={3} className="text-base" />
+                      )}
+                      {field.field_type === 'email' && (
+                        <Input type="email" placeholder={field.placeholder} disabled className="text-base" />
+                      )}
+                      {field.field_type === 'number' && (
+                        <Input type="number" placeholder={field.placeholder} disabled className="text-base" />
+                      )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </FormProvider>
   )

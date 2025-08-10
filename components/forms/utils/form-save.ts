@@ -56,10 +56,9 @@ export function buildFormPayload({
           is_active: field.is_active,
           placeholder: field.placeholder || '',
           help_text: field.help_text || '',
-          default_value: field.default_value,
+          help_image_url: field.help_image_url || undefined,
           min_length: field.min_length,
           max_length: field.max_length,
-          pattern: field.pattern,
           validation_rules: field.validation_rules,
           options: field.options?.map((option, index) => ({
             id: option.id,

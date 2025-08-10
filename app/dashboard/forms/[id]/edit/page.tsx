@@ -18,6 +18,7 @@ import type { DroppableProvided } from "@hello-pangea/dnd"
 import { DragDropContext, Droppable } from "@hello-pangea/dnd"
 import { format } from "date-fns"
 import { CalendarIcon, Eye, Pen, Plus, X } from "lucide-react"
+import Image from "next/image"
 import { useState } from "react"
 
 // 權限顯示組件
@@ -419,7 +420,7 @@ function FormEditContent() {
                               sections={sections}
                               isFocused={focusedFieldId === field.tempId}
                               onFocus={() => setFocusedFieldId(field.tempId)}
-                              onUpdate={(updates) => updateField(field.tempId, updates)}
+                    onUpdate={(updates) => updateField(field.tempId, updates)}
                               onRemove={() => removeField(field.tempId)}
                             />
                           ))}
@@ -507,6 +508,11 @@ function FormEditContent() {
                     </Label>
                     {field.help_text && (
                       <p className="text-base text-muted-foreground">{field.help_text}</p>
+                    )}
+                    {field.help_image_url && (
+                      <div>
+                        <Image src={field.help_image_url} alt="說明圖片" width={800} height={450} className="h-auto max-h-56 w-auto rounded border" unoptimized />
+                      </div>
                     )}
                     
                     {/* 根據欄位類型渲染預覽 */}

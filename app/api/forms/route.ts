@@ -142,12 +142,10 @@ export async function POST(request: NextRequest) {
             is_active: field.is_active !== false,
             placeholder: field.placeholder,
             help_text: field.help_text,
+            help_image_url: field.help_image_url,
             validation_rules: field.validation_rules,
-            conditional_logic: field.conditional_logic,
-            default_value: field.default_value,
             min_length: field.min_length,
             max_length: field.max_length,
-            pattern: field.pattern,
             student_field_mapping: field.student_field_mapping,
             auto_populate_from: field.auto_populate_from,
           }));

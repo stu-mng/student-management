@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import type { DateValidationRules, EmailValidationRules, FormFieldValidationRules, NumberValidationRules } from "@/types"
 import { X } from "lucide-react"
+import Image from "next/image"
 import { useMemo, useState } from "react"
 
 // 台灣身分證字號驗證函數
@@ -161,7 +162,7 @@ function GridComponent({ field, value, onChange, hasError = false, mode }: GridC
 }
 
 export function FormFieldComponent({ field, value, onChange, hasError = false }: FormFieldComponentProps) {
-  const fieldValue = value || field.default_value || ''
+  const fieldValue = value || ''
   const errorClass = hasError ? 'border-red-500 focus:border-red-500' : ''
   const [multiSelectOpen, setMultiSelectOpen] = useState(false)
 
@@ -496,6 +497,12 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
         
         {field.help_text && (
           <p className="text-base text-muted-foreground whitespace-pre-wrap">{field.help_text}</p>
+        )}
+
+        {field.help_image_url && (
+          <div>
+            <Image src={field.help_image_url} alt="說明圖片" width={800} height={450} className="h-auto max-h-56 w-auto rounded border" unoptimized />
+          </div>
         )}
         
         {hasError && (

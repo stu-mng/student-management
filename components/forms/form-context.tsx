@@ -33,10 +33,9 @@ export interface FormFieldWithId {
   is_active: boolean
   placeholder?: string
   help_text?: string
-  default_value?: string
+  help_image_url?: string
   min_length?: number
   max_length?: number
-  pattern?: string
   validation_rules?: FormFieldValidationRules
   options?: FormFieldOptionWithId[]
   grid_options?: {
@@ -285,10 +284,10 @@ export function FormProvider({ children }: FormProviderProps) {
             is_active: field.is_active !== false,
             placeholder: field.placeholder || '',
             help_text: field.help_text || '',
-            default_value: field.default_value || '',
+             help_image_url: field.help_image_url || '',
             min_length: field.min_length || undefined,
             max_length: field.max_length || undefined,
-            pattern: field.pattern || '',
+            
             options: field.form_field_options?.map((option: FormFieldOption) => ({
               tempId: `existing_option_${option.id}`,
               id: option.id,
@@ -338,10 +337,8 @@ export function FormProvider({ children }: FormProviderProps) {
             is_active: field.is_active,
             placeholder: field.placeholder,
             help_text: field.help_text,
-            default_value: field.default_value,
             min_length: field.min_length,
             max_length: field.max_length,
-            pattern: field.pattern,
             validation_rules: field.validation_rules,
             options: field.form_field_options?.map((option, index) => ({
               option_value: option.option_value,
@@ -373,7 +370,7 @@ export function FormProvider({ children }: FormProviderProps) {
         description: section.description,
         order: section.order
       })),
-      fields: fields.map(field => ({
+        fields: fields.map(field => ({
         form_section_id: field.form_section_id,
         field_name: field.field_name,
         field_label: field.field_label,
@@ -383,10 +380,9 @@ export function FormProvider({ children }: FormProviderProps) {
         is_active: field.is_active,
         placeholder: field.placeholder,
         help_text: field.help_text,
-        default_value: field.default_value,
+          help_image_url: field.help_image_url,
         min_length: field.min_length,
         max_length: field.max_length,
-        pattern: field.pattern,
         options: field.options?.map((option, index) => ({
           option_value: option.option_value,
           option_label: option.option_label,
@@ -746,10 +742,9 @@ export function FormProvider({ children }: FormProviderProps) {
           is_active: field.is_active,
           placeholder: field.placeholder,
           help_text: field.help_text,
-          default_value: field.default_value,
+          help_image_url: field.help_image_url,
           min_length: field.min_length,
           max_length: field.max_length,
-          pattern: field.pattern,
             validation_rules: field.validation_rules,
           options: field.options?.map((option, index) => ({
             option_value: option.option_value,
@@ -825,10 +820,8 @@ export function FormProvider({ children }: FormProviderProps) {
           is_active: field.is_active,
           placeholder: field.placeholder,
           help_text: field.help_text,
-          default_value: field.default_value,
           min_length: field.min_length,
           max_length: field.max_length,
-          pattern: field.pattern,
           validation_rules: field.validation_rules,
           options: field.options?.map((option, index) => ({
             option_value: option.option_value,

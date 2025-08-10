@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import Image from "next/image"
 import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FIELD_TYPES } from "../form-context"
 import { FieldOptionsEditor } from "./field-options-editor"
@@ -101,6 +102,29 @@ export function FieldBasicEditor({ field, sections, onUpdate }: FieldBasicEditor
           placeholder="輸入說明文字"
           rows={2}
         />
+      </div>
+
+      <div>
+        <Label htmlFor={`help-image-${field.tempId}`}>說明圖片網址</Label>
+        <Input
+          id={`help-image-${field.tempId}`}
+          value={field.help_image_url || ''}
+          onChange={(e) => onUpdate({ help_image_url: e.target.value })}
+          placeholder="輸入圖片 URL (僅支援網址)"
+          type="url"
+        />
+        {field.help_image_url && (
+          <div className="mt-2">
+            <Image
+              src={field.help_image_url}
+              alt="說明圖片預覽"
+              width={640}
+              height={400}
+              className="h-auto max-h-40 w-auto rounded border"
+              unoptimized
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">

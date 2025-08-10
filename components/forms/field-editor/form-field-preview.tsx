@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import type { FormFieldWithId } from "../form-context"
 
 interface FormFieldPreviewProps {
@@ -41,6 +42,12 @@ export function FormFieldPreview({ field }: FormFieldPreviewProps) {
       {field.help_text && (
         <div className="text-xs text-muted-foreground">
           說明文字: {field.help_text}
+        </div>
+      )}
+
+      {field.help_image_url && (
+        <div className="pt-1">
+          <Image src={field.help_image_url} alt="說明圖片" width={640} height={320} className="h-auto max-h-32 w-auto rounded border" unoptimized />
         </div>
       )}
       

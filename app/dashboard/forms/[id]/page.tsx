@@ -4,15 +4,15 @@ import type { Form } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { FormFieldComponent, FormSectionNavigation, useFormContext } from "@/components/forms"
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -573,10 +573,8 @@ function FormEditView({
       is_active: field.is_active !== false,
       placeholder: field.placeholder || '',
       help_text: field.help_text || '',
-      default_value: field.default_value || '',
       min_length: field.min_length || undefined,
       max_length: field.max_length || undefined,
-      pattern: field.pattern || '',
       options: field.form_field_options?.map(option => ({
         tempId: `existing_option_${option.id}`,
         id: option.id,
