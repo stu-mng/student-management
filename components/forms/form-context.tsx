@@ -173,7 +173,7 @@ interface FormProviderProps {
 }
 
 export function FormProvider({ children }: FormProviderProps) {
-  const { user } = useAuth()
+  const { user, isPreviewing, previewRole } = useAuth()
   const params = useParams()
   const pathname = usePathname()
   const formId = params.id as string
@@ -403,7 +403,11 @@ export function FormProvider({ children }: FormProviderProps) {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/forms/${formId}`)
+      const headers: HeadersInit = {}
+      if (isPreviewing && previewRole?.name) {
+        headers['x-preview-role'] = previewRole.name
+      }
+      const response = await fetch(`/api/forms/${formId}`, { headers })
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -428,7 +432,7 @@ export function FormProvider({ children }: FormProviderProps) {
     } finally {
       setLoading(false)
     }
-  }, [formId, pathname, initializeEditState])
+  }, [formId, pathname, initializeEditState, isPreviewing, previewRole?.name])
 
   const refetchForm = async () => {
     // 保存當前初始化狀態，避免重新初始化編輯狀態

@@ -12,7 +12,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 export default function FormsManagePage() {
-  const { user } = useAuth()
+  const { user, isPreviewing, previewRole } = useAuth()
   const [forms, setForms] = useState<Form[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +21,11 @@ export default function FormsManagePage() {
   useEffect(() => {
     const fetchForms = async () => {
       try {
-        const response = await fetch('/api/forms')
+        const headers: HeadersInit = {}
+        if (isPreviewing && previewRole?.name) {
+          headers['x-preview-role'] = previewRole.name
+        }
+        const response = await fetch('/api/forms', { headers })
         if (!response.ok) {
           throw new Error('Failed to fetch forms')
         }
@@ -37,7 +41,7 @@ export default function FormsManagePage() {
     if (user) {
       fetchForms()
     }
-  }, [user])
+  }, [user, isPreviewing, previewRole?.name])
 
   const handleDeleteForm = async (formId: string) => {
     const confirmed = window.confirm('您確定要刪除此表單嗎？此操作無法復原，所有相關的回應資料也會被刪除。')
@@ -63,7 +67,7 @@ export default function FormsManagePage() {
     }
   }
   
-  const handlePermissionsUpdate = (formId: string, permissions: RolePermission[]) => {
+  const handlePermissionsUpdate = (_formId: string, _permissions: RolePermission[]) => {
     // 可以在這裡更新本地狀態，或者重新載入表單列表
     // 目前先保持簡單，不做額外處理
   }

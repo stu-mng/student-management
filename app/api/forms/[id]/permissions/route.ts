@@ -1,6 +1,7 @@
-import { ErrorResponse, PermissionsUpdateRequest } from '@/app/api/types';
+import type { ErrorResponse, PermissionsUpdateRequest, Role } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function PUT(
   request: NextRequest,
@@ -36,9 +37,9 @@ export async function PUT(
     }
 
     // 只有管理員和 root 可以修改權限設定
-    const currentUserRole = (userData.role as any)?.name;
-    if (!['admin', 'root'].includes(currentUserRole)) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+    const currentUserRole = (userData.role as unknown as Role | null)?.name ?? '';
+    if (!['admin', 'root', 'class-teacher', 'manager'].includes(currentUserRole)) {
+      return NextResponse.json<ErrorResponse>({ error: '您沒有表單權限修改之權限' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -46,7 +47,7 @@ export async function PUT(
     const { permissions } = body;
 
     // 檢查表單是否存在
-    const { data: form, error: formError } = await supabase
+    const { error: formError } = await supabase
       .from('forms')
       .select('id')
       .eq('id', id)
@@ -65,7 +66,7 @@ export async function PUT(
       );
     }
 
-    // 刪除現有權限
+    // 刪除現有權限（覆蓋策略）
     const { error: deleteError } = await supabase
       .from('user_form_access')
       .delete()
@@ -78,11 +79,14 @@ export async function PUT(
         { status: 500 }
       );
     }
+    // 僅保留有效（非空）權限，"無權限" 代表不建立紀錄
+    const effectivePermissions = (permissions || []).filter(
+      (p) => p.access_type === 'read' || p.access_type === 'edit'
+    );
 
-
-    if (permissions.length > 0) {
-      // 首先獲取角色名稱對應的 role_id
-      const roleNames = permissions.map(p => p.role);
+    if (effectivePermissions.length > 0) {
+      // 取得角色名稱對應的 role_id
+      const roleNames = effectivePermissions.map((p) => p.role);
       const { data: rolesData, error: rolesError } = await supabase
         .from('roles')
         .select('id, name')
@@ -96,29 +100,34 @@ export async function PUT(
         );
       }
 
-      // 將角色名稱轉換為 role_id
-      const permissionsWithRoleId = permissions.map(p => {
-        const roleData = rolesData?.find(r => r.name === p.role);
-        if (!roleData) {
-          throw new Error(`Role not found: ${p.role}`);
+      // 將角色名稱轉換為 role_id，忽略不存在的角色
+      const permissionsWithRoleId = effectivePermissions
+        .map((p) => {
+          const roleData = rolesData?.find((r) => r.name === p.role);
+          if (!roleData) {
+            console.warn(`Skipping unknown role: ${p.role}`);
+            return null;
+          }
+          return {
+            form_id: id,
+            role_id: roleData.id,
+            access_type: p.access_type,
+          };
+        })
+        .filter(Boolean) as Array<{ form_id: string; role_id: number; access_type: 'read' | 'edit' }>;
+
+      if (permissionsWithRoleId.length > 0) {
+        const { error: insertError } = await supabase
+          .from('user_form_access')
+          .insert(permissionsWithRoleId);
+
+        if (insertError) {
+          console.error('Error inserting new permissions:', insertError);
+          return NextResponse.json<ErrorResponse>(
+            { error: 'Failed to update permissions' },
+            { status: 500 }
+          );
         }
-        return {
-          form_id: id,
-          role_id: roleData.id,
-          access_type: p.access_type,
-        };
-      });
-
-      const { error: insertError } = await supabase
-        .from('user_form_access')
-        .insert(permissionsWithRoleId);
-
-      if (insertError) {
-        console.error('Error inserting new permissions:', insertError);
-        return NextResponse.json<ErrorResponse>(
-          { error: 'Failed to update permissions' },
-          { status: 500 }
-        );
       }
     }
 

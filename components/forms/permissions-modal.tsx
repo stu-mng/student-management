@@ -121,7 +121,24 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
       })
 
       if (!response.ok) {
-        throw new Error('Failed to save permissions')
+        let message = '保存權限設定失敗'
+        try {
+          const data = await response.json()
+          const serverMsg = data?.error || data?.message
+          if (serverMsg) message = serverMsg
+        } catch {
+          try {
+            const text = await response.text()
+            if (text) message = text
+          } catch {}
+        }
+        if (response.status === 401) {
+          message = '請先登入後再試'
+        } else if (response.status === 403 && message === '保存權限設定失敗') {
+          message = '您沒有權限進行此操作'
+        }
+        toast.error(message)
+        return
       }
 
       toast.success('權限設定已保存')
@@ -129,7 +146,8 @@ export function PermissionsModal({ form, onPermissionsUpdate, roles = DEFAULT_RO
       setOpen(false)
       // 不再需要重新載入頁面，使用回調函數來更新資料
     } catch (err) {
-      toast.error('保存權限設定時發生錯誤')
+      const message = err instanceof Error ? err.message : '保存權限設定時發生錯誤'
+      toast.error(message)
       console.error('Error saving permissions:', err)
     } finally {
       setSaving(false)

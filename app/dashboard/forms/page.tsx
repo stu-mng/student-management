@@ -1,19 +1,19 @@
 "use client"
 
+import type { Form } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
+import { FormCard } from "@/components/forms"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText } from "lucide-react"
 import { useEffect, useState } from "react"
-import type { Form } from "@/app/api/types"
-import { FormCard } from "@/components/forms"
 
 interface FormWithSubmitStatus extends Form {
   submitted: boolean
 }
 
 export default function FormsPage() {
-  const { user } = useAuth()
+  const { user, isPreviewing, previewRole } = useAuth()
   const [forms, setForms] = useState<FormWithSubmitStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +21,11 @@ export default function FormsPage() {
   useEffect(() => {
     const fetchForms = async () => {
       try {
-        const response = await fetch('/api/forms')
+        const headers: HeadersInit = {}
+        if (isPreviewing && previewRole?.name) {
+          headers['x-preview-role'] = previewRole.name
+        }
+        const response = await fetch('/api/forms', { headers })
         if (!response.ok) {
           throw new Error('Failed to fetch forms')
         }
@@ -37,7 +41,7 @@ export default function FormsPage() {
     if (user) {
       fetchForms()
     }
-  }, [user])
+  }, [user, isPreviewing, previewRole?.name])
 
   if (loading) {
     return (

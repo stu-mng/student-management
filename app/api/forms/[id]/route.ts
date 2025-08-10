@@ -12,6 +12,7 @@ import type {
   SuccessResponse
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -52,6 +53,32 @@ export async function GET(
     }
 
     const { id } = await params;
+    const previewRoleName = request.headers.get('x-preview-role') || new URL(request.url).searchParams.get('preview_role');
+    let effectiveRole: { id: number | null; name: string; order: number } | null = null;
+    const currentRole = userData.role as unknown as Role | null;
+
+    if (previewRoleName) {
+      const { data: previewRoleRow, error: previewErr } = await supabase
+        .from('roles')
+        .select('id, name, order')
+        .eq('name', previewRoleName)
+        .single();
+      if (previewErr || !previewRoleRow) {
+        return NextResponse.json<ErrorResponse>({ error: 'Invalid preview role' }, { status: 400 });
+      }
+      if (!currentRole) {
+        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+      }
+      const currentOrder = currentRole.order ?? getRoleOrder({ name: currentRole.name } as { name: string; order?: number });
+      const previewOrder = previewRoleRow.order ?? getRoleOrder({ name: previewRoleRow.name } as { name: string; order?: number });
+      if (!(currentOrder < previewOrder)) {
+        return NextResponse.json<ErrorResponse>({ error: 'Preview role not allowed' }, { status: 403 });
+      }
+      effectiveRole = { id: previewRoleRow.id, name: previewRoleRow.name, order: previewOrder };
+    }
+
+    const effectiveRoleName = (effectiveRole?.name ?? ((userData.role as unknown as Role)?.name || '')) as string;
+    const effectiveRoleId = (effectiveRole?.id ?? ((userData.role as unknown as Role)?.id ?? null)) as number | null;
 
     // 獲取表單基本資訊
     const { data: form, error: formError } = await supabase
@@ -84,25 +111,24 @@ export async function GET(
 
     // 檢查用戶的存取權限
     let accessType: 'read' | 'edit' | null = null;
-    const userRole = userData.role as unknown as Role;
-    const currentUserRole = userRole?.name;
-    const currentUserRoleId = userRole?.id;
 
-    // 1. 如果是表單創建者，給予編輯權限
-    if (form.created_by === user.id) {
+    // 1. 若預覽模式，忽略創建者捷徑，避免權限提升
+    if (!previewRoleName) {
+      if (form.created_by === user.id) {
+        accessType = 'edit';
+      }
+    }
+    // 2. 如果有效角色為 admin 或 root 或 class-teacher，給予編輯權限
+    if (!accessType && ['admin', 'root', 'class-teacher'].includes(effectiveRoleName)) {
       accessType = 'edit';
     }
-    // 2. 如果是 admin 或 root，給予編輯權限
-    else if (['admin', 'root', 'class-teacher'].includes(currentUserRole)) {
-      accessType = 'edit';
-    }
-    // 3. 檢查 user_form_access 表
-    else if (currentUserRoleId) {
+    // 3. 檢查 user_form_access 表（依有效角色）
+    else if (!accessType && effectiveRoleId) {
       const { data: userAccess, error: accessError } = await supabase
         .from('user_form_access')
         .select('access_type')
         .eq('form_id', form.id)
-        .eq('role_id', currentUserRoleId)
+        .eq('role_id', effectiveRoleId)
         .single();
 
       if (!accessError && userAccess) {

@@ -7,6 +7,7 @@ import type {
   RolePermission
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -342,6 +343,43 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const previewRoleName = request.headers.get('x-preview-role') || searchParams.get('preview_role');
+    let effectiveRole: { id: number | null; name: string; order: number } | null = null;
+    const currentRole = userData.role as unknown as Role | null;
+
+    if (previewRoleName) {
+      // 讀取預覽角色並驗證階級
+      const { data: previewRoleRow, error: previewErr } = await supabase
+        .from('roles')
+        .select('id, name, order')
+        .eq('name', previewRoleName)
+        .single();
+
+      if (previewErr || !previewRoleRow) {
+        return NextResponse.json<ErrorResponse>({ error: 'Invalid preview role' }, { status: 400 });
+      }
+
+      if (!currentRole) {
+        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
+      }
+
+      const currentOrder = currentRole.order ?? getRoleOrder({ name: currentRole.name } as { name: string; order?: number });
+      const previewOrder = previewRoleRow.order ?? getRoleOrder({ name: previewRoleRow.name } as { name: string; order?: number });
+
+      // 僅允許預覽比自身低的角色（數字越大權限越低）
+      if (!(currentOrder < previewOrder)) {
+        return NextResponse.json<ErrorResponse>({ error: 'Preview role not allowed' }, { status: 403 });
+      }
+
+      effectiveRole = {
+        id: previewRoleRow.id,
+        name: previewRoleRow.name,
+        order: previewOrder,
+      };
+    }
+
+    const effectiveRoleName = (effectiveRole?.name ?? (currentRole?.name || '')) as string;
+    const effectiveRoleId = (effectiveRole?.id ?? (currentRole?.id ?? null)) as number | null;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
@@ -359,16 +397,13 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' });
 
-    // 根據用戶角色過濾表單
-    const currentUserRole = (userData.role as unknown as Role)?.name;
-    const currentUserRoleId = (userData.role as unknown as Role)?.id;
-    
-    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
+    // 根據有效角色（可能是預覽）過濾表單
+    if (!['admin', 'root', 'manager'].includes(effectiveRoleName)) {
       // 一般用戶需要檢查權限設定
       const { data: userAccessForms } = await supabase
         .from('user_form_access')
         .select('form_id')
-        .eq('role_id', currentUserRoleId)
+        .eq('role_id', effectiveRoleId)
         .not('access_type', 'is', null);
 
       const accessibleFormIds = userAccessForms?.map(access => access.form_id) || [];
@@ -413,22 +448,25 @@ export async function GET(request: NextRequest) {
         let submitted = false;
         let accessType: 'read' | 'edit' | null = null;
 
-        // 檢查用戶的存取權限
+        // 檢查用戶的存取權限（依有效角色判斷）
         // 1. 如果是表單創建者，給予編輯權限
-        if (form.created_by === user.id) {
-          accessType = 'edit';
+        // 注意：在預覽模式下，不因創建者身份提升權限，僅依角色視角判斷
+        if (!previewRoleName) {
+          if (form.created_by === user.id) {
+            accessType = 'edit';
+          }
         }
-        // 2. 如果是 admin 或 root，給予編輯權限
-        else if (['admin', 'root'].includes(currentUserRole)) {
+        // 2. 如果有效角色為 admin 或 root，給予編輯權限
+        if (!accessType && ['admin', 'root'].includes(effectiveRoleName)) {
           accessType = 'edit';
         }
         // 3. 檢查 user_form_access 表
-        else if (currentUserRoleId) {
+        else if (effectiveRoleId) {
           const { data: userAccess, error: accessError } = await supabase
             .from('user_form_access')
             .select('access_type')
             .eq('form_id', form.id)
-            .eq('role_id', currentUserRoleId)
+            .eq('role_id', effectiveRoleId)
             .single();
 
           if (!accessError && userAccess) {
