@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { permissionGroups, roleDescriptions, roleHeaders } from "@/lib/permissions-content"
 import { getRoleBgColor, getRoleTextColor } from "@/lib/utils"
-import { BookOpen, Bookmark, History, Info, Shield, User, UserCog, Users } from "lucide-react"
+import { AlertTriangle, BookOpen, Bookmark, CheckCircle, Clock, FileText, History, Info, Layers, ListChecks, Shield, User, UserCog, Users } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
 interface ManualTabsProps {
-  user: any
+  user: { role?: string } | null
   isAdmin: boolean
 }
 
@@ -53,6 +53,13 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
           className="rounded-sm px-3 py-1.5 text-sm"
         >
           <Shield className="h-4 w-4 mr-1" /> 權限說明
+        </Button>
+        <Button 
+          variant={activeTab === "forms" ? "default" : "ghost"} 
+          onClick={() => handleTabChange("forms")}
+          className="rounded-sm px-3 py-1.5 text-sm"
+        >
+          <FileText className="h-4 w-4 mr-1" /> 表單功能
         </Button>
         <Button 
           variant={activeTab === "teacher" ? "default" : "ghost"} 
@@ -241,6 +248,146 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 表單功能 */}
+      {activeTab === "forms" && (
+        <div className="space-y-6">
+          <Card className="border">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="h-6 w-6 text-primary" />
+                <CardTitle>表單功能說明</CardTitle>
+              </div>
+              <CardDescription>表單的填寫流程、段落導覽、驗證規則與提交/編輯行為</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="mb-2">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground mr-2 text-sm">1</span>
+                  填寫與提交流程
+                </h3>
+                <div className="ml-8 space-y-2 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    表單資訊側欄會顯示建立時間、截止時間與表單設定（是否必填/是否允許多次提交、表單類型與狀態）。
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-primary" />
+                    若表單有多個段落，可透過段落導覽在段落間切換，底部提供「上一步 / 下一步」按鈕與段落進度。
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-primary" />
+                    欄位具有即時驗證與提交前驗證；未通過的欄位會顯示錯誤訊息，需修正後才能提交。
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    若超過截止時間，將顯示「表單已截止」，無法填寫、編輯或再次提交。
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    已提交狀態下，若允許多次提交，可再新增回應；若僅允許一次提交，可直接編輯既有回應（未逾期）。
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-2">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground mr-2 text-sm">2</span>
+                  段落與跳題邏輯
+                </h3>
+                <div className="ml-8 space-y-2 text-sm text-muted-foreground">
+                  <p>表單支援多段落編排，每段落可包含多個欄位與說明文字。</p>
+                  <p>單選與下拉選項可設定「跳題」行為，依使用者選擇自動跳轉至指定段落，加速填寫流程。</p>
+                  <p>如該欄位為必填但尚未作答，將不會進行跳轉，以避免遺漏必要資訊。</p>
+                </div>
+              </div>
+
+              <div className="mb-2">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground mr-2 text-sm">3</span>
+                  欄位驗證與提示
+                </h3>
+                <div className="ml-8 space-y-2 text-sm text-muted-foreground">
+                  <p>系統內建多種驗證規則，提交前會針對當前段落與整體資料再次檢查：</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>電子郵件：格式檢查，並可限制允許的網域。</li>
+                    <li>身分證字號：依字首對應數字與加權計算驗證。</li>
+                    <li>電話：格式與長度檢查；行動電話支援 09xx-xxx-xxx 格式。</li>
+                    <li>數字：可設定必須為整數、最小值/最大值。</li>
+                    <li>日期：可設定不可早於今日/不可晚於今日，或指定最小/最大日期。</li>
+                    <li>多選/單選/下拉：支援選項管理與跳題。</li>
+                    <li>方格題（單選/多選）：以矩陣形式呈現，儲存時會妥善序列化。</li>
+                  </ul>
+                  <p>欄位可設定「必填」；未填寫時會以紅色提示文字標示需補齊。</p>
+                </div>
+              </div>
+
+              <div className="mb-2">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground mr-2 text-sm">4</span>
+                  提交、再次填寫與編輯
+                </h3>
+                <div className="ml-8 space-y-2 text-sm text-muted-foreground">
+                  <p>提交成功後會顯示成功訊息；若允許多次提交，可在未逾期時建立新回應。</p>
+                  <p>若僅允許一次提交，未逾期時可直接「編輯回覆」更新既有回應；逾期則無法編輯。</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Layers className="h-6 w-6 text-primary" />
+                <CardTitle>欄位類型與規則</CardTitle>
+              </div>
+              <CardDescription>常見欄位與可用設定</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <div>
+                <p className="font-medium text-foreground mb-1">文字類</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>短文字/長文字：可搭配 placeholder 與說明文字。</li>
+                  <li>電子郵件、電話、身分證字號：套用對應格式驗證。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">數值與日期</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>數字：支援整數限制、最小值/最大值。</li>
+                  <li>日期：支援不可過去/不可未來、最小日期/最大日期。</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">選擇題</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>單選、下拉、核取方塊（多選）：可設定選項順序與狀態，並支援跳題。</li>
+                  <li>單選方格 / 核取方塊格：以矩陣方式呈現多維度選擇。</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-primary" />
+                <CardTitle>權限與狀態</CardTitle>
+              </div>
+              <CardDescription>表單狀態、是否必填、是否允許多次提交與權限預覽</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <ul className="list-disc list-inside space-y-1">
+                <li>狀態：草稿/已發布/已封存，僅「已發布」可供填寫。</li>
+                <li>是否必填：標記為必填的表單可能會在首頁或清單中特別標示。</li>
+                <li>允許多次提交：開啟後可重覆提交，提交成功仍可再新增回應。</li>
+                <li>截止時間：逾期後會鎖定編輯與提交。</li>
+                <li>權限預覽：建立或分享前可模擬不同角色視角（如大學伴/管理員）。</li>
+              </ul>
             </CardContent>
           </Card>
         </div>

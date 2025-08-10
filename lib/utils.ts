@@ -15,7 +15,7 @@ export const getRoleBgColor = (role: string) => {
       case 'manager':
         return 'bg-yellow-100';
       case 'class-teacher':
-        return 'bg-teal-100';
+        return 'bg-emerald-100';
       case 'candidate':
         return 'bg-gray-100';
       case 'new-registrant':
