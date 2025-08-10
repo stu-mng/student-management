@@ -1,6 +1,6 @@
 "use client"
 
-import type { User } from "@/app/api/types"
+import type { Form, User } from "@/app/api/types"
 import { useAuth } from "@/components/auth-provider"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
@@ -15,12 +15,10 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-type FormItem = { id: string; title: string; status: string }
-
 export default function AdminNotificationsPage() {
   const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
-  const [forms, setForms] = useState<FormItem[]>([])
+  const [forms, setForms] = useState<Form[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -36,14 +34,15 @@ export default function AdminNotificationsPage() {
         setLoading(true)
         const [usersRes, formsRes] = await Promise.all([
           fetch("/api/users"),
-          fetch("/api/forms?status=published&limit=100"),
+          fetch("/api/forms?status=active"),
         ])
         if (!usersRes.ok) throw new Error("Failed to fetch users")
         if (!formsRes.ok) throw new Error("Failed to fetch forms")
         const usersJson: { data: User[] } = await usersRes.json()
-        const formsJson: { data: { id: string; title: string; status: string }[] } = await formsRes.json()
+        const formsJson: { data: Form[] } = await formsRes.json()
         setUsers(usersJson.data || [])
-        setForms((formsJson.data || []).map((f) => ({ id: f.id, title: f.title, status: f.status })))
+        setForms(formsJson.data || [])
+        console.log(formsJson.data)
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "載入資料失敗")
       } finally {
@@ -61,8 +60,8 @@ export default function AdminNotificationsPage() {
     const picked = forms.find(f => f.id === formId)
     if (!picked) return
     const link = `${computedDomain}/dashboard/forms/${picked.id}`
-    setTitle(`提醒填寫：${picked.title}`)
-    setBody(`${picked.title} 填寫提醒：\n\n請點擊以下連結進入填寫：\n${link}\n\n如已完成，請忽略此郵件。`)
+    setTitle(`[提醒填寫] ${picked.title}`)
+    setBody(`${picked.title} 填寫提醒：\n\n請點擊以下連結進入填寫：\n${link}\n\n如果已經填寫請忽略此信件。`)
   }
 
   const toggleOne = (id: string, checked: boolean) => {
@@ -171,7 +170,7 @@ export default function AdminNotificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">不使用模板</SelectItem>
-                    {forms.filter(f => f.status === 'published').map(f => (
+                    {forms.map(f => (
                       <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>
                     ))}
                   </SelectContent>
@@ -242,7 +241,7 @@ function buildPreviewHtml({ username, title, body, domain }: { username: string;
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;')
   const safeTitle = esc(title || "(無標題)")
   const safeUsername = esc(username || "")
-  const safeBody = (body || "").split('\n').map((line) => `<p style="margin:0 0 12px 0; line-height:1.6;">${esc(line)}</p>`).join('')
+  const safeBody = (body || "").split('\n').map((line) => `<p style="margin:0 0 12px 0; line-height:1.6;">${linkify(line, esc)}</p>`).join('')
   const domainBlock = domain ? `<div style="margin-top: 6px;"><a href="${domain}" target="_blank" rel="noreferrer" style="color:#2563eb; text-decoration:none;">${esc(domain.replace(/^https?:\/\//, ''))}</a></div>` : ''
   return `<!DOCTYPE html>
   <html lang="zh-Hant"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${safeTitle}</title></head>
@@ -263,6 +262,23 @@ function getComputedDomain(): string {
   const envDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN as string | undefined) || ""
   if (typeof window === "undefined") return envDomain
   return envDomain || window.location.origin
+}
+
+function linkify(input: string, esc: (s: string) => string): string {
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+  let result = ''
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = urlRegex.exec(input)) !== null) {
+    const [url] = match
+    const start = match.index
+    result += esc(input.slice(lastIndex, start))
+    const safeUrl = esc(url)
+    result += `<a href="${safeUrl}" target="_blank" rel="noreferrer" style="color:#2563eb; text-decoration:none;">${safeUrl}</a>`
+    lastIndex = start + url.length
+  }
+  result += esc(input.slice(lastIndex))
+  return result
 }
 
 

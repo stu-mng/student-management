@@ -16,7 +16,7 @@ export function renderMinimalEmail({ username, title, body }: MinimalEmailProps)
   const safeUsername = escapeHtml(username)
   const safeBody = body
     .split('\n')
-    .map((line) => `<p style="margin:0 0 12px 0; line-height:1.6;">${escapeHtml(line)}</p>`) // preserve basic paragraphs
+    .map((line) => `<p style="margin:0 0 12px 0; line-height:1.6;">${linkify(line)}</p>`) // preserve basic paragraphs and auto-link URLs
     .join('')
   const domainUrl = normalizeDomainUrl(process.env.NEXT_PUBLIC_APP_DOMAIN)
 
@@ -67,6 +67,26 @@ function escapeHtml(input: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
+}
+
+// Convert URLs in plain text into anchor tags while escaping non-link parts
+function linkify(input: string): string {
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+  let result = ''
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = urlRegex.exec(input)) !== null) {
+    const [url] = match
+    const start = match.index
+    // Escape text before the URL
+    result += escapeHtml(input.slice(lastIndex, start))
+    const safeUrl = escapeHtml(url)
+    result += `<a href="${safeUrl}" target="_blank" rel="noreferrer" style="color:#2563eb; text-decoration:none;">${safeUrl}</a>`
+    lastIndex = start + url.length
+  }
+  // Escape the remaining text
+  result += escapeHtml(input.slice(lastIndex))
+  return result
 }
 
 function normalizeDomainUrl(input?: string): string | null {

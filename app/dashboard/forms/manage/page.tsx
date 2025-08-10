@@ -25,8 +25,8 @@ export default function FormsManagePage() {
         if (!response.ok) {
           throw new Error('Failed to fetch forms')
         }
-        const data = await response.json()
-        setForms(data.data || [])
+        const res = await response.json()
+        setForms(res.data || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
