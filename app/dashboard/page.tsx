@@ -4,7 +4,18 @@ import { useAuth } from "@/components/auth-provider"
 import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { BarChart3, BookOpen, FileSpreadsheet, FileText, Link2, Mail, Settings, UserCog, Users } from "lucide-react"
+import {
+    BarChart3,
+    BookOpen,
+    FileSpreadsheet,
+    FileText,
+    FolderOpen,
+    Link2,
+    Mail,
+    Settings,
+    UserCog,
+    Users
+} from "lucide-react"
 import Link from "next/link"
 
 // Create a styled title component for feature cards
@@ -71,6 +82,13 @@ export default function DashboardPage() {
       description: "創建、編輯和管理系統表單",
       icon: <Settings className="h-8 w-8 text-indigo-500" />,
       href: "/dashboard/forms/manage",
+      allowedRoles: ["admin", "root", "class-teacher", "manager"]
+    },
+    {
+      title: "檔案總管",
+      description: "瀏覽、分類、下載和預覽 Google Drive 檔案",
+      icon: <FolderOpen className="h-8 w-8 text-teal-500" />,
+      href: "/dashboard/drive",
       allowedRoles: ["admin", "root", "class-teacher", "manager"]
     },
     {

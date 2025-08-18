@@ -1,4 +1,5 @@
-import { BarChart3, Eye, FileSpreadsheet, FileText, LucideIcon, Settings, Shield, UserCheck, Users } from "lucide-react";
+import type { LucideIcon} from "lucide-react";
+import { BarChart3, Eye, FileSpreadsheet, FileText, Settings, Shield, UserCheck, Users } from "lucide-react";
 
 interface Feature {
   title: string;

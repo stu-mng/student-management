@@ -1,5 +1,6 @@
 import { createClient } from '@/database/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * POST /api/users/activity

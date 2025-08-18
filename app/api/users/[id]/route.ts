@@ -1,7 +1,8 @@
-import { ErrorResponse, SuccessResponse, User, UserUpdateRequest } from '@/app/api/types';
+import type { ErrorResponse, SuccessResponse, User, UserUpdateRequest } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { hasEqualOrHigherPermission, hasUserManagePermission } from '@/lib/utils';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET /api/users/{id}
@@ -49,7 +50,7 @@ export async function GET(
     }
 
     // 獲取用戶資料，包含 role 資料
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .select(`
         *,

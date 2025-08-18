@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import React, { useEffect, useState } from "react"
 
 interface ManualTabsProps {
-  user: { role?: string } | null
+  user: { role?: { name: string } } | null
   isAdmin: boolean
 }
 
@@ -77,7 +77,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
             <UserCog className="h-4 w-4 mr-1" /> 管理員指南
           </Button>
         )}
-        {user?.role === "root" && (
+        {user?.role?.name === "root" && (
           <Button 
             variant={activeTab === "root" ? "default" : "ghost"} 
             onClick={() => handleTabChange("root")}

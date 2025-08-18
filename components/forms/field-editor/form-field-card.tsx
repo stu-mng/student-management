@@ -64,7 +64,7 @@ export function FormFieldCard({
     }
   }, [isFocused, field.tempId])
 
-  const CardWrapper = ({ children }: { children: React.ReactNode }) => {
+  function CardWrapper({ children }: { children: React.ReactNode }) {
     if (!isDraggable) {
       return (
           <Card 
