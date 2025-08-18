@@ -6,12 +6,12 @@ import { DeleteOperations } from './delete-operations';
 import { FileOperations } from './file-operations';
 import { FolderOperations } from './folder-operations';
 import type {
-    IContentOperations,
-    IDeleteOperations,
-    IFileOperations,
-    IFolderOperations,
-    IUploadOperations,
-    IUtilityOperations
+  IContentOperations,
+  IDeleteOperations,
+  IFileOperations,
+  IFolderOperations,
+  IUploadOperations,
+  IUtilityOperations
 } from './types';
 import { UploadOperations } from './upload-operations';
 import { UtilityOperations } from './utility-operations';
@@ -84,6 +84,11 @@ export class GoogleDriveService implements
   async searchFiles(query: string, pageSize?: number): Promise<DriveFile[]> {
     await this.ensureInitialized();
     return this.fileOperations.searchFiles(query, pageSize);
+  }
+
+  async moveFile(fileId: string, newParentId: string): Promise<boolean> {
+    await this.ensureInitialized();
+    return this.fileOperations.moveFile(fileId, newParentId);
   }
 
   // Content Operations

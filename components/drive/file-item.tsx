@@ -14,6 +14,7 @@ import {
   Video
 } from "lucide-react"
 import Image from "next/image"
+import { useDragDrop } from "./drag-drop-context"
 import type { DriveFile } from "./types"
 import { formatDate, formatFileSize, getFileTypeLabel } from "./utils"
 
@@ -40,6 +41,25 @@ export function FileItem({
   onDownload,
   onEnterFolder
 }: FileItemProps) {
+  const { setDraggedItem, setIsDragging, hasContext } = useDragDrop();
+
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!hasContext) return;
+    
+    e.stopPropagation();
+    setDraggedItem(file);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', file.id);
+  };
+
+  const handleDragEnd = () => {
+    if (!hasContext) return;
+    
+    setDraggedItem(null);
+    setIsDragging(false);
+  };
+
   const renderFileIcon = () => {
     if (file.mimeType.includes('folder')) return <Folder className="h-6 w-6 text-blue-500" />
     if (file.mimeType.includes('document')) return <FileText className="h-6 w-6 text-green-500" />
@@ -108,7 +128,7 @@ export function FileItem({
       return (
         <div className="w-full h-full flex items-center justify-center bg-green-50">
           <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-            <FileSpreadsheet className="h-10 w-10 text-green-600" />
+            <FileText className="h-10 w-10 text-green-600" />
           </div>
           <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
             SHEET
@@ -146,6 +166,9 @@ export function FileItem({
         )}
         onClick={() => onClick(file)}
         onContextMenu={(e) => onContextMenu(e, file)}
+        draggable={hasContext}
+        onDragStart={hasContext ? handleDragStart : undefined}
+        onDragEnd={hasContext ? handleDragEnd : undefined}
       >
         {/* 選擇框 */}
         <div className="col-span-1 flex items-center">
@@ -252,6 +275,9 @@ export function FileItem({
       )}
       onClick={() => onClick(file)}
       onContextMenu={(e) => onContextMenu(e, file)}
+      draggable={hasContext}
+      onDragStart={hasContext ? handleDragStart : undefined}
+      onDragEnd={hasContext ? handleDragEnd : undefined}
     >
       {/* 選擇框 */}
       <div className="absolute top-2 left-2 z-20">

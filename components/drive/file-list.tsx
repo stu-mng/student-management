@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { DroppableFolder } from "./droppable-folder"
 import { FileItem } from "./file-item"
 import type { DriveFile, SortDirection, SortField, ViewMode } from "./types"
 import { sortFiles } from "./utils"
@@ -39,6 +40,34 @@ export function FileList({
   onSort
 }: FileListProps) {
   const sortedFiles = sortFiles(files, sortField, sortDirection)
+
+  const renderFileItem = (file: DriveFile) => {
+    const fileItem = (
+      <FileItem
+        key={file.id}
+        file={file}
+        viewMode={viewMode}
+        isSelected={selectedFiles.has(file.id)}
+        onSelect={onSelect}
+        onClick={onFileClick}
+        onContextMenu={onFileContextMenu}
+        onPreview={onPreview}
+        onDownload={onDownload}
+        onEnterFolder={onEnterFolder}
+      />
+    );
+
+    // Wrap folder items with DroppableFolder for drag and drop
+    if (file.mimeType.includes('folder')) {
+      return (
+        <DroppableFolder key={file.id} folder={file}>
+          {fileItem}
+        </DroppableFolder>
+      );
+    }
+
+    return fileItem;
+  };
 
   if (viewMode === 'list') {
     return (
@@ -93,20 +122,7 @@ export function FileList({
         </div>
 
         {/* 檔案列表項目 */}
-        {sortedFiles.map((file) => (
-          <FileItem
-            key={file.id}
-            file={file}
-            viewMode={viewMode}
-            isSelected={selectedFiles.has(file.id)}
-            onSelect={onSelect}
-            onClick={onFileClick}
-            onContextMenu={onFileContextMenu}
-            onPreview={onPreview}
-            onDownload={onDownload}
-            onEnterFolder={onEnterFolder}
-          />
-        ))}
+        {sortedFiles.map(renderFileItem)}
       </div>
     )
   }
@@ -120,20 +136,7 @@ export function FileList({
       )}
       onContextMenu={onEmptySpaceContextMenu}
     >
-      {sortedFiles.map((file) => (
-        <FileItem
-          key={file.id}
-          file={file}
-          viewMode={viewMode}
-          isSelected={selectedFiles.has(file.id)}
-          onSelect={onSelect}
-          onClick={onFileClick}
-          onContextMenu={onFileContextMenu}
-          onPreview={onPreview}
-          onDownload={onDownload}
-          onEnterFolder={onEnterFolder}
-        />
-      ))}
+      {sortedFiles.map(renderFileItem)}
     </div>
   )
 }

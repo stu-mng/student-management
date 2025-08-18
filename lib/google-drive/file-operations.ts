@@ -43,7 +43,7 @@ export class FileOperations implements IFileOperations {
       return mapGoogleDriveFileToDriveFile(file);
     } catch (error) {
       console.error(`${ERROR_MESSAGES.GET_FILE_FAILED}: ${fileId}`, error);
-      return null;
+      throw error;
     }
   }
 
@@ -63,6 +63,39 @@ export class FileOperations implements IFileOperations {
     } catch (error) {
       console.error(ERROR_MESSAGES.SEARCH_FAILED + ':', error);
       throw error;
+    }
+  }
+
+  // Move file/folder to a new parent
+  async moveFile(fileId: string, newParentId: string): Promise<boolean> {
+    try {
+      // First, get the current file to check if it's already in the target folder
+      const file = await this.getFile(fileId);
+      if (!file) {
+        console.error(`File not found: ${fileId}`);
+        return false;
+      }
+
+      // Check if the file is already in the target folder
+      if (file.parents && file.parents.includes(newParentId)) {
+        console.log(`File ${fileId} is already in folder ${newParentId}`);
+        return true;
+      }
+
+      // Move the file to the new parent
+      await this.drive.files.update({
+        fileId,
+        addParents: newParentId,
+        removeParents: file.parents ? file.parents.join(',') : undefined,
+        fields: 'id, name, parents',
+        supportsAllDrives: true,
+      });
+
+      console.log(`Successfully moved file ${fileId} to folder ${newParentId}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to move file ${fileId} to folder ${newParentId}:`, error);
+      return false;
     }
   }
 }
