@@ -1,4 +1,5 @@
-import { createClient as createServerSupabase } from '@/database/supabase/server';
+import { createClient as createServerSupabase } from '../../database/supabase/server';
+import { canDeleteUser } from '../utils';
 import type { PermissionCheckArgs, Role } from './types';
 import { getPathParam } from './utils';
 
@@ -8,6 +9,100 @@ async function getSupabase() {
 
 function isPrivileged(role: Role | null, names: Array<Role['name']>): boolean {
   return !!role && names.includes(role.name);
+}
+
+export async function checkUserDeleteAccess(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+  
+  // Only allow root, admin, manager, class-teacher to delete users
+  if (!['root', 'admin', 'manager', 'class-teacher'].includes(userRole.name)) {
+    return false;
+  }
+  
+  // Get the target user ID from the path
+  const targetUserId = getPathParam('/api/users/[id]', path, 'id');
+  if (!targetUserId) return false;
+  
+  // Users cannot delete themselves
+  if (targetUserId === userId) return false;
+  
+  const supabase = await getSupabase();
+  
+  // Get the target user's role to check if current user has higher permission
+  const { data: targetUser, error: targetUserError } = await supabase
+    .from('users')
+    .select('role:roles(id, name, order)')
+    .eq('id', targetUserId)
+    .single();
+  
+  if (targetUserError || !targetUser) return false;
+  
+  const targetUserRole = Array.isArray(targetUser.role) ? targetUser.role[0] : targetUser.role;
+  
+  // Check if current user has higher permission than target user
+  return canDeleteUser(userRole, targetUserRole);
+}
+
+export async function checkFormAccessPermission(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+  
+  // Root and admin have full access
+  if (['root', 'admin'].includes(userRole.name)) {
+    return true;
+  }
+  
+  const formId = getPathParam('/api/forms/[id]/access', path, 'id');
+  if (!formId) return false;
+  
+  const supabase = await getSupabase();
+  
+  // Check if user is the form creator
+  const { data: form, error: formError } = await supabase
+    .from('forms')
+    .select('id, created_by')
+    .eq('id', formId)
+    .single();
+  
+  if (formError || !form) return false;
+  
+  if (form.created_by === userId) return true;
+  
+  // Check user_form_access table for role-based permissions
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role:roles(id)')
+    .eq('id', userId)
+    .single();
+  
+  if (userError || !userData) return false;
+  
+  // Type the role data properly
+  type UserRoleData = { id: number; name?: string; order?: number } | null;
+  const userRoleData = userData.role as UserRoleData | UserRoleData[];
+  const userRoleId = Array.isArray(userRoleData) ? userRoleData[0]?.id : userRoleData?.id;
+  
+  if (userRoleId) {
+    const { data: accessData, error: accessError } = await supabase
+      .from('user_form_access')
+      .select('access_type')
+      .eq('form_id', formId)
+      .eq('role_id', userRoleId)
+      .single();
+    
+    if (accessError && accessError.code !== 'PGRST116') {
+      console.error('Error checking form access:', accessError);
+      return false;
+    }
+    
+    // If found in user_form_access, user has permission
+    if (accessData) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 export async function checkFormAccess(args: PermissionCheckArgs): Promise<boolean> {
@@ -86,9 +181,17 @@ export async function checkFormResponseAccess(args: PermissionCheckArgs): Promis
     .select('id, user_id, form:forms(id, created_by)')
     .eq('id', responseId)
     .single();
-  type ResponseRow = { id: string; user_id: string; form: { id: string; created_by: string } | null };
-  const row = response as unknown as ResponseRow | null;
-  if (responseError || !row) return false;
+  
+  if (responseError || !response) return false;
+  
+  // Type the response properly
+  type ResponseRow = { 
+    id: string; 
+    user_id: string; 
+    form: { id: string; created_by: string } | null 
+  };
+  const row = response as unknown as ResponseRow;
+  
   if (row.user_id === userId) return true;
   if (row.form?.created_by === userId) return true;
   return false;

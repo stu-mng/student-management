@@ -1,36 +1,18 @@
 import { createClient } from '@/database/supabase/server';
+import { getUserFromHeaders } from '@/lib/middleware-utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Get user info from middleware headers (already authenticated and authorized)
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
+      // Fallback if middleware didn't process this request
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 獲取用戶角色
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        role:roles(name, order)
-      `)
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      return NextResponse.json({ error: userError.message }, { status: 500 });
-    }
-
-    // Check if user has admin or root role
-    const userRole = (userData.role as any);
-    const allowedRoles = ['root', 'admin', 'manager'];
-    if (!userRole || !allowedRoles.includes(userRole.name)) {
-      return NextResponse.json({ error: '權限不足' }, { status: 403 });
     }
     
     // Actual database queries to populate analytics data

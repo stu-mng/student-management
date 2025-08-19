@@ -5,7 +5,7 @@ import type {
     UpdateFormResponseRequest
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 export async function GET(
@@ -352,7 +352,7 @@ export async function DELETE(
 
     // 檢查用戶是否有權限刪除此回應
     const userRole = (userData.role as any)?.name;
-    if (!['admin', 'root', 'project_manager'].includes(userRole)) {
+    if (!['admin', 'root', 'manager'].includes(userRole)) {
       if (existingResponse.respondent_id !== user.id) {
         return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
       }

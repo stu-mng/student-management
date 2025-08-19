@@ -4,13 +4,13 @@ import { Download, Info, Share2, Trash2 } from "lucide-react"
 interface SelectionToolbarProps {
   selectedFilesCount: number
   onClearSelection: () => void
-  onBulkDelete: () => void
+  onBulkMoveToTrash: () => void
 }
 
 export function SelectionToolbar({
   selectedFilesCount,
   onClearSelection,
-  onBulkDelete
+  onBulkMoveToTrash
 }: SelectionToolbarProps) {
   return (
     <div className="h-[72px] transition-all duration-200 ease-in-out">
@@ -31,11 +31,11 @@ export function SelectionToolbar({
           <Button 
             variant="outline" 
             size="sm"
-            onClick={onBulkDelete}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onBulkMoveToTrash}
+            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            刪除
+            移至垃圾桶
           </Button>
           <Button
             variant="ghost"

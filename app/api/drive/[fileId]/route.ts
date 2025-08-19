@@ -121,3 +121,81 @@ export async function HEAD(
     return new NextResponse(null, { status: 500 });
   }
 }
+
+// PATCH 請求處理器 - 更新檔案資訊（如重命名）
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ fileId: string }> }
+) {
+  try {
+    const { fileId } = await params;
+    const { name } = await request.json();
+
+    if (!fileId) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: '檔案 ID 未提供'
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!name) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: '新名稱未提供'
+        },
+        { status: 400 }
+      );
+    }
+
+    // 檢查服務狀態
+    const isServiceHealthy = await googleDriveService.checkServiceStatus();
+    if (!isServiceHealthy) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Google Drive 服務不可用'
+        },
+        { status: 503 }
+      );
+    }
+
+    // 重命名檔案
+    const result = await googleDriveService.renameFile(fileId, name);
+
+    if (result.success) {
+      return NextResponse.json({ 
+        success: true, 
+        message: '重新命名成功'
+      });
+    } else {
+      // 處理特定錯誤情況
+      if (result.errorCode === 'PERMISSION_DENIED') {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 403 }
+        );
+      } else if (result.errorCode === 'FILE_NOT_FOUND') {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 404 }
+        );
+      } else {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 500 }
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error('重新命名失敗:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: '重新命名時發生錯誤' 
+    }, { status: 500 });
+  }
+}

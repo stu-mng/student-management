@@ -7,6 +7,7 @@ import type {
   RolePermission
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getUserFromHeaders } from '@/lib/middleware-utils';
 import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -15,37 +16,15 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Get user info from middleware headers (already authenticated and authorized)
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
+      // Fallback if middleware didn't process this request
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        role:roles(
-          id,
-          name,
-          display_name,
-          color,
-          order
-        )
-      `)
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
-    }
-
-    // 只有管理員和計畫主持可以創建表單
-    const currentUserRole = (userData.role as unknown as Role)?.name;
-    if (!['admin', 'root', 'class-teacher', 'manager'].includes(currentUserRole)) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-    }
+    const { userId } = userInfo;
 
     const body: FormCreateRequest = await request.json();
     const {
@@ -78,7 +57,7 @@ export async function POST(request: NextRequest) {
         is_required,
         allow_multiple_submissions,
         submission_deadline,
-        created_by: user.id,
+        created_by: userId,
       })
       .select()
       .single();
@@ -316,14 +295,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Get user info from middleware headers (already authenticated and authorized)
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
+      // Fallback if middleware didn't process this request
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 獲取用戶角色
+    const { userId } = userInfo;
+    
+    // For complex preview functionality, we still need to fetch full user data
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
@@ -335,7 +317,7 @@ export async function GET(request: NextRequest) {
           order
         )
       `)
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (userError) {
@@ -452,7 +434,7 @@ export async function GET(request: NextRequest) {
         // 1. 如果是表單創建者，給予編輯權限
         // 注意：在預覽模式下，不因創建者身份提升權限，僅依角色視角判斷
         if (!previewRoleName) {
-          if (form.created_by === user.id) {
+          if (form.created_by === userId) {
             accessType = 'edit';
           }
         }
@@ -480,7 +462,7 @@ export async function GET(request: NextRequest) {
             .from('form_responses')
             .select('id, submission_status')
             .eq('form_id', form.id)
-            .eq('respondent_id', user.id)
+            .eq('respondent_id', userId)
             .eq('submission_status', 'submitted')
             .single();
 

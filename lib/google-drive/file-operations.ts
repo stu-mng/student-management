@@ -98,4 +98,57 @@ export class FileOperations implements IFileOperations {
       return false;
     }
   }
+
+  // Rename file/folder
+  async renameFile(fileId: string, newName: string): Promise<{ success: boolean; error?: string; errorCode?: string }> {
+    try {
+      // First, get the current file to check if it exists
+      const file = await this.getFile(fileId);
+      if (!file) {
+        return {
+          success: false,
+          error: '檔案不存在',
+          errorCode: 'FILE_NOT_FOUND'
+        };
+      }
+
+      // Update the file name
+      await this.drive.files.update({
+        fileId,
+        requestBody: {
+          name: newName
+        },
+        fields: 'id, name',
+        supportsAllDrives: true,
+      });
+
+      console.log(`Successfully renamed file ${fileId} to "${newName}"`);
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Failed to rename file ${fileId}:`, error);
+      
+      // Handle specific error cases
+      if (error.code === 403) {
+        return {
+          success: false,
+          error: '權限不足，無法重新命名此檔案',
+          errorCode: 'PERMISSION_DENIED'
+        };
+      }
+      
+      if (error.code === 404) {
+        return {
+          success: false,
+          error: '檔案不存在或已被刪除',
+          errorCode: 'FILE_NOT_FOUND'
+        };
+      }
+
+      return {
+        success: false,
+        error: '重新命名檔案時發生錯誤',
+        errorCode: 'UNKNOWN_ERROR'
+      };
+    }
+  }
 }

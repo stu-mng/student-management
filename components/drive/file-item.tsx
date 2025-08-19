@@ -1,17 +1,17 @@
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
-  Archive,
-  Download,
-  Eye,
-  File,
-  FileSpreadsheet,
-  FileText,
-  Folder,
-  Image as ImageIcon,
-  Music,
-  Presentation,
-  Video
+    Archive,
+    Download,
+    Eye,
+    File,
+    FileSpreadsheet,
+    FileText,
+    Folder,
+    Image as ImageIcon,
+    Music,
+    Presentation,
+    Video
 } from "lucide-react"
 import Image from "next/image"
 import { useDragDrop } from "./drag-drop-context"
@@ -22,6 +22,7 @@ interface FileItemProps {
   file: DriveFile
   viewMode: 'grid' | 'list'
   isSelected: boolean
+  isSelectionMode: boolean
   onSelect: (fileId: string) => void
   onClick: (file: DriveFile) => void
   onContextMenu: (e: React.MouseEvent, file: DriveFile) => void
@@ -34,6 +35,7 @@ export function FileItem({
   file,
   viewMode,
   isSelected,
+  isSelectionMode,
   onSelect,
   onClick,
   onContextMenu,
@@ -58,6 +60,26 @@ export function FileItem({
     
     setDraggedItem(null);
     setIsDragging(false);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isSelectionMode) {
+      e.stopPropagation();
+      onSelect(file.id);
+    } else {
+      onClick(file);
+    }
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    onSelect(file.id);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu(e, file);
   };
 
   const renderFileIcon = () => {
@@ -164,23 +186,22 @@ export function FileItem({
           "grid grid-cols-12 gap-4 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors duration-150 cursor-pointer group min-h-[56px]",
           isSelected && "bg-primary/5 border-primary/20"
         )}
-        onClick={() => onClick(file)}
-        onContextMenu={(e) => onContextMenu(e, file)}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
         draggable={hasContext}
         onDragStart={hasContext ? handleDragStart : undefined}
         onDragEnd={hasContext ? handleDragEnd : undefined}
       >
         {/* 選擇框 */}
         <div className="col-span-1 flex items-center">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              e.stopPropagation()
-              onSelect(file.id)
-            }}
-            className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
-          />
+          {isSelectionMode && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
+            />
+          )}
         </div>
 
         {/* 檔案圖示和名稱 */}
@@ -273,23 +294,22 @@ export function FileItem({
         "group relative bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-md transition-all duration-200 cursor-pointer aspect-square min-w-0",
         isSelected && "border-primary bg-primary/5"
       )}
-      onClick={() => onClick(file)}
-      onContextMenu={(e) => onContextMenu(e, file)}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
       draggable={hasContext}
       onDragStart={hasContext ? handleDragStart : undefined}
       onDragEnd={hasContext ? handleDragEnd : undefined}
     >
       {/* 選擇框 */}
       <div className="absolute top-2 left-2 z-20">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => {
-            e.stopPropagation()
-            onSelect(file.id)
-          }}
-          className="h-4 w-4 text-primary rounded border-border focus:ring-primary bg-background"
-        />
+        {isSelectionMode && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={handleCheckboxChange}
+            className="h-4 w-4 text-primary rounded border-border focus:ring-primary bg-background"
+          />
+        )}
       </div>
 
       {/* 檔案內容 - Google Drive 風格佈局 */}

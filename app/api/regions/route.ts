@@ -1,42 +1,25 @@
 import type { ErrorResponse, RegionsResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import { hasUserManagePermission } from '@/lib/utils';
+import { getUserFromHeaders } from '@/lib/middleware-utils';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
  * GET /api/regions
  * 
  * 返回所有小學伴的唯一區域集合
+ * Permission check handled by middleware
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Get user info from middleware headers (already authenticated and authorized)
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
+      // Fallback if middleware didn't process this request
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 獲取用戶角色和區域
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        region,
-        role:roles(name)
-      `)
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      console.error('Get user role error:', userError);
-      return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
-    }
-
-    const userRoleObj = Array.isArray(userData.role) ? userData.role[0] : userData.role;
-    if (!hasUserManagePermission(userRoleObj)) {
-      return NextResponse.json<ErrorResponse>({ error: '大學伴無法查看區域列表' }, { status: 403 });
     }
 
     // 查詢區域資料

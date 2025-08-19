@@ -17,6 +17,7 @@ export interface IFileOperations {
   getFile(fileId: string): Promise<DriveFile | null>;
   searchFiles(query: string, pageSize?: number): Promise<DriveFile[]>;
   moveFile(fileId: string, newParentId: string): Promise<boolean>;
+  renameFile(fileId: string, newName: string): Promise<{ success: boolean; error?: string; errorCode?: string }>;
 }
 
 export interface IContentOperations {

@@ -11,6 +11,7 @@ interface FileListProps {
   sortField: SortField
   sortDirection: SortDirection
   isDragOver: boolean
+  isSelectionMode: boolean
   onSelect: (fileId: string) => void
   onSelectAll: () => void
   onFileClick: (file: DriveFile) => void
@@ -29,6 +30,7 @@ export function FileList({
   sortField,
   sortDirection,
   isDragOver,
+  isSelectionMode,
   onSelect,
   onSelectAll,
   onFileClick,
@@ -54,6 +56,7 @@ export function FileList({
         onPreview={onPreview}
         onDownload={onDownload}
         onEnterFolder={onEnterFolder}
+        isSelectionMode={isSelectionMode}
       />
     );
 
@@ -81,19 +84,21 @@ export function FileList({
         {/* 列表標題行 */}
         <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-muted/20 border-b border-border text-sm font-medium text-muted-foreground min-h-[48px]">
           <div className="col-span-1">
-            <input
-              type="checkbox"
-              checked={selectedFiles.size === files.length && files.length > 0}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  onSelectAll()
-                } else {
-                  // Clear all selections
-                  selectedFiles.clear()
-                }
-              }}
-              className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
-            />
+            {isSelectionMode && (
+              <input
+                type="checkbox"
+                checked={selectedFiles.size === files.length && files.length > 0}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onSelectAll()
+                  } else {
+                    // Clear all selections
+                    selectedFiles.clear()
+                  }
+                }}
+                className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
+              />
+            )}
           </div>
           <div 
             className="col-span-5 flex items-center space-x-2 cursor-pointer hover:text-foreground"

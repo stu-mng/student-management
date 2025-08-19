@@ -1,6 +1,6 @@
 import type {
-  ErrorResponse,
-  FormResponsesListResponse
+    ErrorResponse,
+    FormResponsesListResponse
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import type { NextRequest } from 'next/server';
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // 根據用戶角色過濾回應
     const currentUserRole = (userData.role as any)?.name;
-    if (!['admin', 'root', 'project_manager'].includes(currentUserRole)) {
+    if (!['admin', 'root', 'manager'].includes(currentUserRole)) {
       // 一般用戶只能看到自己的回應
       query = query.eq('respondent_id', user.id);
     }

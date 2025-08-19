@@ -1,5 +1,6 @@
 import type { ErrorResponse, RolesListResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getUserFromHeaders } from '@/lib/middleware-utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -7,35 +8,18 @@ import { NextResponse } from 'next/server';
  * GET /api/roles
  * 
  * 返回系統中所有角色的列表
+ * Permission check handled by middleware
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Get user info from middleware headers (already authenticated and authorized)
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
+      // Fallback if middleware didn't process this request
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 獲取用戶角色
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        role:roles(name)
-      `)
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
-    }
-
-    // 只有管理員可以查看角色列表
-    const currentUserRole = (userData.role as any)?.name;
-    if (!['admin', 'root', 'manager', 'class-teacher'].includes(currentUserRole)) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
     // 獲取所有角色

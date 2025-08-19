@@ -16,6 +16,8 @@ import {
   EmptyState,
   FileList,
   LoadingSkeleton,
+  MoveToTrashDialog,
+  RenameDialog,
   SearchToolbar,
   SelectionToolbar,
   TopNavigation
@@ -40,6 +42,7 @@ export default function DriveFolderPage() {
     { id: folderId || 'loading', name: '載入中...' }
   ])
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewFile, setPreviewFile] = useState<DriveFile | null>(null)
   const [sortField, setSortField] = useState<SortField>('name')
@@ -56,6 +59,7 @@ export default function DriveFolderPage() {
   // Operation states
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
 
   // Dialog states
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false)
@@ -71,6 +75,27 @@ export default function DriveFolderPage() {
     show: false,
     isBulkDelete: false,
     selectedFiles: []
+  })
+
+  // Move to trash dialog state
+  const [moveToTrashDialog, setMoveToTrashDialog] = useState<{
+    show: boolean
+    file?: DriveFile
+    isBulkMove: boolean
+    selectedFiles: DriveFile[]
+  }>({
+    show: false,
+    isBulkMove: false,
+    selectedFiles: []
+  })
+
+  // Rename dialog state
+  const [renameDialog, setRenameDialog] = useState<{
+    show: boolean
+    file: DriveFile | null
+  }>({
+    show: false,
+    file: null
   })
 
   // Drag and drop states
@@ -155,6 +180,18 @@ export default function DriveFolderPage() {
     }
   }, [folderId, loadFiles, loadBreadcrumbs])
 
+  // Handle selection mode toggle
+  const handleToggleSelectionMode = useCallback(() => {
+    setIsSelectionMode(prev => {
+      const newMode = !prev;
+      // Clear selection when turning off selection mode
+      if (!newMode) {
+        setSelectedFiles(new Set());
+      }
+      return newMode;
+    });
+  }, []);
+
   // Handle file selection
   const toggleFileSelection = useCallback((fileId: string) => {
     setSelectedFiles(prev => {
@@ -174,13 +211,14 @@ export default function DriveFolderPage() {
   }, [files])
 
   // Handle file context menu
-  const handleFileContextMenu = useCallback((e: React.MouseEvent, _file: DriveFile) => {
+  const handleFileContextMenu = useCallback((e: React.MouseEvent, file: DriveFile) => {
     e.preventDefault()
     setContextMenu({
       show: true,
       x: e.clientX,
       y: e.clientY,
-      target: 'file'
+      target: 'file',
+      file: file
     })
   }, [])
 
@@ -347,31 +385,88 @@ export default function DriveFolderPage() {
   }, [])
 
   // Handle rename file
-  const handleRenameFile = useCallback((_file: DriveFile) => {
-    // TODO: Implement rename functionality
-    toast.info('重新命名功能即將推出')
+  const handleRenameFile = useCallback((file: DriveFile) => {
+    setRenameDialog({
+      show: true,
+      file: file
+    })
   }, [])
 
-  // Handle move to trash
-  const handleMoveToTrash = useCallback(async (file: DriveFile) => {
+  // Execute rename
+  const executeRename = useCallback(async (newName: string) => {
+    if (!renameDialog.file) return
+
+    setIsRenaming(true)
     try {
-      const response = await fetch(`/api/drive/delete/${file.id}`, {
-        method: 'DELETE'
+      const response = await fetch(`/api/drive/${renameDialog.file.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: newName
+        })
       })
 
       const data = await response.json()
       
       if (data.success) {
-        toast.success('檔案已移至垃圾桶')
-        loadFiles(currentFolder)
+        toast.success('重新命名成功')
+        setRenameDialog({ show: false, file: null })
+        loadFiles(currentFolder) // Refresh the file list
       } else {
-        toast.error(data.error || '移至垃圾桶失敗')
+        throw new Error(data.error || '重新命名失敗')
       }
+    } catch (error) {
+      console.error('Rename error:', error)
+      toast.error('重新命名時發生錯誤')
+      throw error // Re-throw to let the dialog handle the error
+    } finally {
+      setIsRenaming(false)
+    }
+  }, [renameDialog.file, currentFolder, loadFiles])
+
+  // Handle move to trash
+  const handleMoveToTrash = useCallback((file: DriveFile) => {
+    setMoveToTrashDialog({
+      show: true,
+      file,
+      isBulkMove: false,
+      selectedFiles: []
+    })
+  }, [])
+
+  // Execute move to trash
+  const executeMoveToTrash = useCallback(async () => {
+    const filesToMove = moveToTrashDialog.isBulkMove 
+      ? moveToTrashDialog.selectedFiles 
+      : moveToTrashDialog.file 
+        ? [moveToTrashDialog.file] 
+        : []
+
+    try {
+      for (const file of filesToMove) {
+        const response = await fetch(`/api/drive/delete/${file.id}`, {
+          method: 'DELETE'
+        })
+
+        const data = await response.json()
+        if (!data.success) {
+          throw new Error(data.error || '移至垃圾桶失敗')
+        }
+      }
+
+      toast.success(moveToTrashDialog.isBulkMove ? '檔案已移至垃圾桶' : '檔案已移至垃圾桶')
+      setSelectedFiles(new Set())
+      loadFiles(currentFolder)
+      setMoveToTrashDialog(prev => ({ ...prev, show: false }))
     } catch (error) {
       console.error('Move to trash error:', error)
       toast.error('移至垃圾桶時發生錯誤')
     }
-  }, [currentFolder, loadFiles])
+  }, [moveToTrashDialog, loadFiles, currentFolder])
+
+
 
   // Handle copy link
   const handleCopyLink = useCallback(async (file: DriveFile) => {
@@ -396,15 +491,17 @@ export default function DriveFolderPage() {
     loadFiles(currentFolder)
   }, [currentFolder, loadFiles])
 
-  // Handle bulk delete
-  const handleBulkDelete = useCallback(() => {
+  // Handle bulk move to trash
+  const handleBulkMoveToTrash = useCallback(() => {
     const selectedFilesList = files.filter(file => selectedFiles.has(file.id))
-    setDeleteDialog({
+    setMoveToTrashDialog({
       show: true,
-      isBulkDelete: true,
+      isBulkMove: true,
       selectedFiles: selectedFilesList
     })
   }, [files, selectedFiles])
+
+
 
   // Execute delete
   const executeDelete = useCallback(async () => {
@@ -554,13 +651,16 @@ export default function DriveFolderPage() {
             onCreateFolder={handleCreateFolderClick}
             isUploading={isUploading}
             isCreatingFolder={isCreatingFolder}
+            isSelectionMode={isSelectionMode}
+            onToggleSelectionMode={handleToggleSelectionMode}
+            onBack={() => router.back()}
           />
 
           {/* Selection Toolbar */}
           <SelectionToolbar
             selectedFilesCount={selectedFiles.size}
             onClearSelection={() => setSelectedFiles(new Set())}
-            onBulkDelete={handleBulkDelete}
+            onBulkMoveToTrash={handleBulkMoveToTrash}
           />
 
           {/* File List */}
@@ -581,6 +681,7 @@ export default function DriveFolderPage() {
               sortField={sortField}
               sortDirection={sortDirection}
               isDragOver={isDragOver}
+              isSelectionMode={isSelectionMode}
               onSelect={toggleFileSelection}
               onSelectAll={handleSelectAll}
               onFileClick={handleFileClick}
@@ -618,9 +719,10 @@ export default function DriveFolderPage() {
           x={contextMenu.x}
           y={contextMenu.y}
           target={contextMenu.target}
-          file={contextMenu.target === 'file' ? contextMenu.file : undefined}
+          file={contextMenu.file}
           selectedFilesCount={selectedFiles.size}
           totalFilesCount={files.length}
+          isSelectionMode={isSelectionMode}
           onPreview={handlePreviewFile}
           onViewInDrive={handleViewInDrive}
           onRename={handleRenameFile}
@@ -643,6 +745,26 @@ export default function DriveFolderPage() {
           onConfirm={executeDelete}
           onCancel={() => setDeleteDialog(prev => ({ ...prev, show: false }))}
           isDeleting={false}
+        />
+
+        {/* Move to Trash Dialog */}
+        <MoveToTrashDialog
+          show={moveToTrashDialog.show}
+          file={moveToTrashDialog.file}
+          isBulkMove={moveToTrashDialog.isBulkMove}
+          selectedFiles={moveToTrashDialog.selectedFiles}
+          onConfirm={executeMoveToTrash}
+          onCancel={() => setMoveToTrashDialog(prev => ({ ...prev, show: false }))}
+          isMoving={false}
+        />
+
+        {/* Rename Dialog */}
+        <RenameDialog
+          show={renameDialog.show}
+          file={renameDialog.file}
+          onConfirm={executeRename}
+          onCancel={() => setRenameDialog({ show: false, file: null })}
+          isRenaming={isRenaming}
         />
       </div>
     </DragDropProvider>

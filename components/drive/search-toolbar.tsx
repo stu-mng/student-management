@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, RefreshCw, Search, Upload } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { ArrowLeft, CheckSquare, Plus, RefreshCw, Search, Square, Upload } from "lucide-react"
 
 interface SearchToolbarProps {
   searchQuery: string
@@ -11,6 +12,9 @@ interface SearchToolbarProps {
   onCreateFolder: () => void
   isUploading: boolean
   isCreatingFolder: boolean
+  isSelectionMode: boolean
+  onToggleSelectionMode: () => void
+  onBack?: () => void
 }
 
 export function SearchToolbar({
@@ -21,12 +25,25 @@ export function SearchToolbar({
   onUpload,
   onCreateFolder,
   isUploading,
-  isCreatingFolder
+  isCreatingFolder,
+  isSelectionMode,
+  onToggleSelectionMode,
+  onBack
 }: SearchToolbarProps) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
+          {onBack && (
+            <Button
+              onClick={onBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center justify-center"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
           <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -43,6 +60,22 @@ export function SearchToolbar({
           <Button onClick={onRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             重新整理
+          </Button>
+          <Button
+            onClick={onToggleSelectionMode}
+            variant={isSelectionMode ? "default" : "outline"}
+            size="sm"
+            className={cn(
+              "transition-all duration-200",
+              isSelectionMode && "bg-primary text-primary-foreground"
+            )}
+          >
+            {isSelectionMode ? (
+              <CheckSquare className="h-4 w-4 mr-2" />
+            ) : (
+              <Square className="h-4 w-4 mr-2" />
+            )}
+            {isSelectionMode ? '選擇模式' : '選擇模式'}
           </Button>
         </div>
         
