@@ -345,7 +345,7 @@ export async function checkAssignedStudentsAccess(args: PermissionCheckArgs): Pr
   const { userRole, userId, path } = args;
   if (!userRole) return false;
 
-  const targetUserId = getPathParam('/api/permissions/assigned/students/[id]', path, 'id');
+  const targetUserId = getPathParam('/api/students/assigned/[id]', path, 'id');
   if (!targetUserId) return false;
 
   // Admin-level roles have full access

@@ -1,10 +1,10 @@
 import type { ErrorResponse } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
- * GET /api/permissions/assigned/[id]
+ * GET /api/students/assigned/[id]
  * 
  * 回傳所有 userId 為 id 的使用者所被分配到的學生 ID 陣列
  */
@@ -43,12 +43,6 @@ export async function GET(
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
     }
 
-    // 如果不是管理員並且也不是查詢自己的數據，則拒絕訪問
-    const userRole = (userData.role as any)?.name;
-    if (userRole !== 'admin' && userRole !== 'root' && userRole !== 'manager' && user.id !== userId) {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-    }
-
     // 查詢用戶是否存在
     const { count, error: userExistsError } = await supabase
       .from('users')
@@ -84,4 +78,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

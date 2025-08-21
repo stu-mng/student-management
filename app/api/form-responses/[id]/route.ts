@@ -1,10 +1,11 @@
 import type {
-    ErrorResponse,
-    FormResponseUpdateResponse,
-    SuccessResponse,
-    UpdateFormResponseRequest
+  ErrorResponse,
+  FormResponseUpdateResponse,
+  SuccessResponse,
+  UpdateFormResponseRequest
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { getUserFromHeaders } from '@/lib/middleware-utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -15,13 +16,14 @@ export async function GET(
   try {
     const supabase = await createClient();
     
-    // 获取当前用户
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // 從 header 中獲取用戶信息
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { userId } = userInfo;
     const { id: responseId } = await params;
 
     // 获取回应数据
@@ -70,7 +72,7 @@ export async function GET(
       .select(`
         role:roles(name, order)
       `)
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (userError) {
@@ -79,7 +81,7 @@ export async function GET(
     }
 
     // 检查是否是回应者本人
-    const isOwner = user.id === response.respondent_id;
+    const isOwner = userId === response.respondent_id;
     const userRole = (userData.role as any)?.name;
     const userRoleOrder = (userData.role as any)?.order || 999;
     const isAdmin = ['admin', 'root', 'manager'].includes(userRole);
@@ -141,13 +143,14 @@ export async function PUT(
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // 從 header 中獲取用戶信息
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { userId } = userInfo;
     const { id: responseId } = await params;
     const body: UpdateFormResponseRequest = await request.json();
     const { field_responses, submission_status = 'draft' } = body;
@@ -181,7 +184,7 @@ export async function PUT(
     }
 
     // 檢查權限：只有回應者本人可以修改
-    if (existingResponse.respondent_id !== user.id) {
+    if (existingResponse.respondent_id !== userId) {
       return NextResponse.json<ErrorResponse>(
         { error: 'Permission denied' },
         { status: 403 }
@@ -307,12 +310,14 @@ export async function DELETE(
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // 從 header 中獲取用戶信息
+    const userInfo = getUserFromHeaders(request);
+    
+    if (!userInfo) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { userId } = userInfo;
 
     // 獲取用戶角色
     const { data: userData, error: userError } = await supabase
@@ -320,7 +325,7 @@ export async function DELETE(
       .select(`
         role:roles(name)
       `)
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (userError) {
@@ -353,7 +358,7 @@ export async function DELETE(
     // 檢查用戶是否有權限刪除此回應
     const userRole = (userData.role as any)?.name;
     if (!['admin', 'root', 'manager'].includes(userRole)) {
-      if (existingResponse.respondent_id !== user.id) {
+      if (existingResponse.respondent_id !== userId) {
         return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
       }
     }

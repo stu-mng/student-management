@@ -59,7 +59,7 @@ export function SearchToolbar({
           </Button>
           <Button onClick={onRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
-            重新整理
+            重整
           </Button>
           <Button
             onClick={onToggleSelectionMode}
@@ -75,7 +75,7 @@ export function SearchToolbar({
             ) : (
               <Square className="h-4 w-4 mr-2" />
             )}
-            {isSelectionMode ? '選擇模式' : '選擇模式'}
+            {isSelectionMode ? '選取' : '選取'}
           </Button>
         </div>
         
@@ -92,7 +92,7 @@ export function SearchToolbar({
             ) : (
               <Upload className="h-4 w-4 mr-2" />
             )}
-            {isUploading ? '上傳中...' : '上傳檔案'}
+            {isUploading ? '上傳中...' : '上傳'}
           </Button>
           <Button
             onClick={onCreateFolder}
@@ -105,7 +105,7 @@ export function SearchToolbar({
             ) : (
               <Plus className="h-4 w-4 mr-2" />
             )}
-            {isCreatingFolder ? '建立中...' : '新建資料夾'}
+            {isCreatingFolder ? '建立中...' : '新資料夾'}
           </Button>
         </div>
       </div>

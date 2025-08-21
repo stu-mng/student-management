@@ -24,7 +24,7 @@ export function DragDropZone({ isDragOver, hasFiles }: DragDropZoneProps) {
         "text-sm transition-colors duration-200",
         isDragOver ? "text-primary font-medium" : "text-muted-foreground"
       )}>
-        {isDragOver ? "放開以上傳檔案" : "拖放檔案到此處以上傳"}
+        {isDragOver ? "放開以上傳" : "拖放檔案到此處以上傳"}
       </p>
     </div>
   )

@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
- * POST /api/permissions/bulk-assign
+ * POST /api/students/assign
  * 
  * 批量分配教師對學生的權限（僅限管理員）
  */
@@ -30,12 +30,6 @@ export async function POST(request: NextRequest) {
 
     if (userError) {
       return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
-    }
-
-    // 只有管理員可以批量分配權限
-    const userRole = (userData.role as any)?.name;
-    if (userRole !== 'admin' && userRole !== 'root' && userRole !== 'manager') {
-      return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
     }
 
     // 獲取請求體
@@ -138,4 +132,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

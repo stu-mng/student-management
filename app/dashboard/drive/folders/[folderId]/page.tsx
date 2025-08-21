@@ -1,26 +1,26 @@
 "use client"
 
 import type {
-  BreadcrumbItem,
-  ContextMenuState,
-  DriveFile,
-  SortDirection,
-  SortField,
-  ViewMode
+    BreadcrumbItem,
+    ContextMenuState,
+    DriveFile,
+    SortDirection,
+    SortField,
+    ViewMode
 } from "@/components/drive";
 import {
-  ContextMenu,
-  CreateFolderDialog,
-  DeleteConfirmationDialog,
-  DragDropProvider,
-  EmptyState,
-  FileList,
-  LoadingSkeleton,
-  MoveToTrashDialog,
-  RenameDialog,
-  SearchToolbar,
-  SelectionToolbar,
-  TopNavigation
+    ContextMenu,
+    CreateFolderDialog,
+    DeleteConfirmationDialog,
+    DragDropProvider,
+    EmptyState,
+    FileList,
+    LoadingSkeleton,
+    MoveToTrashDialog,
+    RenameDialog,
+    SearchToolbar,
+    SelectionToolbar,
+    TopNavigation
 } from "@/components/drive";
 import { FilePreview } from "@/components/file-preview";
 import { useParams, useRouter } from 'next/navigation';
@@ -200,15 +200,23 @@ export default function DriveFolderPage() {
         newSet.delete(fileId)
       } else {
         newSet.add(fileId)
+        // Automatically enable selection mode when selecting a file
+        if (!isSelectionMode) {
+          setIsSelectionMode(true)
+        }
       }
       return newSet
     })
-  }, [])
+  }, [isSelectionMode])
 
   // Handle select all files
   const handleSelectAll = useCallback(() => {
+    // Automatically enable selection mode if not already enabled
+    if (!isSelectionMode) {
+      setIsSelectionMode(true)
+    }
     setSelectedFiles(new Set(files.map(file => file.id)))
-  }, [files])
+  }, [files, isSelectionMode])
 
   // Handle file context menu
   const handleFileContextMenu = useCallback((e: React.MouseEvent, file: DriveFile) => {
@@ -483,8 +491,22 @@ export default function DriveFolderPage() {
 
   // Handle select file
   const handleSelectFile = useCallback((file: DriveFile) => {
-    toggleFileSelection(file.id)
-  }, [toggleFileSelection])
+    // Automatically enable selection mode if not already enabled
+    if (!isSelectionMode) {
+      setIsSelectionMode(true)
+    }
+    // Directly toggle the file selection without calling toggleFileSelection
+    // to avoid double-enabling selection mode
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(file.id)) {
+        newSet.delete(file.id)
+      } else {
+        newSet.add(file.id)
+      }
+      return newSet
+    })
+  }, [isSelectionMode])
 
   // Handle refresh files
   const handleRefreshFiles = useCallback(() => {
@@ -722,7 +744,7 @@ export default function DriveFolderPage() {
           file={contextMenu.file}
           selectedFilesCount={selectedFiles.size}
           totalFilesCount={files.length}
-          isSelectionMode={isSelectionMode}
+          selectedFiles={selectedFiles}
           onPreview={handlePreviewFile}
           onViewInDrive={handleViewInDrive}
           onRename={handleRenameFile}

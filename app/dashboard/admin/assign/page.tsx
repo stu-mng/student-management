@@ -1,6 +1,6 @@
 "use client"
 
-import { bulkAssignStudentsToTeacher, fetchAssignedStudents, fetchStudents, fetchTeachers } from "@/app/api/permissions/assign/service"
+import { bulkAssignStudentsToTeacher, fetchAssignedStudents, fetchStudents, fetchTeachers } from "@/app/api/students/assign/service"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

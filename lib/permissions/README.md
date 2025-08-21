@@ -100,13 +100,11 @@ Custom checks receive `PermissionCheckArgs` and can implement:
 - `PUT /api/students/[id]` - **Complex Check**: Admin + regional access + teacher-student relationships  
 - `DELETE /api/students/[id]` - **Complex Check**: Admin + regional access + teacher-student relationships
 - `POST /api/students/import` - `['root', 'admin', 'manager', 'class-teacher']`
+- `POST /api/students/assign` - `['root', 'admin', 'manager', 'class-teacher']`
+- `GET /api/students/assigned/[id]` - **Complex Check**: Admin permissions + self-access for teachers
 
 ### Roles Management
 - `GET /api/roles` - `['root', 'admin', 'manager', 'class-teacher']`
-
-### Permissions Management
-- `POST /api/permissions/assign` - `['root', 'admin', 'manager', 'class-teacher']`
-- `GET /api/permissions/assigned/students/[id]` - **Complex Check**: Admin permissions + self-access for teachers
 
 ### Regions Management
 - `GET /api/regions` - `['root', 'admin', 'manager', 'class-teacher']`

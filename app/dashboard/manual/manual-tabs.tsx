@@ -186,7 +186,7 @@ export function ManualTabs({ user, isAdmin }: ManualTabsProps) {
                 <Shield className="h-6 w-6 text-primary" />
                 <CardTitle>權限層級體系</CardTitle>
               </div>
-              <CardDescription>系統中的六個用戶角色及其基本權限</CardDescription>
+              <CardDescription>系統中的七個角色及其基本權限</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-4">

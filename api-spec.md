@@ -300,7 +300,7 @@ Authorization: Bearer <token>
 
 ### 權限管理 API
 
-#### GET /api/permissions/assigned/students/{id}
+#### GET /api/students/assigned/{id}
 
 獲取指定教師可以查看的所有小學伴ID列表（僅限管理員或查詢本人資料）。
 
@@ -319,7 +319,7 @@ Authorization: Bearer <token>
 - `403 Forbidden`: 權限不足
 - `404 Not Found`: 用戶不存在
 
-#### POST /api/permissions/assign
+#### POST /api/students/assign
 
 批量分配或取消分配教師對小學伴的權限（僅限管理員）。
 

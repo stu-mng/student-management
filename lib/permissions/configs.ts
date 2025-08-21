@@ -1,11 +1,38 @@
 import { checkAssignedStudentsAccess, checkFormResponsesOverviewAccess, checkFormsListAccess, checkStudentAccess, checkStudentsCreateAccess, checkStudentsListAccess, checkUserFormResponsesAccess, checkUserProfileAccess, checkUserUpdateAccess, checkUserViewAccess } from './advanced-checks';
 import { checkFormAccess, checkFormDeleteAccess, checkFormEditAccess, checkFormResponseAccess, checkFormResponseEditAccess, checkFormResponseViewAccess, checkUserDeleteAccess } from './checks';
+import type { PermissionCheckFunction, RoleName } from './types';
 
-const ADMINS = ['root', 'admin', 'manager', 'class-teacher'] 
-const EVERYONE = ['root', 'admin', 'manager', 'class-teacher', 'teacher', 'candidate', 'new-registrant']
+// TypeScript interfaces for permissions
+interface PermissionConfig {
+  roles?: RoleName[];
+  customCheck?: PermissionCheckFunction;
+}
 
-export const API_PERMISSIONS = {
+interface ApiEndpoint {
+  feature: string;
+  description: string;
+  method: string;
+  path: string;
+  permissions: PermissionConfig;
+}
+
+interface ApiModule {
+  module: string;
+  description: string;
+  [key: string]: ApiEndpoint | string;
+}
+
+interface ApiPermissions {
+  [key: string]: ApiModule;
+}
+
+export const ADMINS: RoleName[] = ['root', 'admin', 'manager', 'class-teacher'] 
+export const EVERYONE: RoleName[] = ['root', 'admin', 'manager', 'class-teacher', 'teacher', 'candidate', 'new-registrant']
+
+export const API_PERMISSIONS: ApiPermissions = {
   users: {
+    module: '用戶管理',
+    description: '管理系統用戶，包括創建、查看、更新和刪除用戶',
     list: {
       feature: '用戶列表',
       description: '查看所有用戶列表',
@@ -107,17 +134,21 @@ export const API_PERMISSIONS = {
     },
   },
   roles: {
+    module: '角色管理',
+    description: '管理系統角色和權限',
     list: {
       feature: '角色列表',
       description: '查看所有角色列表',
       method: 'GET',
       path: '/api/roles',
       permissions: { 
-        roles: ADMINS
+        roles: EVERYONE
       },
     },
   },
   students: {
+    module: '學生管理',
+    description: '管理學生資料，包括創建、查看、更新和刪除學生記錄',
     list: {
       feature: '學生列表',
       description: '查看學生列表',
@@ -172,8 +203,28 @@ export const API_PERMISSIONS = {
         roles: ADMINS
       },
     },
+    assign: {
+      feature: '分配學生',
+      description: '分配學生給教師管理',
+      method: 'POST',
+      path: '/api/students/assign',
+      permissions: { 
+        roles: ADMINS
+      },
+    },
+    assigned: {
+      feature: '查看分配的學生',
+      description: '查看用戶被分配的學生列表',
+      method: 'GET',
+      path: '/api/students/assigned/[id]',
+      permissions: {
+        customCheck: checkAssignedStudentsAccess,
+      },
+    },
   },
   forms: {
+    module: '表單管理',
+    description: '管理系統表單，包括創建、編輯、刪除和權限控制',
     list: {
       feature: '表單列表',
       description: '查看表單列表',
@@ -266,6 +317,8 @@ export const API_PERMISSIONS = {
     },
   },
   formResponses: {
+    module: '表單回應管理',
+    description: '管理表單回應，包括查看和更新回應內容',
     list: {
       feature: '表單回應列表',
       description: '查看表單回應列表',
@@ -294,27 +347,9 @@ export const API_PERMISSIONS = {
       },
     },
   },
-  permissions: {
-    assign: {
-      feature: '分配權限',
-      description: '批量分配教師對學生的權限',
-      method: 'POST',
-      path: '/api/permissions/assign',
-      permissions: { 
-        roles: ADMINS
-      },
-    },
-    assignedStudents: {
-      feature: '查看分配的學生',
-      description: '查看用戶被分配的學生列表',
-      method: 'GET',
-      path: '/api/permissions/assigned/students/[id]',
-      permissions: {
-        customCheck: checkAssignedStudentsAccess,
-      },
-    },
-  },
   regions: {
+    module: '地區管理',
+    description: '管理系統地區設定',
     list: {
       feature: '地區列表',
       description: '查看地區列表',
@@ -326,6 +361,8 @@ export const API_PERMISSIONS = {
     },
   },
   analytics: {
+    module: '數據分析',
+    description: '查看系統分析數據和統計信息',
     overview: {
       feature: '分析概覽',
       description: '查看系統分析數據',
@@ -337,6 +374,8 @@ export const API_PERMISSIONS = {
     },
   },
   emails: {
+    module: '郵件管理',
+    description: '管理系統郵件發送功能',
     batch: {
       feature: '批量發送郵件',
       description: '批量發送郵件給多個收件人',
@@ -348,6 +387,8 @@ export const API_PERMISSIONS = {
     },
   },
   drive: {
+    module: 'Google Drive 管理',
+    description: '管理 Google Drive 檔案和資料夾操作',
     list: {
       feature: 'Google Drive 檔案列表',
       description: '查看 Google Drive 中的檔案',

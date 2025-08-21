@@ -45,7 +45,7 @@ export async function fetchStudents(): Promise<Student[]> {
  */
 export async function fetchAssignedStudents(userId: string): Promise<string[]> {
   try {
-    const response = await fetch(`/api/permissions/assigned/students/${userId}`);
+    const response = await fetch(`/api/students/assigned/${userId}`);
     
     if (!response.ok) {
       const error = await response.json();
@@ -77,7 +77,7 @@ export async function bulkAssignStudentsToTeacher(
       student_ids: studentIds
     };
     
-    const response = await fetch('/api/permissions/assign', {
+    const response = await fetch('/api/students/assign', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -95,4 +95,4 @@ export async function bulkAssignStudentsToTeacher(
     console.error('Error assigning students to teacher:', error);
     throw error;
   }
-} 
+}

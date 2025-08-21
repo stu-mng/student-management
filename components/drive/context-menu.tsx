@@ -1,12 +1,12 @@
 import {
-  Copy,
-  Edit3,
-  ExternalLink,
-  Eye,
-  Plus,
-  RefreshCw,
-  Trash2,
-  Upload
+    Copy,
+    Edit3,
+    ExternalLink,
+    Eye,
+    Plus,
+    RefreshCw,
+    Trash2,
+    Upload
 } from "lucide-react"
 import { useEffect, useRef } from "react"
 import type { DriveFile } from "./types"
@@ -19,7 +19,7 @@ interface ContextMenuProps {
   file?: DriveFile
   selectedFilesCount: number
   totalFilesCount: number
-  isSelectionMode: boolean
+  selectedFiles: Set<string>
   onPreview: (file: DriveFile) => void
   onViewInDrive: (file: DriveFile) => void
   onRename: (file: DriveFile) => void
@@ -42,7 +42,7 @@ export function ContextMenu({
   file,
   selectedFilesCount,
   totalFilesCount,
-  isSelectionMode,
+  selectedFiles,
   onPreview,
   onViewInDrive,
   onRename,
@@ -158,11 +158,11 @@ export function ContextMenu({
             >
               <input
                 type="checkbox"
-                checked={isSelectionMode}
+                checked={selectedFiles.has(file.id)}
                 readOnly
                 className="h-4 w-4 text-primary rounded border-border"
               />
-              <span>{isSelectionMode ? '取消選取' : '選取'}</span>
+              <span>{selectedFiles.has(file.id) ? '取消選取' : '選取'}</span>
             </button>
           )}
         </>
@@ -175,7 +175,7 @@ export function ContextMenu({
             className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2"
           >
             <Upload className="h-4 w-4" />
-            <span>上傳檔案</span>
+            <span>上傳</span>
           </button>
           <button
             onClick={onCreateFolder}
@@ -189,7 +189,7 @@ export function ContextMenu({
             className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center space-x-2"
           >
             <RefreshCw className="h-4 w-4" />
-            <span>重新整理</span>
+            <span>重整</span>
           </button>
           <button
             onClick={onSelectAll}
