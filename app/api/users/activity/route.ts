@@ -1,5 +1,5 @@
 import { createClient } from '@/database/supabase/server';
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
@@ -7,13 +7,11 @@ import { NextResponse } from 'next/server';
  * 
  * 更新當前用戶的最後活動時間
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // 獲取當前用戶的認證資料
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

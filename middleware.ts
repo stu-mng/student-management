@@ -172,14 +172,12 @@ function findApiPermissionConfig(method: string, path: string): ApiPermissionCon
       if (score > bestScore) {
         bestScore = score;
         bestMatch = config;
-        console.log(`  🎯 New best match: ${config.method} ${config.path} (score: ${score})`);
       }
     }
   }
 
   // Fallback 1: If no method-specific match found, try method-agnostic best match
   if (!bestMatch) {
-    console.log('⚠️ No method-specific match; falling back to method-agnostic search');
     for (const groupKey in permissions) {
       const group = permissions[groupKey];
       for (const key in group) {

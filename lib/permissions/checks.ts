@@ -170,7 +170,7 @@ export async function checkFormDeleteAccess(args: PermissionCheckArgs): Promise<
 export async function checkFormResponseAccess(args: PermissionCheckArgs): Promise<boolean> {
   const { userRole, userId, path } = args;
   if (!userRole) return false;
-  if (isPrivileged(userRole, ['admin', 'root', 'manager'])) return true;
+  if (isPrivileged(userRole, ['admin', 'root', 'manager', 'class-teacher'])) return true;
 
   const responseId = getPathParam('/api/form-responses/[id]', path, 'id');
   if (!responseId) return false;
@@ -178,7 +178,7 @@ export async function checkFormResponseAccess(args: PermissionCheckArgs): Promis
   const supabase = await getSupabase();
   const { data: response, error: responseError } = await supabase
     .from('form_responses')
-    .select('id, user_id, form:forms(id, created_by)')
+    .select('id, respondent_id, form:forms(id, created_by)')
     .eq('id', responseId)
     .single();
   
@@ -187,12 +187,13 @@ export async function checkFormResponseAccess(args: PermissionCheckArgs): Promis
   // Type the response properly
   type ResponseRow = { 
     id: string; 
-    user_id: string; 
+    respondent_id: string; 
     form: { id: string; created_by: string } | null 
   };
   const row = response as unknown as ResponseRow;
   
-  if (row.user_id === userId) return true;
+  console.log('🔍 checkFormResponseAccess Debug:', { userId, row });
+  if (row.respondent_id === userId) return true;
   if (row.form?.created_by === userId) return true;
   return false;
 }

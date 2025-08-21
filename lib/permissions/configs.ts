@@ -96,6 +96,15 @@ export const API_PERMISSIONS = {
         roles: ADMINS
       },
     },
+    activityUpdate: {
+      feature: '更新用戶活動',
+      description: '更新當前用戶的最後活動時間',
+      method: 'POST',
+      path: '/api/users/activity',
+      permissions: { 
+        roles: EVERYONE
+      },
+    },
   },
   roles: {
     list: {
