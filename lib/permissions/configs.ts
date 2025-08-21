@@ -479,7 +479,6 @@ export const API_PERMISSIONS: ApiPermissions = {
         roles: ADMINS
       },
     },
-
     image: {
       feature: 'Google Drive 圖片處理',
       description: '處理 Google Drive 中的圖片',
