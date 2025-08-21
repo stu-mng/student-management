@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 // GET 請求處理器 - 取得儲存空間使用量
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 檢查服務狀態
     const isServiceHealthy = await googleDriveService.checkServiceStatus();
@@ -17,15 +17,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 注意：getStorageQuota 方法已被移除，此端點暫時停用
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '儲存空間查詢功能已停用',
-        details: '此功能已整合到主要 API 端點中'
-      },
-      { status: 501 }
-    );
+    // 獲取儲存空間配額資訊
+    const storageQuota = await googleDriveService.getStorageQuota();
+
+    return NextResponse.json({
+      success: true,
+      data: storageQuota
+    });
 
   } catch (error: unknown) {
     console.error('取得儲存空間資訊錯誤:', error);

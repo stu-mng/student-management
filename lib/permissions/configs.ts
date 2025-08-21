@@ -372,6 +372,15 @@ export const API_PERMISSIONS: ApiPermissions = {
         roles: ['root'] 
       },
     },
+    sessions: {
+      feature: '會話分析',
+      description: '查看系統會話分析數據',
+      method: 'GET',
+      path: '/api/analytics/sessions',
+      permissions: { 
+        roles: ['root'] 
+      },
+    },
   },
   emails: {
     module: '郵件管理',
@@ -457,6 +466,15 @@ export const API_PERMISSIONS: ApiPermissions = {
       description: '管理 Google Drive 資料夾',
       method: 'POST',
       path: '/api/drive/folders',
+      permissions: { 
+        roles: ADMINS
+      },
+    },
+    storage: {
+      feature: 'Google Drive 儲存空間',
+      description: '查看 Google Drive 儲存空間使用情況',
+      method: 'GET',
+      path: '/api/drive/storage',
       permissions: { 
         roles: ADMINS
       },

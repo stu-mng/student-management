@@ -46,6 +46,20 @@ export interface IUtilityOperations {
   formatFileSize(bytes: number): string;
   checkServiceStatus(): Promise<boolean>;
   getDefaultFolderId(): string;
+  getStorageQuota(): Promise<StorageQuota>;
+}
+
+// Storage quota information
+export interface StorageQuota {
+  limit: string;
+  usage: string;
+  usageInDrive: string;
+  usageInDriveTrash: string;
+  limitFormatted: string;
+  usageFormatted: string;
+  usageInDriveFormatted: string;
+  usageInDriveTrashFormatted: string;
+  usagePercentage: number;
 }
 
 // Google Drive service instance types

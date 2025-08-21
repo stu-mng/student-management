@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // 檢查當前用戶的角色，只有管理員或本人可以檢視分配的學生
-    const { data: userData, error: userError } = await supabase
+    const { error: userError } = await supabase
       .from('users')
       .select(`
         role:roles(name)

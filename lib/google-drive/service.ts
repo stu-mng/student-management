@@ -11,7 +11,8 @@ import type {
     IFileOperations,
     IFolderOperations,
     IUploadOperations,
-    IUtilityOperations
+    IUtilityOperations,
+    StorageQuota
 } from './types';
 import { UploadOperations } from './upload-operations';
 import { UtilityOperations } from './utility-operations';
@@ -54,7 +55,7 @@ export class GoogleDriveService implements
       this.folderOperations = new FolderOperations(drive, this.defaultFolderId, this.getFile.bind(this));
       this.uploadOperations = new UploadOperations(drive);
       this.deleteOperations = new DeleteOperations(drive);
-      this.utilityOperations = new UtilityOperations(this.defaultFolderId, this.listFilesInFolder.bind(this));
+      this.utilityOperations = new UtilityOperations(this.defaultFolderId, this.listFilesInFolder.bind(this), drive);
       
       this.initialized = true;
     } catch (error) {
@@ -161,6 +162,11 @@ export class GoogleDriveService implements
 
   formatFileSize(bytes: number): string {
     return this.utilityOperations.formatFileSize(bytes);
+  }
+
+  async getStorageQuota(): Promise<StorageQuota> {
+    await this.ensureInitialized();
+    return this.utilityOperations.getStorageQuota();
   }
 
   // Additional utility methods

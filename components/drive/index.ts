@@ -13,6 +13,7 @@ export { RenameDialog } from './rename-dialog';
 export { SearchToolbar } from './search-toolbar';
 export { SelectionToolbar } from './selection-toolbar';
 export { LoadingSkeleton } from './skeletons';
+export { StorageQuotaDisplay } from './storage-quota-display';
 export { TopNavigation } from './top-navigation';
 export type {
     BreadcrumbItem, ContextMenuState, DriveFile, SortDirection, SortField, ViewMode
