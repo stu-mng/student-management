@@ -161,7 +161,7 @@ export async function checkFormEditAccess(args: PermissionCheckArgs): Promise<bo
 export async function checkFormDeleteAccess(args: PermissionCheckArgs): Promise<boolean> {
   const { userRole } = args;
   if (!userRole) return false;
-  return isPrivileged(userRole, ['admin', 'root']);
+  return isPrivileged(userRole, ['admin', 'root', 'manager', 'class-teacher']);
 }
 
 export async function checkFormResponseAccess(args: PermissionCheckArgs): Promise<boolean> {
