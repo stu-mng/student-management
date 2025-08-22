@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { SmartImage } from "@/components/ui/smart-image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, MessageSquare } from "lucide-react"
-import Image from "next/image"
+
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -104,11 +105,10 @@ function FileUploadCard({ fileId, metadata, compact = false, onPreview, onOpenFo
     if (mimeType.startsWith('image/')) {
       return (
         <div className={`${size} bg-muted/20 overflow-hidden rounded-lg relative`}>
-          <Image
+          <SmartImage
             src={`/api/drive/image/${fileId}`}
             alt={`Thumbnail for ${metadata.name}`}
-            fill
-            className="object-cover"
+            className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement
               const parent = target.parentElement

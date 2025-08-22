@@ -8,6 +8,7 @@ const nextConfig = {
 	// Enable standalone output for Docker deployments
 	output: 'standalone',
 	images: {
+		unoptimized: false, // Keep optimization enabled for external images
 		remotePatterns: [
 			{
 				protocol: 'https',
@@ -27,6 +28,16 @@ const nextConfig = {
 			{
 				protocol: 'https',
 				hostname: 'drive.google.com',
+				port: '',
+			},
+			{
+				protocol: 'https',
+				hostname: 'student-management-seven-theta.vercel.app',
+				port: '',
+			},
+			{
+				protocol: 'http',
+				hostname: 'localhost',
 				port: '',
 			},
 		],

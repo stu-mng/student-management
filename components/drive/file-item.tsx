@@ -13,7 +13,8 @@ import {
     Presentation,
     Video
 } from "lucide-react"
-import Image from "next/image"
+
+import { SmartImage } from '@/components/ui/smart-image'
 import { useDragDrop } from "./drag-drop-context"
 import type { DriveFile } from "./types"
 import { formatDate, formatFileSize, getFileTypeLabel } from "./utils"
@@ -97,12 +98,11 @@ export function FileItem({
   const renderThumbnail = () => {
     if (file.mimeType.startsWith('image/')) {
       return (
-        <div className="w-full h-32 bg-muted/20 overflow-hidden rounded-t-lg">
-          <Image
+        <div className="w-full h-32 bg-muted/20 overflow-hidden rounded-t-lg relative">
+          <SmartImage
             src={`/api/drive/image/${file.id}`}
             alt={`Thumbnail for ${file.name}`}
-            fill
-            className="object-cover"
+            className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement
               target.style.display = 'none'

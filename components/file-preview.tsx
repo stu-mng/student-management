@@ -2,8 +2,8 @@
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SmartImage } from '@/components/ui/smart-image'
 import { Download, ExternalLink, RefreshCw, X } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 interface FilePreviewProps {
@@ -156,10 +156,75 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
           <div className="text-center space-y-4">
             <div className="text-6xl">⚠️</div>
             <p className="text-muted-foreground">{error}</p>
-            <Button onClick={handleDownload} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              下載檔案
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button onClick={handleDownload} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                下載檔案
+              </Button>
+              <Button 
+                onClick={async () => {
+                  setError(null)
+                  setLoading(true)
+                  
+                  try {
+                    // 嘗試使用圖片預覽 API
+                    const response = await fetch(`/api/drive/preview-image/${file.id}`)
+                    if (response.ok) {
+                      const data = await response.json()
+                      if (data.success && data.previewUrls) {
+                        // 嘗試不同的預覽方法，優先使用我們的 API
+                        const urls = [
+                          data.previewUrls.api,        // 我們的圖片代理 API (最可靠)
+                          data.previewUrls.direct,     // 直接下載 URL
+                          data.previewUrls.preview     // Google Drive 預覽 URL
+                        ]
+                        
+                        // 測試每個 URL 直到找到可用的
+                        let urlFound = false
+                        for (const url of urls) {
+                          try {
+                            await new Promise((resolve, reject) => {
+                              const img = new window.Image()
+                              img.onload = () => {
+                                setPreviewUrl(url)
+                                setLoading(false)
+                                urlFound = true
+                                resolve(true)
+                              }
+                              img.onerror = () => {
+                                console.log('URL 失敗:', url)
+                                reject(new Error(`URL 失敗: ${url}`))
+                              }
+                              img.src = url
+                            })
+                            if (urlFound) break
+                          } catch (e) {
+                            console.log('URL 測試失敗:', url, e)
+                            continue
+                          }
+                        }
+                        
+                        if (!urlFound) {
+                          throw new Error('所有預覽方法都失敗了')
+                        }
+                      } else {
+                        throw new Error(data.error || '無法獲取圖片預覽信息')
+                      }
+                    } else {
+                      throw new Error('圖片預覽 API 請求失敗')
+                    }
+                  } catch (err) {
+                    console.error('重試預覽失敗:', err)
+                    setError('重試預覽失敗，請嘗試下載檔案')
+                    setLoading(false)
+                  }
+                }} 
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                重試預覽
+              </Button>
+            </div>
           </div>
         </div>
       )
@@ -269,7 +334,7 @@ export function FilePreview({ file, onClose }: FilePreviewProps) {
             </div>
           ) : (
             <div className="flex items-center justify-center w-full h-full p-4">
-              <Image
+              <SmartImage
                 src={previewUrl}
                 alt={file.name}
                 width={800}
