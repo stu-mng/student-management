@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const parentFolderId = formData.get('parentFolderId') as string;
+    const username = formData.get('username') as string;
 
     if (!file || !parentFolderId) {
       return NextResponse.json(
@@ -31,8 +32,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 處理檔案重命名（如果有提供用戶名）
+    let finalFile = file;
+    if (username && username.trim()) {
+      const originalName = file.name;
+      const lastDotIndex = originalName.lastIndexOf('.');
+      const fileName = lastDotIndex > 0 ? originalName.substring(0, lastDotIndex) : originalName;
+      const extension = lastDotIndex > 0 ? originalName.substring(lastDotIndex) : '';
+      const newFileName = `${username.trim()}_${fileName}${extension}`;
+      
+      // 創建一個新的 File 對象用重命名的檔案名
+      finalFile = new File([file], newFileName, { type: file.type });
+    }
+
     // 上傳檔案
-    const uploadedFile = await googleDriveService.uploadFile(file, parentFolderId);
+    const uploadedFile = await googleDriveService.uploadFile(finalFile, parentFolderId);
 
     if (!uploadedFile) {
       return NextResponse.json(

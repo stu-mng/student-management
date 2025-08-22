@@ -1,5 +1,6 @@
 "use client"
 
+import type { Form } from "@/app/api/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FieldBasicEditor } from "./basic-settings-editor"
@@ -8,11 +9,12 @@ import { FieldValidationEditor } from "./validation-settings-editor"
 interface FormFieldBuilderProps {
   field: FormFieldWithId
   sections: FormSectionWithId[]
+  form: Form | null
   onUpdate: (updates: Partial<FormFieldWithId>) => void
 }
 
-export function FormFieldBuilder({ field, sections, onUpdate }: FormFieldBuilderProps) {
-  const showValidationTabs = ['number', 'email', 'date'].includes(field.field_type)
+export function FormFieldBuilder({ field, sections, form, onUpdate }: FormFieldBuilderProps) {
+  const showValidationTabs = ['number', 'email', 'date', 'file_upload'].includes(field.field_type)
 
   return (
     <div className="space-y-4" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
@@ -23,7 +25,7 @@ export function FormFieldBuilder({ field, sections, onUpdate }: FormFieldBuilder
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
-          <FieldBasicEditor field={field} sections={sections} onUpdate={onUpdate} />
+          <FieldBasicEditor field={field} sections={sections} form={form} onUpdate={onUpdate} />
         </TabsContent>
 
         <TabsContent value="validation" className="space-y-4">

@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const { name, parentFolderId } = await request.json();
+    console.log('name', name);
+    console.log('parentFolderId', parentFolderId);
 
     if (!name || !parentFolderId) {
       return NextResponse.json(

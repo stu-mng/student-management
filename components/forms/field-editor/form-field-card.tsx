@@ -1,5 +1,6 @@
 "use client"
 
+import type { Form } from "@/app/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,6 +17,7 @@ interface FormFieldCardProps {
   field: FormFieldWithId
   fieldIndex: number
   sections: FormSectionWithId[]
+  form: Form | null
   isFocused: boolean
   onUpdate: (updates: Partial<FormFieldWithId>) => void
   onRemove: () => void
@@ -27,6 +29,7 @@ export function FormFieldCard({
   field,
   fieldIndex,
   sections,
+  form,
   isFocused,
   onUpdate,
   onRemove,
@@ -63,82 +66,6 @@ export function FormFieldCard({
       card.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [isFocused, field.tempId])
-
-  function CardWrapper({ children }: { children: React.ReactNode }) {
-    if (!isDraggable) {
-      return (
-          <Card 
-            id={`field-card-${field.tempId}`}
-          className={`border transition-all duration-200 cursor-pointer relative ${
-            isFocused ? 'border-l-4 border-l-purple-500 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (!isFocused) {
-              onFocus()
-            }
-          }}
-        >
-          {children}
-        </Card>
-      )
-    }
-
-    return (
-      <Draggable key={field.tempId} draggableId={field.tempId} index={fieldIndex}>
-        {(provided: DraggableProvided) => (
-          <Card 
-            id={`field-card-${field.tempId}`}
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            className={`border transition-all duration-200 cursor-pointer relative ${
-              isFocused ? 'border-l-4 border-l-purple-500 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!isFocused) {
-                onFocus()
-              }
-            }}
-          >
-            <CardContent className="p-4 form-field-card">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  {isDraggable && (
-                    <div {...provided.dragHandleProps}>
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
-                  <h4 className="font-medium">
-                    {field.field_label || `欄位 ${fieldIndex + 1}`}
-                  </h4>
-                  <Badge variant="secondary">
-                    {fieldType?.label || field.field_type}
-                  </Badge>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRemove()
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {isFocused ? (
-                <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
-              ) : (
-                <FormFieldPreview field={field} />
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </Draggable>
-    )
-  }
 
   if (!isDraggable) {
     return (
@@ -177,7 +104,7 @@ export function FormFieldCard({
           </div>
           
           {isFocused ? (
-            <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
+            <FormFieldBuilder field={field} sections={sections} form={form} onUpdate={onUpdate} />
           ) : (
             <FormFieldPreview field={field} />
           )}
@@ -229,7 +156,7 @@ export function FormFieldCard({
             </div>
             
             {isFocused ? (
-              <FormFieldBuilder field={field} sections={sections} onUpdate={onUpdate} />
+              <FormFieldBuilder field={field} sections={sections} form={form} onUpdate={onUpdate} />
             ) : (
               <FormFieldPreview field={field} />
             )}

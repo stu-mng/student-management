@@ -1,11 +1,15 @@
 "use client"
 
+import type { Form } from "@/app/api/types"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
+import { useState } from "react"
+import { toast } from "sonner"
 import type { FormFieldWithId, FormSectionWithId } from "../form-context"
 import { FIELD_TYPES } from "../form-context"
 import { FieldOptionsEditor } from "./field-options-editor"
@@ -14,12 +18,14 @@ import { GridOptionsEditor } from "./grid-options-editor"
 interface FieldBasicEditorProps {
   field: FormFieldWithId
   sections: FormSectionWithId[]
+  form: Form | null
   onUpdate: (updates: Partial<FormFieldWithId>) => void
 }
 
-export function FieldBasicEditor({ field, sections, onUpdate }: FieldBasicEditorProps) {
+export function FieldBasicEditor({ field, sections, form, onUpdate }: FieldBasicEditorProps) {
   const needsOptions = ['radio', 'checkbox', 'select', 'multi-select'].includes(field.field_type)
   const needsGrid = ['radio_grid', 'checkbox_grid'].includes(field.field_type)
+  const [uploading, setUploading] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -104,25 +110,55 @@ export function FieldBasicEditor({ field, sections, onUpdate }: FieldBasicEditor
         />
       </div>
 
-      <div>
-        <Label htmlFor={`help-image-${field.tempId}`}>說明圖片網址</Label>
-        <Input
-          id={`help-image-${field.tempId}`}
-          value={field.help_image_url || ''}
-          onChange={(e) => onUpdate({ help_image_url: e.target.value })}
-          placeholder="輸入圖片 URL (僅支援網址)"
-          type="url"
-        />
+      <div className="space-y-2">
+        <Label htmlFor={`help-image-${field.tempId}`}>說明圖片</Label>
+        <div className="flex items-center gap-2">
+          <Input id={`help-image-${field.tempId}`} value={field.help_image_url || ''} onChange={(e) => onUpdate({ help_image_url: e.target.value })} placeholder="或貼上圖片 URL" />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => {
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.accept = 'image/*'
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0]
+                if (!file) return
+                try {
+                  setUploading(true)
+                  // 使用表單的 help_image_folder_id
+                  const parentFolderId = form?.help_image_folder_id
+                  if (!parentFolderId) {
+                    toast.error('找不到說明圖片資料夾，請先建立表單或重新載入')
+                    return
+                  }
+                  const formData = new FormData()
+                  formData.append('file', file)
+                  formData.append('parentFolderId', parentFolderId)
+                  const res = await fetch('/api/drive/upload', { method: 'POST', body: formData })
+                  const json = await res.json()
+                  if (!res.ok || !json?.success) throw new Error(json?.error || '上傳失敗')
+                  const uploaded = json.file as { id: string }
+                  const url = `/api/drive/image/${uploaded.id}`
+                  onUpdate({ help_image_url: url })
+                  toast.success('說明圖片已上傳')
+                } catch (err) {
+                  console.error(err)
+                  toast.error('上傳失敗', { description: err instanceof Error ? err.message : '未知錯誤' })
+                } finally {
+                  setUploading(false)
+                }
+              }
+              input.click()
+            }}
+          >
+            {uploading ? '上傳中...' : '上傳圖片'}
+          </Button>
+        </div>
         {field.help_image_url && (
           <div className="mt-2">
-            <Image
-              src={field.help_image_url}
-              alt="說明圖片預覽"
-              width={640}
-              height={400}
-              className="h-auto max-h-40 w-auto rounded border"
-              unoptimized
-            />
+            <Image src={field.help_image_url} alt="說明圖片預覽" width={640} height={400} className="h-auto max-h-40 w-auto rounded border" unoptimized />
           </div>
         )}
       </div>

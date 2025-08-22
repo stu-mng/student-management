@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -160,6 +160,7 @@ export type Database = {
           placeholder: string | null
           student_field_mapping: string | null
           updated_at: string | null
+          upload_folder_id: string | null
           validation_rules: Json | null
         }
         Insert: {
@@ -181,6 +182,7 @@ export type Database = {
           placeholder?: string | null
           student_field_mapping?: string | null
           updated_at?: string | null
+          upload_folder_id?: string | null
           validation_rules?: Json | null
         }
         Update: {
@@ -202,6 +204,7 @@ export type Database = {
           placeholder?: string | null
           student_field_mapping?: string | null
           updated_at?: string | null
+          upload_folder_id?: string | null
           validation_rules?: Json | null
         }
         Relationships: [
@@ -374,12 +377,14 @@ export type Database = {
           created_by: string | null
           description: string | null
           form_type: string
+          help_image_folder_id: string | null
           id: string
           is_required: boolean | null
           status: string | null
           submission_deadline: string | null
           title: string
           updated_at: string | null
+          upload_folders_folder_id: string | null
         }
         Insert: {
           allow_multiple_submissions?: boolean | null
@@ -387,12 +392,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           form_type: string
+          help_image_folder_id?: string | null
           id?: string
           is_required?: boolean | null
           status?: string | null
           submission_deadline?: string | null
           title: string
           updated_at?: string | null
+          upload_folders_folder_id?: string | null
         }
         Update: {
           allow_multiple_submissions?: boolean | null
@@ -400,12 +407,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           form_type?: string
+          help_image_folder_id?: string | null
           id?: string
           is_required?: boolean | null
           status?: string | null
           submission_deadline?: string | null
           title?: string
           updated_at?: string | null
+          upload_folders_folder_id?: string | null
         }
         Relationships: [
           {

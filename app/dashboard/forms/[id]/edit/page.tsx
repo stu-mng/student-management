@@ -418,9 +418,10 @@ function FormEditContent() {
                               field={field}
                               fieldIndex={index}
                               sections={sections}
+                              form={form}
                               isFocused={focusedFieldId === field.tempId}
                               onFocus={() => setFocusedFieldId(field.tempId)}
-                    onUpdate={(updates) => updateField(field.tempId, updates)}
+                              onUpdate={(updates) => updateField(field.tempId, updates)}
                               onRemove={() => removeField(field.tempId)}
                             />
                           ))}

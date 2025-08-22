@@ -525,6 +525,7 @@ function FormCreateContent() {
                                 field={field}
                                 fieldIndex={fieldIndex}
                                 sections={sections}
+                                form={null}
                                 isFocused={focusedFieldId === field.tempId}
                                 onUpdate={(updates) => updateField(currentSectionIndex, fieldIndex, updates)}
                                 onRemove={() => removeField(currentSectionIndex, fieldIndex)}

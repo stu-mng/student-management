@@ -1,6 +1,7 @@
 "use client"
 
 import type { FormField, FormFieldOption } from "@/app/api/types"
+import { useAuth } from "@/components/auth-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,10 +11,11 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import type { DateValidationRules, EmailValidationRules, FormFieldValidationRules, NumberValidationRules } from "@/types"
+import type { DateValidationRules, EmailValidationRules, FileValidationRules, FormFieldValidationRules, NumberValidationRules } from "@/types"
 import { X } from "lucide-react"
 import Image from "next/image"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 
 // 台灣身分證字號驗證函數
 const validateTaiwanId = (id: string): boolean => {
@@ -161,7 +163,11 @@ function GridComponent({ field, value, onChange, hasError = false, mode }: GridC
   )
 }
 
-export function FormFieldComponent({ field, value, onChange, hasError = false }: FormFieldComponentProps) {
+export function FormFieldComponent({ field, value, onChange, hasError }: FormFieldComponentProps) {
+  const [uploading, setUploading] = useState(false)
+  const { user } = useAuth()
+  const [uploadedFileName, setUploadedFileName] = useState<string>('')
+  
   const fieldValue = value || ''
   const errorClass = hasError ? 'border-red-500 focus:border-red-500' : ''
   const [multiSelectOpen, setMultiSelectOpen] = useState(false)
@@ -470,6 +476,148 @@ export function FormFieldComponent({ field, value, onChange, hasError = false }:
             mode="checkbox"
           />
         )
+
+      case 'file_upload': {
+        const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          if (!field.upload_folder_id) {
+            toast.error('無法上傳', { description: '未設定此欄位的上傳資料夾' })
+            return
+          }
+
+          // 驗證檔案
+          const validationRules = field.validation_rules as FileValidationRules | undefined
+          if (validationRules) {
+            // 檢查檔案大小
+            if (validationRules.maxFileSize && file.size > validationRules.maxFileSize) {
+              const maxSizeMB = Math.round(validationRules.maxFileSize / (1024 * 1024))
+              toast.error('檔案太大', { description: `檔案大小不能超過 ${maxSizeMB} MB` })
+              return
+            }
+
+            // 檢查檔案格式
+            if (validationRules.allowedExtensions && validationRules.allowedExtensions.length > 0) {
+              const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+              const isValidExtension = validationRules.allowedExtensions.some(ext => 
+                ext.toLowerCase() === fileExtension
+              )
+              if (!isValidExtension) {
+                toast.error('不支援的檔案格式', { 
+                  description: `只允許: ${validationRules.allowedExtensions.join(', ')}` 
+                })
+                return
+              }
+            }
+
+
+          }
+
+          try {
+            setUploading(true)
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('parentFolderId', field.upload_folder_id)
+            
+            // 使用組件級別的用戶資訊
+            if (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email) {
+              const username = user.user_metadata?.full_name || user.user_metadata?.name || user.email
+              formData.append('username', username)
+            }
+            
+            const res = await fetch('/api/drive/upload', { method: 'POST', body: formData })
+            const json = await res.json()
+            if (!res.ok || !json?.success) {
+              throw new Error(json?.error || '上傳失敗')
+            }
+            const uploaded = json.file as { id: string; name: string }
+            onChange(field.id, uploaded.id)
+            setUploadedFileName(uploaded.name)
+            toast.success('檔案已上傳')
+          } catch (err) {
+            console.error(err)
+            toast.error('上傳失敗', { description: err instanceof Error ? err.message : '未知錯誤' })
+          } finally {
+            setUploading(false)
+          }
+        }
+        return (
+          <div className="space-y-2">
+            <div className="space-y-2">
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                onChange={handleFileChange} 
+                disabled={uploading}
+                accept={field.validation_rules && 
+                  (field.validation_rules as any)?.type === 'file' && 
+                  (field.validation_rules as any)?.allowedExtensions ?
+                   (field.validation_rules as any).allowedExtensions?.join(',') :
+                   undefined
+                 }
+                className="hidden"
+                id={`file-input-${field.id}`}
+              />
+              
+              {/* Styled upload button */}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => document.getElementById(`file-input-${field.id}`)?.click()}
+                className="w-full justify-center"
+              >
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                    上傳中...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    選擇檔案
+                  </>
+                )}
+              </Button>
+              
+              {/* File status and name */}
+              {value && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    檔案已上傳
+                  </div>
+                  {uploadedFileName && (
+                    <div className="text-sm font-medium text-foreground bg-muted/20 px-2 py-1 rounded">
+                      檔案名稱: {uploadedFileName}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground bg-muted/20 px-2 py-1 rounded">
+                    檔案 ID: {value}
+                  </div>
+                </div>
+              )}
+              
+              {/* Validation rules info */}
+              {field.validation_rules && 
+                (field.validation_rules as any)?.type === 'file' && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  {(field.validation_rules as any)?.allowedExtensions && (
+                    <div>允許格式: {(field.validation_rules as any).allowedExtensions?.join(', ')}</div>
+                  )}
+                  {(field.validation_rules as any)?.maxFileSize && (
+                    <div>最大大小: {Math.round((field.validation_rules as any).maxFileSize! / (1024 * 1024))} MB</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
 
       default:
         return (

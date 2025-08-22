@@ -23,9 +23,18 @@ export interface DateValidationRules {
   noFuture?: boolean
 }
 
+export interface FileValidationRules {
+  type: 'file'
+  // Allowed file extensions (e.g., ['.pdf', '.doc', '.docx'])
+  allowedExtensions?: string[]
+  // Maximum file size in bytes
+  maxFileSize?: number
+}
+
 export type FormFieldValidationRules =
   | NumberValidationRules
   | EmailValidationRules
   | DateValidationRules
+  | FileValidationRules
 
 

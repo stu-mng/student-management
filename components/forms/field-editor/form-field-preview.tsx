@@ -22,7 +22,8 @@ export function FormFieldPreview({ field }: FormFieldPreviewProps) {
       'select': '下拉選單',
       'multi-select': '多選下拉選單',
       'radio_grid': '單選方格',
-      'checkbox_grid': '核取方塊格'
+      'checkbox_grid': '核取方塊格',
+      'file_upload': '檔案上傳'
     }
     return typeMap[fieldType as keyof typeof typeMap] || fieldType
   }

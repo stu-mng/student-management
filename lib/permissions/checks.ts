@@ -217,21 +217,37 @@ export async function checkFormResponseViewAccess(args: PermissionCheckArgs): Pr
 export async function checkFormResponseEditAccess(args: PermissionCheckArgs): Promise<boolean> {
   const { userRole, userId, path } = args;
   if (!userRole) return false;
-  if (isPrivileged(userRole, ['admin', 'root'])) return true;
+  if (isPrivileged(userRole, ['admin', 'root', 'manager', 'class-teacher'])) return true;
 
-  const formId = getPathParam('/api/forms/[id]/responses/users/[userId]', path, 'id') ?? getPathParam('/api/forms/[id]', path, 'id');
-  const targetUserId = getPathParam('/api/forms/[id]/responses/users/[userId]', path, 'userId');
-  if (!formId) return false;
+  // Extract the form response ID from /api/form-responses/[id]
+  const responseId = getPathParam('/api/form-responses/[id]', path, 'id');
+  if (!responseId) return false;
 
   const supabase = await getSupabase();
-  const { data: form, error: formError } = await supabase
-    .from('forms')
-    .select('id, created_by')
-    .eq('id', formId)
+  
+  // Query the form_responses table to get the respondent_id and form information
+  const { data: response, error: responseError } = await supabase
+    .from('form_responses')
+    .select('id, respondent_id, form:forms(id, created_by)')
+    .eq('id', responseId)
     .single();
-  if (formError || !form) return false;
-  if (form.created_by === userId) return true;
-  if (targetUserId === userId) return true;
+  
+  if (responseError || !response) return false;
+  
+  // Type the response properly
+  type ResponseRow = { 
+    id: string; 
+    respondent_id: string | null; 
+    form: { id: string; created_by: string } | null 
+  };
+  const row = response as unknown as ResponseRow;
+  
+  // Allow access if user is the respondent
+  if (row.respondent_id === userId) return true;
+  
+  // Allow access if user is the form creator
+  if (row.form?.created_by === userId) return true;
+  
   return false;
 }
 

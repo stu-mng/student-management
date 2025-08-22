@@ -285,7 +285,7 @@ export const API_PERMISSIONS: ApiPermissions = {
       method: 'GET',
       path: '/api/forms/[id]/access',
       permissions: { 
-        customCheck: checkFormEditAccess
+        roles: EVERYONE
       },
     },
     responsesList: {

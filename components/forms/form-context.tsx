@@ -34,6 +34,7 @@ export interface FormFieldWithId {
   placeholder?: string
   help_text?: string
   help_image_url?: string
+  upload_folder_id?: string
   min_length?: number
   max_length?: number
   validation_rules?: FormFieldValidationRules
@@ -81,6 +82,7 @@ export const FIELD_TYPES: FieldType[] = [
   // 高級題型
   { value: 'radio_grid', label: '單選方格', category: '高級題型' },
   { value: 'checkbox_grid', label: '核取方塊格', category: '高級題型' },
+  { value: 'file_upload', label: '檔案上傳', category: '高級題型' },
 ]
 
 export const FORM_TYPES = [
@@ -284,7 +286,8 @@ export function FormProvider({ children }: FormProviderProps) {
             is_active: field.is_active !== false,
             placeholder: field.placeholder || '',
             help_text: field.help_text || '',
-             help_image_url: field.help_image_url || '',
+            help_image_url: field.help_image_url || '',
+            upload_folder_id: field.upload_folder_id || '',
             min_length: field.min_length || undefined,
             max_length: field.max_length || undefined,
             
@@ -323,6 +326,8 @@ export function FormProvider({ children }: FormProviderProps) {
         isRequired: formData.is_required || false,
         allowMultipleSubmissions: formData.allow_multiple_submissions || false,
         submissionDeadline: formData.submission_deadline,
+        help_image_folder_id: formData.help_image_folder_id,
+        upload_folders_folder_id: formData.upload_folders_folder_id,
         sections: formData.sections?.map(section => ({
           title: section.title,
           description: section.description,
@@ -337,6 +342,8 @@ export function FormProvider({ children }: FormProviderProps) {
             is_active: field.is_active,
             placeholder: field.placeholder,
             help_text: field.help_text,
+            help_image_url: field.help_image_url,
+            upload_folder_id: field.upload_folder_id,
             min_length: field.min_length,
             max_length: field.max_length,
             validation_rules: field.validation_rules,
@@ -346,8 +353,8 @@ export function FormProvider({ children }: FormProviderProps) {
               display_order: index,
               is_active: option.is_active,
               jump_to_section_id: option.jump_to_section_id
-            }))
-          }))
+            })) || []
+          })) || []
         })) || []
       })
       initialStateRef.current = initialState

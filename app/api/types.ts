@@ -159,6 +159,9 @@ export interface Form {
   created_by?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  // Google Drive integration folders
+  help_image_folder_id?: string | null;
+  upload_folders_folder_id?: string | null;
   sections?: FormSection[];
   access_type?: 'read' | 'edit' | null;
   permissions?: RolePermission[];
@@ -189,6 +192,8 @@ export interface FormField {
   max_length?: number | null;
   student_field_mapping?: string | null;
   auto_populate_from?: string | null;
+  // Google Drive folder for file upload field
+  upload_folder_id?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   form_field_options?: FormFieldOption[];

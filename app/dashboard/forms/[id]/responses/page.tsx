@@ -1,13 +1,16 @@
 "use client"
 
 import type { Form } from "@/app/api/types"
+import { FilePreview } from "@/components/file-preview"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, MessageSquare } from "lucide-react"
+import Image from "next/image"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -62,6 +65,214 @@ interface PaginationData {
   totalPages: number
 }
 
+// 檔案上傳卡片組件
+interface FileUploadCardProps {
+  fileId: string
+  metadata?: { name: string; mimeType: string; size?: string; webViewLink?: string } | null
+  compact?: boolean
+  onPreview: () => void
+  onOpenFolder: () => void
+  onFetchMetadata: () => Promise<{ name: string; mimeType: string; size?: string; webViewLink?: string } | null>
+}
+
+function FileUploadCard({ fileId, metadata, compact = false, onPreview, onOpenFolder, onFetchMetadata }: FileUploadCardProps) {
+  const [loading, setLoading] = useState(!metadata)
+
+  useEffect(() => {
+    if (!metadata) {
+      setLoading(true)
+      onFetchMetadata().finally(() => setLoading(false))
+    }
+  }, [metadata, onFetchMetadata])
+
+  // 根據 MIME 類型渲染縮圖
+  const renderThumbnail = () => {
+    if (loading || !metadata) {
+      return (
+        <div className={`${compact ? 'w-8 h-8' : 'w-12 h-12'} bg-muted/20 rounded-lg flex items-center justify-center animate-pulse`}>
+          <FileText className={`${compact ? 'h-4 w-4' : 'h-6 w-6'} text-muted-foreground`} />
+        </div>
+      )
+    }
+
+    const { mimeType } = metadata
+    const size = compact ? 'w-8 h-8' : 'w-12 h-12'
+    const iconSize = compact ? 'h-4 w-4' : 'h-6 w-6'
+    const badgeSize = compact ? 'text-[6px]' : 'text-[8px]'
+
+    // 圖片檔案顯示實際縮圖
+    if (mimeType.startsWith('image/')) {
+      return (
+        <div className={`${size} bg-muted/20 overflow-hidden rounded-lg relative`}>
+          <Image
+            src={`/api/drive/image/${fileId}`}
+            alt={`Thumbnail for ${metadata.name}`}
+            fill
+            className="object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              const parent = target.parentElement
+              if (parent) {
+                target.style.display = 'none'
+                parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg class="${iconSize} text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`
+              }
+            }}
+          />
+        </div>
+      )
+    }
+
+    // PDF 檔案
+    if (mimeType === 'application/pdf') {
+      return (
+        <div className={`${size} bg-red-50 rounded-lg flex items-center justify-center relative`}>
+          <FileText className={`${iconSize} text-red-600`} />
+          <div className={`absolute bottom-0 right-0 bg-red-500 text-white ${badgeSize} px-1 rounded-tl rounded-br leading-none`}>
+            PDF
+          </div>
+        </div>
+      )
+    }
+
+    // Word 文件
+    if (mimeType.includes('document')) {
+      return (
+        <div className={`${size} bg-blue-50 rounded-lg flex items-center justify-center relative`}>
+          <FileText className={`${iconSize} text-blue-600`} />
+          <div className={`absolute bottom-0 right-0 bg-blue-500 text-white ${badgeSize} px-1 rounded-tl rounded-br leading-none`}>
+            DOC
+          </div>
+        </div>
+      )
+    }
+
+    // Excel 試算表
+    if (mimeType.includes('spreadsheet')) {
+      return (
+        <div className={`${size} bg-green-50 rounded-lg flex items-center justify-center relative`}>
+          <FileText className={`${iconSize} text-green-600`} />
+          <div className={`absolute bottom-0 right-0 bg-green-500 text-white ${badgeSize} px-1 rounded-tl rounded-br leading-none`}>
+            XLS
+          </div>
+        </div>
+      )
+    }
+
+    // PowerPoint 簡報
+    if (mimeType.includes('presentation')) {
+      return (
+        <div className={`${size} bg-orange-50 rounded-lg flex items-center justify-center relative`}>
+          <FileText className={`${iconSize} text-orange-600`} />
+          <div className={`absolute bottom-0 right-0 bg-orange-500 text-white ${badgeSize} px-1 rounded-tl rounded-br leading-none`}>
+            PPT
+          </div>
+        </div>
+      )
+    }
+
+    // 預設檔案圖示
+    return (
+      <div className={`${size} bg-muted/20 rounded-lg flex items-center justify-center`}>
+        <FileText className={`${iconSize} text-muted-foreground`} />
+      </div>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 p-1 rounded hover:bg-muted/20 transition-colors">
+        {renderThumbnail()}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-medium text-foreground truncate">
+            {metadata?.name || '已上傳檔案'}
+          </div>
+          <div className="text-[10px] text-muted-foreground space-y-0.5">
+            <div>ID: {fileId}</div>
+            {metadata?.webViewLink && (
+              <div className="break-all">
+                <a 
+                  href={metadata.webViewLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  {metadata.webViewLink}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-1"
+            onClick={onPreview}
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            檢視
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-1"
+            onClick={onOpenFolder}
+          >
+            <FolderOpen className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/30 transition-colors">
+      {renderThumbnail()}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate">
+          {metadata?.name || '已上傳檔案'}
+        </div>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <div>檔案 ID: {fileId}</div>
+          {metadata?.webViewLink && (
+            <div className="break-all">
+              <span className="text-muted-foreground">URL: </span>
+              <a 
+                href={metadata.webViewLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                {metadata.webViewLink}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 px-2"
+          onClick={onPreview}
+        >
+          <Eye className="h-3 w-3 mr-1" />
+          檢視
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 px-2"
+          onClick={onOpenFolder}
+        >
+          <FolderOpen className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function FormResponsesPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -72,6 +283,10 @@ export default function FormResponsesPage() {
   const [responses, setResponses] = useState<FormResponse[]>([])
   const [overview, setOverview] = useState<FieldOverview[]>([])
   const [loading, setLoading] = useState(true)
+  const [formFields, setFormFields] = useState<Record<string, { upload_folder_id?: string }>>({})
+  const [previewFile, setPreviewFile] = useState<{ id: string; name: string; mimeType: string } | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [fileMetadata, setFileMetadata] = useState<Record<string, { name: string; mimeType: string; size?: string; webViewLink?: string }>>({})
   const [responsesLoading, setResponsesLoading] = useState(false)
   const [overviewLoading, setOverviewLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,6 +306,61 @@ export default function FormResponsesPage() {
   const currentTab = searchParams.get('tab') || 'overview'
   const currentPage = parseInt(searchParams.get('page') || '1')
 
+  // 獲取欄位的上傳資料夾 ID
+  const getFieldUploadFolderId = (fieldId: string): string | null => {
+    return formFields[fieldId]?.upload_folder_id || null
+  }
+
+  // 獲取檔案元數據
+  const fetchFileMetadata = async (fileId: string) => {
+    if (fileMetadata[fileId]) {
+      return fileMetadata[fileId]
+    }
+
+    try {
+      const response = await fetch(`/api/drive/${fileId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.file) {
+          const metadata = {
+            name: data.file.name,
+            mimeType: data.file.mimeType,
+            size: data.file.size,
+            webViewLink: data.file.webViewLink
+          }
+          setFileMetadata(prev => ({
+            ...prev,
+            [fileId]: metadata
+          }))
+          return metadata
+        }
+      }
+    } catch (error) {
+      console.error('獲取檔案元數據失敗:', error)
+    }
+    return null
+  }
+
+
+
+  // 開啟檔案預覽
+  const openFilePreview = async (fileId: string) => {
+    try {
+      // 使用現有的 fetchFileMetadata 函數
+      const metadata = await fetchFileMetadata(fileId)
+      if (metadata) {
+        setPreviewFile({
+          id: fileId,
+          name: metadata.name,
+          mimeType: metadata.mimeType
+        })
+        setShowPreview(true)
+      }
+    } catch (error) {
+      console.error('獲取檔案資訊失敗:', error)
+    }
+  }
+
   useEffect(() => {
     const fetchFormAndAccess = async () => {
       try {
@@ -106,6 +376,21 @@ export default function FormResponsesPage() {
 
         const formData = await formResponse.json()
         setForm(formData.data)
+
+        // 建立欄位資訊映射（包含 upload_folder_id）
+        const fieldsMap: Record<string, { upload_folder_id?: string }> = {}
+        if (formData.data?.sections) {
+          for (const section of formData.data.sections) {
+            if (section.fields) {
+              for (const field of section.fields) {
+                fieldsMap[field.id] = {
+                  upload_folder_id: field.upload_folder_id
+                }
+              }
+            }
+          }
+        }
+        setFormFields(fieldsMap)
 
         if (accessResponse.ok) {
           const accessData = await accessResponse.json()
@@ -241,6 +526,27 @@ export default function FormResponsesPage() {
         return fieldResponse.field_value
       }
     }
+
+    // 處理檔案上傳欄位
+    if (fieldResponse.field.field_type === 'file_upload' && fieldResponse.field_value) {
+      const fileId = fieldResponse.field_value
+      const metadata = fileMetadata[fileId]
+      
+      return (
+        <FileUploadCard 
+          fileId={fileId} 
+          metadata={metadata} 
+          onPreview={() => openFilePreview(fileId)}
+          onOpenFolder={() => {
+            const uploadFolderId = getFieldUploadFolderId(fieldResponse.field.id)
+            if (uploadFolderId) {
+              window.open(`/dashboard/drive/folders/${uploadFolderId}`, '_blank')
+            }
+          }}
+          onFetchMetadata={() => fetchFileMetadata(fileId)}
+        />
+      )
+    }
     
     if (fieldResponse.field_values && Array.isArray(fieldResponse.field_values)) {
       return fieldResponse.field_values.join(', ')
@@ -272,6 +578,28 @@ export default function FormResponsesPage() {
       } catch (error) {
         return response.field_value
       }
+    }
+
+    // 處理檔案上傳欄位
+    if (fieldType === 'file_upload' && response.field_value) {
+      const fileId = response.field_value
+      const metadata = fileMetadata[fileId]
+      
+      return (
+        <FileUploadCard 
+          fileId={fileId} 
+          metadata={metadata} 
+          compact={true}
+          onPreview={() => openFilePreview(fileId)}
+          onOpenFolder={() => {
+            const uploadFolderId = getFieldUploadFolderId(fieldId || '')
+            if (uploadFolderId) {
+              window.open(`/dashboard/drive/folders/${uploadFolderId}`, '_blank')
+            }
+          }}
+          onFetchMetadata={() => fetchFileMetadata(fileId)}
+        />
+      )
     }
     
     if (response.field_values && Array.isArray(response.field_values)) {
@@ -1247,6 +1575,16 @@ export default function FormResponsesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 檔案預覽 */}
+      {showPreview && previewFile && (
+        <div className="fixed inset-0 z-[60]">
+          <FilePreview
+            file={previewFile}
+            onClose={() => setShowPreview(false)}
+          />
+        </div>
+      )}
     </div>
   )
 } 

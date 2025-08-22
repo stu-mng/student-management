@@ -7,6 +7,7 @@ import type {
   RolePermission
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { googleDriveService } from '@/lib/google-drive';
 import { getUserFromHeaders } from '@/lib/middleware-utils';
 import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
@@ -70,6 +71,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 在 Google Drive 建立表單專屬資料夾與子資料夾
+    // 根資料夾（由需求提供）
+    const ROOT_PARENT_FOLDER_ID = '1_tacmfCWOGruYMm5pXM-vBkBT1CMvzKV';
+    let helpImageFolderId: string | null = null;
+    let uploadFoldersFolderId: string | null = null;
+    try {
+      const formRoot = await googleDriveService.createFolder(`${form.title}_${form.id}`, ROOT_PARENT_FOLDER_ID);
+      if (formRoot?.id) {
+        const helpFolder = await googleDriveService.createFolder('提示圖片', formRoot.id);
+        const uploadFolder = await googleDriveService.createFolder('檔案上傳', formRoot.id);
+        helpImageFolderId = helpFolder?.id || null;
+        uploadFoldersFolderId = uploadFolder?.id || null;
+        // 回寫到表單
+        await supabase
+          .from('forms')
+          .update({
+            help_image_folder_id: helpImageFolderId,
+            upload_folders_folder_id: uploadFoldersFolderId,
+          })
+          .eq('id', form.id);
+      }
+    } catch (e) {
+      console.error('Drive folder provisioning failed for form', form.id, e);
+    }
+
     // 創建表單分段和欄位
     if (sections.length > 0) {
       for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
@@ -123,7 +149,12 @@ export async function POST(request: NextRequest) {
             placeholder: field.placeholder,
             help_text: field.help_text,
             help_image_url: field.help_image_url,
-            validation_rules: field.validation_rules,
+            validation_rules: field.field_type === 'file_upload' ? 
+              {
+                type: 'file',
+                allowedExtensions: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif'],
+                maxFileSize: 20 * 1024 * 1024, // 20MB
+              } : field.validation_rules,
             min_length: field.min_length,
             max_length: field.max_length,
             student_field_mapping: field.student_field_mapping,
@@ -143,6 +174,25 @@ export async function POST(request: NextRequest) {
               { error: 'Failed to create form fields' },
               { status: 500 }
             );
+          }
+
+          // 若有「檔案上傳」欄位，為其建立對應的上傳資料夾
+          if (createdFields && uploadFoldersFolderId) {
+            for (const f of createdFields) {
+              if (f.field_type === 'file_upload' && !f.upload_folder_id) {
+                try {
+                  const folder = await googleDriveService.createFolder(f.id, uploadFoldersFolderId);
+                  if (folder?.id) {
+                    await supabase
+                      .from('form_fields')
+                      .update({ upload_folder_id: folder.id })
+                      .eq('id', f.id);
+                  }
+                } catch (driveErr) {
+                  console.error('Failed creating upload folder for field', f.id, driveErr);
+                }
+              }
+            }
           }
 
           // 為有選項的欄位創建選項

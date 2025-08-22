@@ -1,17 +1,18 @@
 import type {
-  ErrorResponse,
-  ExtendedFormFieldOption,
-  FormDetailResponse,
-  FormField,
-  FormFieldCreateRequest,
-  FormFieldOption,
-  FormSectionCreateRequest,
-  FormUpdateRequest,
-  Role,
-  RolePermission,
-  SuccessResponse
+    ErrorResponse,
+    ExtendedFormFieldOption,
+    FormDetailResponse,
+    FormField,
+    FormFieldCreateRequest,
+    FormFieldOption,
+    FormSectionCreateRequest,
+    FormUpdateRequest,
+    Role,
+    RolePermission,
+    SuccessResponse
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
+import { googleDriveService } from '@/lib/google-drive';
 import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -722,7 +723,13 @@ export async function PUT(
                   placeholder: field.placeholder,
                   help_text: field.help_text,
                   help_image_url: field.help_image_url,
-                  validation_rules: field.validation_rules,
+                  validation_rules: field.field_type === 'file_upload' && !field.validation_rules ? 
+                    {
+                      type: 'file',
+                      allowedExtensions: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif'],
+                      maxFileSize: 20 * 1024 * 1024, // 20MB
+
+                    } : field.validation_rules,
                   min_length: field.min_length,
                   max_length: field.max_length,
                   student_field_mapping: field.student_field_mapping,
@@ -743,6 +750,37 @@ export async function PUT(
 
               // 更新欄位選項
               await updateFieldOptions(supabase, existingField.id, field);
+
+              // 若欄位類型為 file_upload 且尚未建立上傳資料夾，則建立
+              if (field.field_type === 'file_upload') {
+                // 讀取目前欄位的 upload_folder_id
+                const { data: fieldRow } = await supabase
+                  .from('form_fields')
+                  .select('upload_folder_id')
+                  .eq('id', existingField.id)
+                  .single();
+                if (!fieldRow?.upload_folder_id) {
+                  const { data: formRow } = await supabase
+                    .from('forms')
+                    .select('upload_folders_folder_id')
+                    .eq('id', id)
+                    .single();
+                  const parentFolder = formRow?.upload_folders_folder_id;
+                  if (parentFolder) {
+                    try {
+                      const folder = await googleDriveService.createFolder(existingField.id, parentFolder);
+                      if (folder?.id) {
+                        await supabase
+                          .from('form_fields')
+                          .update({ upload_folder_id: folder.id })
+                          .eq('id', existingField.id);
+                      }
+                    } catch (driveErr) {
+                      console.error('Failed creating upload folder for field', existingField.id, driveErr);
+                    }
+                  }
+                }
+              }
             } else {
               console.log(`Creating new field: ${field.field_name}`);
               
@@ -761,7 +799,13 @@ export async function PUT(
                   placeholder: field.placeholder,
                   help_text: field.help_text,
                   help_image_url: field.help_image_url,
-                  validation_rules: field.validation_rules,
+                  validation_rules: field.field_type === 'file_upload' && !field.validation_rules ? 
+                    {
+                      type: 'file',
+                      allowedExtensions: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif'],
+                      maxFileSize: 20 * 1024 * 1024, // 20MB
+
+                    } : field.validation_rules,
                   min_length: field.min_length,
                   max_length: field.max_length,
                   student_field_mapping: field.student_field_mapping,
@@ -776,6 +820,30 @@ export async function PUT(
                   { error: 'Failed to create form fields' },
                   { status: 500 }
                 );
+              }
+
+              // 對 file_upload 欄位建立上傳資料夾
+              if (createdField && field.field_type === 'file_upload') {
+                // 讀取表單的上傳根資料夾
+                const { data: formRow } = await supabase
+                  .from('forms')
+                  .select('upload_folders_folder_id')
+                  .eq('id', id)
+                  .single();
+                const parentFolder = formRow?.upload_folders_folder_id;
+                if (parentFolder) {
+                  try {
+                    const folder = await googleDriveService.createFolder(createdField.id, parentFolder);
+                    if (folder?.id) {
+                      await supabase
+                        .from('form_fields')
+                        .update({ upload_folder_id: folder.id })
+                        .eq('id', createdField.id);
+                    }
+                  } catch (driveErr) {
+                    console.error('Failed creating upload folder for field', createdField.id, driveErr);
+                  }
+                }
               }
 
               // 標記新建欄位為有效
