@@ -98,25 +98,28 @@ export function FileItem({
   const renderThumbnail = () => {
     if (file.mimeType.startsWith('image/')) {
       return (
-        <div className="w-full h-32 bg-muted/20 overflow-hidden rounded-t-lg relative">
-          <SmartImage
-            src={`/api/drive/image/${file.id}`}
-            alt={`Thumbnail for ${file.name}`}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              target.style.display = 'none'
-              const parent = target.parentElement
-              if (parent) {
-                parent.innerHTML = `
-                  <div class="w-full h-full flex items-center justify-center">
-                    ${renderFileIcon()}
-                  </div>
-                `
-              }
-            }}
-          />
-        </div>
+        <SmartImage
+          src={`/api/drive/image/${file.id}`}
+          alt={`Thumbnail for ${file.name}`}
+          fill
+          className="object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement
+            target.style.display = 'none'
+            const parent = target.parentElement
+            if (parent) {
+              parent.innerHTML = `
+                <div class="w-full h-full flex items-center justify-center">
+                  <svg class="h-6 w-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                  </svg>
+                </div>
+              `
+            }
+          }}
+        />
       )
     }
 

@@ -23,12 +23,23 @@ export const SmartImage = forwardRef<HTMLImageElement, SmartImageProps>(
     
     // For API images, use regular img tag to avoid Next.js optimization issues
     if (isApiImage) {
+      // When fill is true, we need to make the img tag behave like Next.js Image with fill
+      const imgClassName = fill 
+        ? `absolute inset-0 w-full h-full ${className || ''}`.trim()
+        : className
+
+      // Create style object for img tag to handle dimensions
+      const imgStyle: React.CSSProperties = {}
+      if (width && !fill) imgStyle.width = width
+      if (height && !fill) imgStyle.height = height
+      
       return (
         <img
           ref={ref}
           src={src}
           alt={alt}
-          className={className}
+          className={imgClassName}
+          style={imgStyle}
           onLoad={onLoad}
           onError={onError}
           {...props}
