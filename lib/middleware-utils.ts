@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import type { Role } from './permissions/types';
 
 /**
  * Extract user information from middleware-injected headers
@@ -7,23 +6,24 @@ import type { Role } from './permissions/types';
  */
 export function getUserFromHeaders(request: NextRequest): {
   userId: string;
-  userRole: Role;
+  userRoleName: string;
+  originalUserRoleName?: string;
+  isPreviewMode: boolean;
 } | null {
   try {
     const userId = request.headers.get('x-user-id');
-    const userRoleHeader = request.headers.get('x-user-role');
+    const userRoleName = request.headers.get('x-user-role');
+    const originalUserRoleName = request.headers.get('x-original-user-role');
 
-    if (!userId || !userRoleHeader) {
+    if (!userId || !userRoleName) {
       return null;
     }
 
-    // Decode URL-encoded role data
-    const decodedRoleData = decodeURIComponent(userRoleHeader);
-    const userRole = JSON.parse(decodedRoleData) as Role;
-    
     return {
       userId,
-      userRole,
+      userRoleName,
+      originalUserRoleName: originalUserRoleName || undefined,
+      isPreviewMode: !!originalUserRoleName,
     };
   } catch (error) {
     console.error('Error parsing user headers:', error);

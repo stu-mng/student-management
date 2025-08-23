@@ -9,7 +9,6 @@ import type {
 import { createClient } from '@/database/supabase/server';
 import { googleDriveService } from '@/lib/google-drive';
 import { getUserFromHeaders } from '@/lib/middleware-utils';
-import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -353,65 +352,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json<ErrorResponse>({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { userId } = userInfo;
+    const { userId, userRoleName: effectiveRoleName, isPreviewMode } = userInfo;
+    const { searchParams } = new URL(request.url);
     
-    // For complex preview functionality, we still need to fetch full user data
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        role:roles(
-          id,
-          name,
-          display_name,
-          color,
-          order
-        )
-      `)
-      .eq('id', userId)
+    // Get role ID for the effective role
+    const { data: effectiveRoleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', effectiveRoleName)
       .single();
 
-    if (userError) {
-      return NextResponse.json<ErrorResponse>({ error: userError.message }, { status: 500 });
+    if (roleError) {
+      return NextResponse.json<ErrorResponse>({ error: 'Invalid role' }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const previewRoleName = request.headers.get('x-preview-role') || searchParams.get('preview_role');
-    let effectiveRole: { id: number | null; name: string; order: number } | null = null;
-    const currentRole = userData.role as unknown as Role | null;
-
-    if (previewRoleName) {
-      // 讀取預覽角色並驗證階級
-      const { data: previewRoleRow, error: previewErr } = await supabase
-        .from('roles')
-        .select('id, name, order')
-        .eq('name', previewRoleName)
-        .single();
-
-      if (previewErr || !previewRoleRow) {
-        return NextResponse.json<ErrorResponse>({ error: 'Invalid preview role' }, { status: 400 });
-      }
-
-      if (!currentRole) {
-        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-      }
-
-      const currentOrder = currentRole.order ?? getRoleOrder({ name: currentRole.name } as { name: string; order?: number });
-      const previewOrder = previewRoleRow.order ?? getRoleOrder({ name: previewRoleRow.name } as { name: string; order?: number });
-
-      // 僅允許預覽比自身低的角色（數字越大權限越低）
-      if (!(currentOrder < previewOrder)) {
-        return NextResponse.json<ErrorResponse>({ error: 'Preview role not allowed' }, { status: 403 });
-      }
-
-      effectiveRole = {
-        id: previewRoleRow.id,
-        name: previewRoleRow.name,
-        order: previewOrder,
-      };
-    }
-
-    const effectiveRoleName = (effectiveRole?.name ?? (currentRole?.name || '')) as string;
-    const effectiveRoleId = (effectiveRole?.id ?? (currentRole?.id ?? null)) as number | null;
+    const effectiveRoleId = effectiveRoleData.id;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
@@ -483,7 +438,7 @@ export async function GET(request: NextRequest) {
         // 檢查用戶的存取權限（依有效角色判斷）
         // 1. 如果是表單創建者，給予編輯權限
         // 注意：在預覽模式下，不因創建者身份提升權限，僅依角色視角判斷
-        if (!previewRoleName) {
+        if (!isPreviewMode) {
           if (form.created_by === userId) {
             accessType = 'edit';
           }

@@ -13,7 +13,6 @@ import type {
 } from '@/app/api/types';
 import { createClient } from '@/database/supabase/server';
 import { googleDriveService } from '@/lib/google-drive';
-import { getRoleOrder } from '@/lib/utils';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -54,32 +53,28 @@ export async function GET(
     }
 
     const { id } = await params;
-    const previewRoleName = request.headers.get('x-preview-role') || new URL(request.url).searchParams.get('preview_role');
-    let effectiveRole: { id: number | null; name: string; order: number } | null = null;
+    
+    // Get effective role from middleware headers
+    const effectiveRoleName = request.headers.get('x-user-role') || '';
+    const originalUserRole = request.headers.get('x-original-user-role');
+    const isPreviewMode = !!originalUserRole;
+    
+    // Get role ID - need to match effective role name to get correct ID
     const currentRole = userData.role as unknown as Role | null;
-
-    if (previewRoleName) {
-      const { data: previewRoleRow, error: previewErr } = await supabase
+    let effectiveRoleId = currentRole?.id ?? null;
+    
+    // If in preview mode, get the role ID for the effective role
+    if (isPreviewMode && effectiveRoleName) {
+      const { data: effectiveRoleData } = await supabase
         .from('roles')
-        .select('id, name, order')
-        .eq('name', previewRoleName)
+        .select('id')
+        .eq('name', effectiveRoleName)
         .single();
-      if (previewErr || !previewRoleRow) {
-        return NextResponse.json<ErrorResponse>({ error: 'Invalid preview role' }, { status: 400 });
+      
+      if (effectiveRoleData) {
+        effectiveRoleId = effectiveRoleData.id;
       }
-      if (!currentRole) {
-        return NextResponse.json<ErrorResponse>({ error: 'Permission denied' }, { status: 403 });
-      }
-      const currentOrder = currentRole.order ?? getRoleOrder({ name: currentRole.name } as { name: string; order?: number });
-      const previewOrder = previewRoleRow.order ?? getRoleOrder({ name: previewRoleRow.name } as { name: string; order?: number });
-      if (!(currentOrder < previewOrder)) {
-        return NextResponse.json<ErrorResponse>({ error: 'Preview role not allowed' }, { status: 403 });
-      }
-      effectiveRole = { id: previewRoleRow.id, name: previewRoleRow.name, order: previewOrder };
     }
-
-    const effectiveRoleName = (effectiveRole?.name ?? ((userData.role as unknown as Role)?.name || '')) as string;
-    const effectiveRoleId = (effectiveRole?.id ?? ((userData.role as unknown as Role)?.id ?? null)) as number | null;
 
     // 獲取表單基本資訊
     const { data: form, error: formError } = await supabase
@@ -114,7 +109,7 @@ export async function GET(
     let accessType: 'read' | 'edit' | null = null;
 
     // 1. 若預覽模式，忽略創建者捷徑，避免權限提升
-    if (!previewRoleName) {
+    if (!isPreviewMode) {
       if (form.created_by === user.id) {
         accessType = 'edit';
       }

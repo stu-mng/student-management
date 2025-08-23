@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { apiClientSilent, type ApiResponse } from "@/lib/api-utils"
 import { getRoleOrder, hasHigherPermission } from "@/lib/utils"
 import { createBrowserClient } from "@supabase/ssr"
 import { useRouter } from "next/navigation"
@@ -103,38 +104,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const syncUserData = useCallback(async (authUser: User): Promise<User> => {
     try {
       // Check if user exists
-      const existingUserResponse = await fetch(`/api/users/me`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const existingUserResponse = await apiClientSilent.get<ApiResponse<unknown>>(`/api/users/me`)
       
-      if (existingUserResponse.status === 404) {
-        // User is not in the whitelist, redirect to blocked page
-        router.replace('/blocked')
-        return authUser
-      }
-      
-      if (existingUserResponse.ok) {
-        const existingUserData = await existingUserResponse.json()
+      if (existingUserResponse.status === 200) {
+        const existingUserData = existingUserResponse.data
         
         // Update user data
-        const updateResponse = await fetch(`/api/users/me`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-        })
+        const updateResponse = await apiClientSilent.put<ApiResponse<unknown>>(`/api/users/me`)
         
-        if (!updateResponse.ok) {
-          console.error('Failed to update user data:', await updateResponse.text())
+        if (updateResponse.status === 200) {
+          return { ...authUser, ...updateResponse.data }
+        } else {
+          console.error('Failed to update user data')
           return { ...authUser, ...existingUserData }
         }
-        
-        return { ...authUser, ...(await updateResponse.json()) }
       }
       
-      console.error('Error checking user:', existingUserResponse.statusText)
+      console.error('Error checking user')
       return authUser
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error syncing user data:', error)
+      
+      // Check if it's a 404 error (user not in whitelist)
+      if (error.response?.status === 404) {
+        router.replace('/blocked')
+      }
+      
       return authUser
     }
   }, [router])
@@ -146,10 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 初始登入時更新活動時間
     const updateActivity = async () => {
       try {
-        await fetch('/api/users/activity', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        })
+        await apiClientSilent.post<ApiResponse<unknown>>('/api/users/activity')
       } catch (error) {
         console.error('Error updating activity:', error)
       }

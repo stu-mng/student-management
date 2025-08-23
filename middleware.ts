@@ -72,16 +72,41 @@ export async function middleware(request: NextRequest) {
     const userRole = Array.isArray(userData.role) ? userData.role[0] : userData.role;
     const method = request.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     
-    // Debug user role information
-    console.log('👤 User Role Debug:', {
-      userId: user.id,
-      userEmail: user.email,
-      rawRole: userData.role,
-      processedRole: userRole,
-      roleName: userRole?.name,
-      roleId: userRole?.id,
-      roleOrder: userRole?.order
-    });
+    // Check for preview role header and validate permissions
+    const previewRoleName = request.headers.get('x-preview-role');
+    let effectiveRole = userRole;
+    
+    if (previewRoleName && userRole) {
+      // Get all roles to find the preview role details
+      const { data: allRoles } = await supabase
+        .from('roles')
+        .select('id, name, display_name, color, order')
+        .eq('name', previewRoleName)
+        .single();
+      
+      if (allRoles) {
+        // Validate that the preview role has lower or equal permissions
+        // (higher order number means lower permissions)
+        if (allRoles.order >= userRole.order) {
+          effectiveRole = allRoles;
+          console.log('🎭 Using preview role:', {
+            originalRole: userRole.name,
+            previewRole: allRoles.name,
+            originalOrder: userRole.order,
+            previewOrder: allRoles.order
+          });
+        } else {
+          console.warn('⚠️ Preview role has higher permissions than user role, ignoring:', {
+            userRole: userRole.name,
+            userOrder: userRole.order,
+            previewRole: allRoles.name,
+            previewOrder: allRoles.order
+          });
+        }
+      } else {
+        console.warn('⚠️ Preview role not found:', previewRoleName);
+      }
+    }
 
     // Find matching API permission config with proper priority
     const permissionConfig = findApiPermissionConfig(method, pathname);
@@ -107,12 +132,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Check permissions using the found config directly
-    const hasPermission = await checkPermission(permissionConfig, { userRole, userId: user.id, method, path: pathname });
+    // Check permissions using the found config directly with effective role
+    const hasPermission = await checkPermission(permissionConfig, { userRole: effectiveRole, userId: user.id, method, path: pathname });
     
     console.log('🔐 Permission check result:', {
       hasPermission,
-      userRole: userRole?.name,
+      originalRole: userRole?.name,
+      effectiveRole: effectiveRole?.name,
       allowedRoles: permissionConfig.permissions.roles,
       customCheck: !!permissionConfig.permissions.customCheck
     });
@@ -128,8 +154,12 @@ export async function middleware(request: NextRequest) {
     // Add user info to request headers for API routes to use
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', user.id);
-    // Encode role data to avoid non-ASCII character issues in headers
-    requestHeaders.set('x-user-role', encodeURIComponent(JSON.stringify(userRole)));
+    // Set role name for easier access in API routes
+    requestHeaders.set('x-user-role', effectiveRole?.name || '');
+    // Also add the original role for reference if preview is active
+    if (effectiveRole !== userRole) {
+      requestHeaders.set('x-original-user-role', userRole?.name || '');
+    }
 
     return NextResponse.next({
       request: {

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
+import { apiClient, apiClientSilent } from "@/lib/api-utils"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
@@ -34,13 +35,13 @@ export default function AdminNotificationsPage() {
       try {
         setLoading(true)
         const [usersRes, formsRes] = await Promise.all([
-          fetch("/api/users"),
-          fetch("/api/forms?status=active"),
+          apiClientSilent.get<{ data: User[] }>("/api/users"),
+          apiClientSilent.get<{ data: Form[] }>("/api/forms?status=active"),
         ])
-        if (!usersRes.ok) throw new Error("Failed to fetch users")
-        if (!formsRes.ok) throw new Error("Failed to fetch forms")
-        const usersJson: { data: User[] } = await usersRes.json()
-        const formsJson: { data: Form[] } = await formsRes.json()
+        if (usersRes.status !== 200) throw new Error("Failed to fetch users")
+        if (formsRes.status !== 200) throw new Error("Failed to fetch forms")
+        const usersJson: { data: User[] } = usersRes.data
+        const formsJson: { data: Form[] } = formsRes.data
         setUsers(usersJson.data || [])
         setForms(formsJson.data || [])
         console.log(formsJson.data)
@@ -153,17 +154,9 @@ export default function AdminNotificationsPage() {
       .filter(u => selectedIds.has(u.id))
       .map(u => ({ email: u.email, username: u.name || u.email.split("@")[0] }))
 
-    const res = await fetch("/api/emails/batch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, recipients }),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      toast.error(j.error || "寄送失敗")
-      return
-    }
-    const result = await res.json()
+    const res = await apiClient.post<{ success: boolean; summary: { succeeded: number; total: number; failed: number } }>("/api/emails/batch", { title, body, recipients })
+    const result = res.data
+    // Show more detailed success message for email sending
     if (result.success) {
       toast.success(`寄送成功：${result.summary.succeeded}/${result.summary.total}`)
     } else {
