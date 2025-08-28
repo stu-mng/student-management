@@ -9,6 +9,9 @@ export const getFileIcon = (mimeType: string) => {
   if (mimeType.includes('video')) return 'video'
   if (mimeType.includes('audio')) return 'audio'
   if (mimeType.includes('zip') || mimeType.includes('rar')) return 'archive'
+  if (mimeType.startsWith('text/') || 
+      mimeType === 'text/markdown' || 
+      mimeType === 'text/x-markdown') return 'document'
   return 'file'
 }
 
@@ -21,6 +24,9 @@ export const getFileTypeLabel = (mimeType: string) => {
   if (mimeType.includes('video')) return '影片'
   if (mimeType.includes('audio')) return '音訊'
   if (mimeType.includes('zip') || mimeType.includes('rar')) return '壓縮檔'
+  if (mimeType.startsWith('text/') || 
+      mimeType === 'text/markdown' || 
+      mimeType === 'text/x-markdown') return '文字文件'
   return '檔案'
 }
 

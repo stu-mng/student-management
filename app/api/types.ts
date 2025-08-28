@@ -66,6 +66,21 @@ export interface StudentsListResponse {
   data: Student[];
 }
 
+// Task assignment response types
+export interface TaskAssignResponse {
+  success: boolean;
+  message: string;
+  assigned_count: number;
+  already_assigned_count: number;
+}
+
+export interface TaskUnassignResponse {
+  success: boolean;
+  message: string;
+  removed_count: number;
+  total_requested: number;
+}
+
 // Student update request type
 export interface StudentUpdateRequest {
   name?: string;

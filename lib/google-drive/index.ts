@@ -7,6 +7,7 @@ export * from './content-operations';
 export * from './delete-operations';
 export * from './file-operations';
 export * from './folder-operations';
+export * from './task-folder-utils';
 export * from './types';
 export * from './upload-operations';
 export * from './utility-operations';

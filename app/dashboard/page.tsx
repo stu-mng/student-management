@@ -5,16 +5,16 @@ import { RestrictedCard } from "@/components/restricted-card"
 import { Button } from "@/components/ui/button"
 import { CardContent, CardHeader } from "@/components/ui/card"
 import {
-    BarChart3,
-    BookOpen,
-    FileSpreadsheet,
-    FileText,
-    FolderOpen,
-    Link2,
-    Mail,
-    Settings,
-    UserCog,
-    Users
+  BarChart3,
+  BookOpen,
+  FileSpreadsheet,
+  FileText,
+  FolderOpen,
+  Link2,
+  Mail,
+  Settings,
+  UserCog,
+  Users
 } from "lucide-react"
 import Link from "next/link"
 
@@ -85,6 +85,13 @@ export default function DashboardPage() {
       allowedRoles: ["admin", "root", "class-teacher", "manager"]
     },
     {
+      title: "任務管理",
+      description: "即時任務派發、進度追蹤和檔案收集管理",
+      icon: <FileText className="h-8 w-8 text-rose-500" />,
+      href: "/dashboard/admin/tasks",
+      allowedRoles: ["admin", "root", "class-teacher", "manager"]
+    },
+    {
       title: "檔案總管",
       description: "瀏覽、分類、下載和預覽 Google Drive 檔案",
       icon: <FolderOpen className="h-8 w-8 text-teal-500" />,
@@ -114,6 +121,13 @@ export default function DashboardPage() {
       icon: <FileText className="h-8 w-8 text-orange-500" />,
       href: "/dashboard/forms",
       allowedRoles: ["candidate", "teacher", "admin", "root", "manager", "class-teacher", "new-registrant"]
+    },
+    {
+      title: "我的任務",
+      description: "查看並完成分配給我的教學任務",
+      icon: <FileText className="h-8 w-8 text-purple-500" />,
+      href: "/dashboard/tasks",
+      allowedRoles: ["candidate", "teacher", "admin", "root", "manager", "class-teacher"]
     },
     {
       title: "系統使用手冊",

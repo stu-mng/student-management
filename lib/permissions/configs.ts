@@ -1,5 +1,5 @@
-import { checkAssignedStudentsAccess, checkFormResponsesOverviewAccess, checkFormsListAccess, checkStudentAccess, checkStudentsCreateAccess, checkStudentsListAccess, checkUserFormResponsesAccess, checkUserProfileAccess, checkUserUpdateAccess, checkUserViewAccess } from './advanced-checks';
-import { checkFormAccess, checkFormDeleteAccess, checkFormEditAccess, checkFormResponseAccess, checkFormResponseEditAccess, checkFormResponseViewAccess, checkUserDeleteAccess } from './checks';
+import { checkAssignedStudentsAccess, checkFormResponsesOverviewAccess, checkFormsListAccess, checkStudentAccess, checkStudentsCreateAccess, checkStudentsListAccess, checkTaskAssignAccess, checkTaskAssignmentsAccess, checkTaskResponsesAccess, checkTaskViewAccess, checkUserFormResponsesAccess, checkUserProfileAccess, checkUserUpdateAccess, checkUserViewAccess } from './advanced-checks';
+import { checkFormAccess, checkFormEditAccess, checkFormResponseAccess, checkFormResponseEditAccess, checkFormResponseViewAccess, checkUserDeleteAccess } from './checks';
 import type { PermissionCheckFunction, RoleName } from './types';
 
 // TypeScript interfaces for permissions
@@ -267,7 +267,7 @@ export const API_PERMISSIONS: ApiPermissions = {
       method: 'DELETE',
       path: '/api/forms/[id]',
       permissions: { 
-        customCheck: checkFormDeleteAccess 
+        roles: ADMINS
       },
     },
     permissionsUpdate: {
@@ -413,7 +413,7 @@ export const API_PERMISSIONS: ApiPermissions = {
       method: 'POST',
       path: '/api/drive/upload',
       permissions: { 
-        roles: ADMINS
+        roles: EVERYONE
       },
     },
     delete: {
@@ -522,6 +522,127 @@ export const API_PERMISSIONS: ApiPermissions = {
       path: '/api/drive/[fileId]',
       permissions: { 
         roles: ADMINS
+      },
+    },
+  },
+  tasks: {
+    module: '任務管理',
+    description: '管理教學任務的建立、分配和進度追蹤',
+    list: {
+      feature: '任務列表',
+      description: '查看任務列表',
+      method: 'GET',
+      path: '/api/tasks',
+      permissions: { 
+        roles: ADMINS
+      },
+    },
+    create: {
+      feature: '創建任務',
+      description: '創建新的教學任務',
+      method: 'POST',
+      path: '/api/tasks',
+      permissions: { 
+        roles: ADMINS
+      },
+    },
+    view: {
+      feature: '查看任務詳情',
+      description: '查看單個任務的詳細資訊',
+      method: 'GET',
+      path: '/api/tasks/[id]',
+      permissions: {
+        customCheck: checkTaskViewAccess, // Use task-specific view access logic
+      },
+    },
+    update: {
+      feature: '更新任務',
+      description: '更新任務資訊和狀態',
+      method: 'PATCH',
+      path: '/api/tasks/[id]',
+      permissions: {
+        roles: ADMINS
+      },
+    },
+    delete: {
+      feature: '刪除任務',
+      description: '刪除任務',
+      method: 'DELETE',
+      path: '/api/tasks/[id]',
+      permissions: { 
+        roles: ADMINS
+      },
+    },
+    responses: {
+      feature: '任務提交記錄',
+      description: '查看任務的提交記錄和進度',
+      method: 'GET',
+      path: '/api/tasks/[id]/responses',
+      permissions: {
+        customCheck: checkTaskResponsesAccess, // Reuse form responses logic
+      },
+    },
+    assign: {
+      feature: '分配任務',
+      description: '將任務分配給特定用戶',
+      method: 'POST',
+      path: '/api/tasks/[id]/assign',
+      permissions: {
+        customCheck: checkTaskAssignAccess, // Use task-specific assign logic
+      },
+    },
+    removeAssignment: {
+      feature: '取消任務分配',
+      description: '取消用戶的任務分配',
+      method: 'DELETE',
+      path: '/api/tasks/[id]/assign',
+      permissions: {
+        customCheck: checkTaskAssignAccess, // Use task-specific assign logic
+      },
+    },
+    assignments: {
+      feature: '查看任務分配',
+      description: '查看任務的分配狀態',
+      method: 'GET',
+      path: '/api/tasks/[id]/assignments',
+      permissions: {
+        customCheck: checkTaskAssignmentsAccess,
+      },
+    },
+    my: {
+      feature: '我的任務',
+      description: '查看當前用戶被分配的任務',
+      method: 'GET',
+      path: '/api/tasks/my',
+      permissions: { 
+        roles: EVERYONE
+      },
+    },
+    submit: {
+      feature: '提交任務',
+      description: '提交任務完成狀態和相關檔案',
+      method: 'POST',
+      path: '/api/tasks/submit',
+      permissions: { 
+        roles: EVERYONE
+      },
+    },
+    notify: {
+      feature: '發送任務通知',
+      description: '向已分配用戶發送任務通知郵件',
+      method: 'POST',
+      path: '/api/tasks/[id]/notify',
+      permissions: {
+        customCheck: checkTaskAssignAccess, // 使用任務分配權限檢查
+      },
+    },
+    export: {
+      feature: '匯出任務結果',
+      description: '匯出任務的完整結果和回應數據',
+      method: 'GET',
+      path: '/api/tasks/[id]/export',
+      permissions: {
+        roles: ADMINS, // 只有管理員可以匯出任務結果
       },
     },
   },

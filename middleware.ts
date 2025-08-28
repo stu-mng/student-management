@@ -54,14 +54,6 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single();
       
-    console.log('🗄️ Database query result:', {
-      userData,
-      userError,
-      hasRole: !!userData?.role,
-      roleType: typeof userData?.role,
-      isArray: Array.isArray(userData?.role)
-    });
-
     if (userError || !userData) {
       return NextResponse.json(
         { error: 'Failed to get user role' }, 

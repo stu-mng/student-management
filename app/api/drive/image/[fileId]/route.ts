@@ -62,7 +62,10 @@ export async function GET(
       // 設置適當的響應頭
       const headers = new Headers();
       headers.set('Content-Type', file.mimeType);
-      headers.set('Content-Disposition', `inline; filename="${file.name}"`);
+      
+      // 處理中文文件名，使用 encodeURIComponent 進行 URL 編碼
+      const encodedFilename = encodeURIComponent(file.name);
+      headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodedFilename}`);
       headers.set('Cache-Control', 'public, max-age=3600'); // 1小時緩存
       
       // 返回圖片內容 - 將 Buffer 轉換為 Uint8Array
