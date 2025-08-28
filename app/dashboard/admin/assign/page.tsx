@@ -48,9 +48,6 @@ export default function AssignStudentsPage() {
         console.log(`已載入 ${teachersData.length} 位大學伴和 ${studentsData.length} 位小學伴`)
       } catch (error) {
         console.error("獲取初始數據錯誤:", error)
-        toast("錯誤", {
-          description: "獲取大學伴和學生數據失敗",
-        })
       } finally {
         setIsLoadingInitial(false)
       }
@@ -84,9 +81,6 @@ export default function AssignStudentsPage() {
         setSelectedStudents(assignedIds)
       } catch (error) {
         console.error("獲取已分配學生錯誤:", error)
-        toast("錯誤", {
-          description: "獲取教師已分配學生失敗",
-        })
       } finally {
         setIsLoadingAssigned(false)
       }

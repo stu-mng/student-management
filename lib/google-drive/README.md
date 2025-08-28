@@ -1,138 +1,137 @@
-# Google Drive Service - Modular Architecture
+# Google Drive Integration
 
-This directory contains a refactored, modular version of the Google Drive service that replaces the monolithic `google-drive.ts` file.
+This module provides integration with Google Drive API for file management, folder operations, and task-specific folder structures.
 
-## Architecture Overview
+## Features
 
-The service is now organized into logical modules, each responsible for specific functionality:
+- **File Operations**: Upload, download, delete, and manage files
+- **Folder Operations**: Create, move, and organize folders
+- **Task Folder Management**: Automated folder structure creation for tasks
+- **Authentication**: OAuth2 flow for Google Drive access
+- **Content Operations**: Preview, search, and content management
 
-### Core Modules
+## Task Folder Utils
 
-- **`types.ts`** - TypeScript interfaces and type definitions
-- **`config.ts`** - Configuration constants and error messages
-- **`auth.ts`** - Google Drive authentication and initialization
-- **`service.ts`** - Main service class that orchestrates all operations
+### `createTaskFolders(supabase, taskId, taskTitle)`
 
-### Functional Modules
+Creates the complete Google Drive folder structure for a new task:
 
-- **`file-operations.ts`** - File listing, getting, and searching
-- **`content-operations.ts`** - File content retrieval and image handling
-- **`folder-operations.ts`** - Folder path operations and creation
-- **`upload-operations.ts`** - File upload functionality
-- **`delete-operations.ts`** - File and folder deletion operations
-- **`utility-operations.ts`** - Service status checks and utilities
-
-### Utility Modules
-
-- **`utils.ts`** - Common helper functions (file size formatting, type checking)
-- **`index.ts`** - Main export file for the entire module
-
-## Benefits of the New Structure
-
-1. **Separation of Concerns** - Each module has a single responsibility
-2. **Better Maintainability** - Easier to locate and modify specific functionality
-3. **Improved Testability** - Individual modules can be tested in isolation
-4. **Type Safety** - Proper TypeScript types eliminate `any` usage
-5. **Code Reusability** - Modules can be imported individually when needed
-6. **Easier Debugging** - Clear module boundaries make issues easier to trace
-
-## Usage
-
-### Basic Usage (Same as before)
-```typescript
-import { googleDriveService } from '@/lib/google-drive';
-
-// All existing functionality remains the same
-const files = await googleDriveService.listFilesInFolder();
-const file = await googleDriveService.getFile('fileId');
+```
+任務_[TaskTitle]_[TaskId]/
+├── 提示圖片/
+└── 檔案上傳/
 ```
 
-### Advanced Usage (Import specific modules)
-```typescript
-import { FileOperations, ContentOperations, DeleteOperations } from '@/lib/google-drive';
+**Parameters:**
+- `supabase`: Supabase client instance
+- `taskId`: Unique task identifier
+- `taskTitle`: Human-readable task title
 
-// Use specific modules directly
-const fileOps = new FileOperations(driveInstance, defaultFolderId);
-const contentOps = new ContentOperations(driveInstance);
-const deleteOps = new DeleteOperations(driveInstance);
+**Returns:** `TaskFolderInfo` with folder IDs
+
+### `createRequirementFolder(supabase, taskId, requirementName, existingFolders)`
+
+Creates a specific folder for a task requirement within the upload folders structure:
+
+```
+任務_[TaskTitle]_[TaskId]/
+├── 提示圖片/
+└── 檔案上傳/
+    └── 要求_[RequirementName]_[Timestamp]/
 ```
 
-### Import Individual Utilities
-```typescript
-import { formatFileSize, isImageFile } from '@/lib/google-drive';
+**Parameters:**
+- `supabase`: Supabase client instance
+- `taskId`: Unique task identifier
+- `requirementName`: Name of the requirement
+- `existingFolders`: Current folder structure information
 
-// Use utility functions directly
-const size = formatFileSize(1024);
-const isImage = isImageFile('image/jpeg');
-```
+**Returns:** `RequirementFolderInfo` with the new folder ID
 
-### Delete Operations
+### `getTaskFolders(supabase, taskId)`
 
-The service now includes comprehensive delete functionality:
+Retrieves existing folder information for a task.
+
+**Parameters:**
+- `supabase`: Supabase client instance
+- `taskId`: Unique task identifier
+
+**Returns:** `TaskFolderInfo` with existing folder IDs
+
+## Usage Examples
+
+### Creating a New Task
 
 ```typescript
-import { googleDriveService } from '@/lib/google-drive';
+import { createTaskFolders } from '@/lib/google-drive';
 
-// Delete a file permanently
-await googleDriveService.deleteFile('fileId');
-
-// Delete a folder and all its contents permanently
-await googleDriveService.deleteFolder('folderId');
-
-// Move a file to trash (soft delete)
-await googleDriveService.moveToTrash('fileId');
-
-// Restore a file from trash
-await googleDriveService.restoreFromTrash('fileId');
+// Create task folders
+const folders = await createTaskFolders(supabase, taskId, taskTitle);
+console.log('Help image folder:', folders.helpImageFolderId);
+console.log('Upload folders:', folders.uploadFoldersFolderId);
 ```
 
-### API Endpoints
+### Adding a File Upload Requirement
 
-New delete API endpoint available at `/api/drive/delete/[fileId]`:
+```typescript
+import { createRequirementFolder, getTaskFolders } from '@/lib/google-drive';
 
-- **DELETE** `/api/drive/delete/[fileId]?action=delete&type=file` - Permanently delete a file
-- **DELETE** `/api/drive/delete/[fileId]?action=delete&type=folder` - Permanently delete a folder
-- **DELETE** `/api/drive/delete/[fileId]?action=trash` - Move to trash
-- **DELETE** `/api/drive/delete/[fileId]?action=restore` - Restore from trash
+// Get existing folders
+const existingFolders = await getTaskFolders(supabase, taskId);
 
-## Migration Notes
+// Create requirement folder
+const folderInfo = await createRequirementFolder(
+  supabase,
+  taskId,
+  'Upload Document',
+  existingFolders
+);
 
-- The original `google-drive.ts` file has been removed
-- All existing imports from `@/lib/google-drive` will continue to work
-- The `googleDriveService` instance maintains the same API
-- No breaking changes to existing code
-- New delete functionality has been added
-
-## File Structure
-
+// Use the folder ID for the form field
+const uploadFolderId = folderInfo.uploadFolderId;
 ```
-lib/google-drive/
-├── README.md              # This documentation
-├── index.ts               # Main exports
-├── service.ts             # Main service class
-├── types.ts               # Type definitions
-├── config.ts              # Configuration
-├── auth.ts                # Authentication
-├── utils.ts               # Utility functions
-├── file-operations.ts     # File operations
-├── content-operations.ts  # Content operations
-├── folder-operations.ts   # Folder operations
-├── upload-operations.ts   # Upload operations
-├── delete-operations.ts   # Delete operations
-└── utility-operations.ts  # Utility operations
+
+## Data Models
+
+### TaskFolderInfo
+
+```typescript
+interface TaskFolderInfo {
+  helpImageFolderId: string | null;
+  uploadFoldersFolderId: string | null;
+}
+```
+
+### RequirementFolderInfo
+
+```typescript
+interface RequirementFolderInfo {
+  uploadFolderId: string | null;
+}
 ```
 
 ## Error Handling
 
-All modules use centralized error messages defined in `config.ts`, making error handling consistent across the service.
+All functions include comprehensive error handling:
 
-## Type Safety
+- Google Drive API errors are logged but don't stop the process
+- Missing folders are automatically created
+- Database errors are properly propagated
+- Graceful fallbacks when folder creation fails
 
-The service now uses proper Google Drive API types from the `googleapis` package, eliminating the use of `any` types and providing better IntelliSense support.
+## Configuration
 
-## Security Considerations
+The root parent folder ID is configured in the utility functions:
 
-- Delete operations are permanent and cannot be undone
-- Folder deletion recursively removes all contents
-- Use `moveToTrash` for safer operations that can be reversed
-- Always verify file/folder IDs before performing delete operations
+```typescript
+const ROOT_PARENT_FOLDER_ID = '1_tacmfCWOGruYMm5pXM-vBkBT1CMvzKV';
+```
+
+This should be updated to match your Google Drive organization structure.
+
+## Integration Points
+
+- **Task Creation**: Automatically creates folder structure
+- **Task Editing**: Creates folders for new file upload requirements
+- **Form Fields**: Links file upload fields to specific folders
+- **Database**: Stores folder IDs in the `forms` table

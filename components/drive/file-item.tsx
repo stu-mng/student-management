@@ -1,21 +1,23 @@
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
-    Archive,
-    Download,
-    Eye,
-    File,
-    FileSpreadsheet,
-    FileText,
-    Folder,
-    Image as ImageIcon,
-    Music,
-    Presentation,
-    Video
+  Archive,
+  Download,
+  Eye,
+  File,
+  FileSpreadsheet,
+  FileText,
+  Folder,
+  Image as ImageIcon,
+  Music,
+  Presentation,
+  Video
 } from "lucide-react"
 
 import { SmartImage } from '@/components/ui/smart-image'
+import { useState } from "react"
 import { useDragDrop } from "./drag-drop-context"
+import { InlinePreview } from './inline-preview'
 import type { DriveFile } from "./types"
 import { formatDate, formatFileSize, getFileTypeLabel } from "./utils"
 
@@ -45,6 +47,7 @@ export function FileItem({
   onEnterFolder
 }: FileItemProps) {
   const { setDraggedItem, setIsDragging, hasContext } = useDragDrop();
+  const [showInlinePreview, setShowInlinePreview] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
     if (!hasContext) return;
@@ -83,6 +86,15 @@ export function FileItem({
     onContextMenu(e, file);
   };
 
+  const handleInlinePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowInlinePreview(true);
+  };
+
+  const handleCloseInlinePreview = () => {
+    setShowInlinePreview(false);
+  };
+
   const renderFileIcon = () => {
     if (file.mimeType.includes('folder')) return <Folder className="h-6 w-6 text-blue-500" />
     if (file.mimeType.includes('document')) return <FileText className="h-6 w-6 text-green-500" />
@@ -92,6 +104,11 @@ export function FileItem({
     if (file.mimeType.includes('video')) return <Video className="h-6 w-6 text-red-500" />
     if (file.mimeType.includes('audio')) return <Music className="h-4 w-4 text-pink-500" />
     if (file.mimeType.includes('zip') || file.mimeType.includes('rar')) return <Archive className="h-6 w-6 text-gray-500" />
+    if (file.mimeType.startsWith('text/') || 
+        file.mimeType === 'text/markdown' || 
+        file.mimeType === 'text/x-markdown' ||
+        file.name.toLowerCase().endsWith('.md') ||
+        file.name.toLowerCase().endsWith('.markdown')) return <FileText className="h-6 w-6 text-blue-500" />
     return <File className="h-6 w-6 text-gray-500" />
   }
 
@@ -175,6 +192,23 @@ export function FileItem({
       )
     }
 
+    if (file.mimeType.startsWith('text/') || 
+        file.mimeType === 'text/markdown' || 
+        file.mimeType === 'text/x-markdown' ||
+        file.name.toLowerCase().endsWith('.md') ||
+        file.name.toLowerCase().endsWith('.markdown')) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-cyan-50">
+          <div className="w-16 h-16 bg-cyan-100 rounded-lg flex items-center justify-center">
+            <FileText className="h-10 w-10 text-cyan-600" />
+          </div>
+          <div className="absolute bottom-2 right-2 bg-cyan-500 text-white text-xs px-2 py-1 rounded">
+            {file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.markdown') ? 'MD' : 'TXT'}
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/20">
         {renderFileIcon()}
@@ -184,10 +218,138 @@ export function FileItem({
 
   if (viewMode === 'list') {
     return (
+      <>
+        <div
+          className={cn(
+            "grid grid-cols-12 gap-4 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors duration-150 cursor-pointer group min-h-[56px]",
+            isSelected && "bg-primary/5 border-primary/20"
+          )}
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
+          draggable={hasContext}
+          onDragStart={hasContext ? handleDragStart : undefined}
+          onDragEnd={hasContext ? handleDragEnd : undefined}
+        >
+          {/* 選擇框 */}
+          <div className="col-span-1 flex items-center">
+            {isSelectionMode && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
+              />
+            )}
+          </div>
+
+          {/* 檔案圖示和名稱 */}
+          <div className="col-span-5 flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              {renderFileIcon()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                {file.name}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {getFileTypeLabel(file.mimeType)}
+              </div>
+            </div>
+          </div>
+
+          {/* 修改時間 */}
+          <div className="col-span-3 flex items-center text-sm text-muted-foreground">
+            {formatDate(file.createdTime)}
+          </div>
+
+          {/* 檔案大小 */}
+          <div className="col-span-2 flex items-center text-sm text-muted-foreground">
+            {file.mimeType.includes('folder') ? '-' : (file.size || 'N/A')}
+          </div>
+
+          {/* 操作按鈕 */}
+          <div className="col-span-1 flex items-center justify-end">
+            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              {file.mimeType.includes('folder') ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEnterFolder(file.id, file.name)
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
+                  title="開啟資料夾"
+                >
+                  <Folder className="h-4 w-4" />
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleInlinePreview}
+                    className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
+                    title="快速預覽"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onPreview(file)
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
+                    title="完整預覽"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDownload(file)
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
+                    title="下載檔案"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
+                title="更多選項"
+              >
+                <span className="text-lg leading-none">⋯</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* 内联预览 */}
+        <InlinePreview
+          file={file}
+          isOpen={showInlinePreview}
+          onClose={handleCloseInlinePreview}
+          onDownload={onDownload}
+        />
+      </>
+    )
+  }
+
+  // Grid view
+  return (
+    <>
       <div
         className={cn(
-          "grid grid-cols-12 gap-4 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors duration-150 cursor-pointer group min-h-[56px]",
-          isSelected && "bg-primary/5 border-primary/20"
+          "group relative bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-md transition-all duration-200 cursor-pointer aspect-square min-w-0",
+          isSelected && "border-primary bg-primary/5"
         )}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -196,194 +358,103 @@ export function FileItem({
         onDragEnd={hasContext ? handleDragEnd : undefined}
       >
         {/* 選擇框 */}
-        <div className="col-span-1 flex items-center">
+        <div className="absolute top-2 left-2 z-20">
           {isSelectionMode && (
             <input
               type="checkbox"
               checked={isSelected}
               onChange={handleCheckboxChange}
-              className="h-4 w-4 text-primary rounded border-border focus:ring-primary"
+              className="h-4 w-4 text-primary rounded border-border focus:ring-primary bg-background"
             />
           )}
         </div>
 
-        {/* 檔案圖示和名稱 */}
-        <div className="col-span-5 flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            {renderFileIcon()}
+        {/* 檔案內容 - Google Drive 風格佈局 */}
+        <div className="flex flex-col h-full">
+          {/* 縮圖區域 - 覆蓋上半部分 */}
+          <div className="flex-1 relative bg-muted/20 border-b border-border">
+            {renderThumbnail()}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+          
+          {/* 檔案信息區域 - 下半部分 */}
+          <div className="p-3 text-center flex-shrink-0">
+            <h3 className="text-sm font-medium text-foreground mb-2 truncate px-1">
               {file.name}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {getFileTypeLabel(file.mimeType)}
+            </h3>
+            <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
+              <span className="truncate">{getFileTypeLabel(file.mimeType)}</span>
+              <span>•</span>
+              <span className="truncate">{formatDate(file.createdTime)}</span>
+              {file.size && file.size !== 'N/A' && (
+                <>
+                  <span>•</span>
+                  <span className="truncate">{formatFileSize(file.size)}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* 修改時間 */}
-        <div className="col-span-3 flex items-center text-sm text-muted-foreground">
-          {formatDate(file.createdTime)}
-        </div>
-
-        {/* 檔案大小 */}
-        <div className="col-span-2 flex items-center text-sm text-muted-foreground">
-          {file.mimeType.includes('folder') ? '-' : (file.size || 'N/A')}
-        </div>
-
-        {/* 操作按鈕 */}
-        <div className="col-span-1 flex items-center justify-end">
-          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        {/* 懸停操作按鈕 */}
+        <div className="absolute inset-0 bg-background/95 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
+          <div className="flex flex-col space-y-2 pointer-events-auto">
             {file.mimeType.includes('folder') ? (
               <Button
                 size="sm"
-                variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation()
                   onEnterFolder(file.id, file.name)
                 }}
-                className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
-                title="開啟資料夾"
+                className="bg-card text-foreground hover:bg-accent border border-border"
               >
-                <Folder className="h-4 w-4" />
+                <Folder className="h-4 w-4 mr-1" />
+                開啟
               </Button>
             ) : (
               <>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  onClick={handleInlinePreview}
+                  className="bg-card text-foreground hover:bg-accent border border-border"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  快速預覽
+                </Button>
+                <Button
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
                     onPreview(file)
                   }}
-                  className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
-                  title="預覽檔案"
+                  className="bg-card text-foreground hover:bg-accent border border-border"
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4 mr-1" />
+                  完整預覽
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation()
                     onDownload(file)
                   }}
-                  className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
-                  title="下載檔案"
+                  className="bg-card text-foreground hover:bg-accent border border-border"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4 mr-1" />
+                  下載
                 </Button>
               </>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 hover:bg-muted/50 rounded-full"
-              title="更多選項"
-            >
-              <span className="text-lg leading-none">⋯</span>
-            </Button>
           </div>
         </div>
       </div>
-    )
-  }
-
-  // Grid view
-  return (
-    <div
-      className={cn(
-        "group relative bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-md transition-all duration-200 cursor-pointer aspect-square min-w-0",
-        isSelected && "border-primary bg-primary/5"
-      )}
-      onClick={handleClick}
-      onContextMenu={handleContextMenu}
-      draggable={hasContext}
-      onDragStart={hasContext ? handleDragStart : undefined}
-      onDragEnd={hasContext ? handleDragEnd : undefined}
-    >
-      {/* 選擇框 */}
-      <div className="absolute top-2 left-2 z-20">
-        {isSelectionMode && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={handleCheckboxChange}
-            className="h-4 w-4 text-primary rounded border-border focus:ring-primary bg-background"
-          />
-        )}
-      </div>
-
-      {/* 檔案內容 - Google Drive 風格佈局 */}
-      <div className="flex flex-col h-full">
-        {/* 縮圖區域 - 覆蓋上半部分 */}
-        <div className="flex-1 relative bg-muted/20 border-b border-border">
-          {renderThumbnail()}
-        </div>
-        
-        {/* 檔案信息區域 - 下半部分 */}
-        <div className="p-3 text-center flex-shrink-0">
-          <h3 className="text-sm font-medium text-foreground mb-2 truncate px-1">
-            {file.name}
-          </h3>
-          <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
-            <span className="truncate">{getFileTypeLabel(file.mimeType)}</span>
-            <span>•</span>
-            <span className="truncate">{formatDate(file.createdTime)}</span>
-            {file.size && file.size !== 'N/A' && (
-              <>
-                <span>•</span>
-                <span className="truncate">{formatFileSize(file.size)}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 懸停操作按鈕 */}
-      <div className="absolute inset-0 bg-background/95 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
-        <div className="flex flex-col space-y-2 pointer-events-auto">
-          {file.mimeType.includes('folder') ? (
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEnterFolder(file.id, file.name)
-              }}
-              className="bg-card text-foreground hover:bg-accent border border-border"
-            >
-              <Folder className="h-4 w-4 mr-1" />
-              開啟
-            </Button>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onPreview(file)
-                }}
-                className="bg-card text-foreground hover:bg-accent border border-border"
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                預覽
-              </Button>
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDownload(file)
-                }}
-                className="bg-card text-foreground hover:bg-accent border border-border"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                下載
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+      
+      {/* 内联预览 */}
+      <InlinePreview
+        file={file}
+        isOpen={showInlinePreview}
+        onClose={handleCloseInlinePreview}
+        onDownload={onDownload}
+      />
+    </>
   )
 }

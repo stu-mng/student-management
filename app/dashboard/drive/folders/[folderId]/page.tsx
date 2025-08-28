@@ -1,28 +1,29 @@
 "use client"
 
 import type {
-    BreadcrumbItem,
-    ContextMenuState,
-    DriveFile,
-    SortDirection,
-    SortField,
-    ViewMode
+  BreadcrumbItem,
+  ContextMenuState,
+  DriveFile,
+  SortDirection,
+  SortField,
+  ViewMode
 } from "@/components/drive";
 import {
-    ContextMenu,
-    CreateFolderDialog,
-    DeleteConfirmationDialog,
-    DragDropProvider,
-    EmptyState,
-    FileList,
-    LoadingSkeleton,
-    MoveToTrashDialog,
-    RenameDialog,
-    SearchToolbar,
-    SelectionToolbar,
-    TopNavigation
+  ContextMenu,
+  CreateFolderDialog,
+  DeleteConfirmationDialog,
+  DragDropProvider,
+  EmptyState,
+  FileList,
+  LoadingSkeleton,
+  MoveToTrashDialog,
+  RenameDialog,
+  SearchToolbar,
+  SelectionToolbar,
+  TopNavigation
 } from "@/components/drive";
 import { FilePreview } from "@/components/file-preview";
+import { apiClientSilent, type DriveApiResponse } from '@/lib/api-utils';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -124,11 +125,11 @@ export default function DriveFolderPage() {
   const loadFiles = useCallback(async (targetFolderId: string) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/drive?folderId=${targetFolderId}`)
-      const data = await response.json()
+      const response = await apiClientSilent.get<DriveApiResponse>(`/api/drive?folderId=${targetFolderId}`)
+      const data = response.data
       
       if (data.success) {
-        setFiles(data.files)
+        setFiles((data.files as any) || [])
         setCurrentFolder(targetFolderId)
       } else {
         console.error('Failed to load files:', data.error)
@@ -148,16 +149,16 @@ export default function DriveFolderPage() {
       // Set loading state immediately
       setBreadcrumbs([{ id: targetFolderId, name: '載入中...' }]);
       
-      const response = await fetch(`/api/drive/path/${targetFolderId}`)
+      const response = await apiClientSilent.get<DriveApiResponse>(`/api/drive/path/${targetFolderId}`)
       
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json()
+      const data = response.data
       
       if (data.success && data.path && Array.isArray(data.path) && data.path.length > 0) {
-        setBreadcrumbs(data.path)
+        setBreadcrumbs(data.path as any[])
       } else {
         console.error('Failed to load breadcrumbs or invalid format:', data)
         // Set a default breadcrumb for the current folder

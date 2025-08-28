@@ -1,5 +1,7 @@
 import { createClient as createServerSupabase } from '../../database/supabase/server';
 import { hasEqualOrHigherPermission, hasUserManagePermission, isManager } from '../utils';
+import { isPrivileged } from './checks';
+import { ADMINS } from './configs';
 import type { PermissionCheckArgs } from './types';
 import { getPathParam } from './utils';
 
@@ -40,7 +42,7 @@ export async function checkUserProfileAccess(args: PermissionCheckArgs): Promise
   if (targetUserId === userId) return true;
 
   // Admins can view all profiles
-  if (['root', 'admin', 'manager', 'class-teacher'].includes(userRole.name)) {
+  if (ADMINS.includes(userRole.name)) {
     return true;
   }
 
@@ -164,6 +166,117 @@ export async function checkFormResponsesOverviewAccess(args: PermissionCheckArgs
     .from('user_form_access')
     .select('access_type')
     .eq('form_id', formId)
+    .eq('role_id', roleData.id)
+    .single();
+
+  if (accessError || !accessData) return false;
+
+  return accessData.access_type === 'edit';
+}
+
+/**
+ * Complex permission check for viewing task details
+ * Checks: 1. Task creator 2. Assigned users 3. Admin permissions 4. Form access permissions
+ */
+export async function checkTaskViewAccess(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+  if (isPrivileged(userRole, ADMINS)) return true;
+
+  const taskId = getPathParam('/api/tasks/[id]', path, 'id');
+  if (!taskId) return false;
+
+  const supabase = await getSupabase();
+
+  // Check if task exists and get creator
+  const { data: task, error: taskError } = await supabase
+    .from('forms') // Tasks are stored in forms table
+    .select('id, created_by')
+    .eq('id', taskId)
+    .single();
+
+  if (taskError || !task) return false;
+
+  // Creator has access
+  if (task.created_by === userId) return true;
+
+  // Check if user is assigned to this task
+  const { data: assignment, error: assignmentError } = await supabase
+    .from('user_form_access')
+    .select('id')
+    .eq('form_id', taskId)
+    .eq('user_id', userId)
+    .single();
+
+  if (assignment && !assignmentError) return true;
+
+  // Check user_form_access for read permissions
+  const { data: userRoleData, error: userRoleError } = await supabase
+    .from('users')
+    .select('role:roles(id)')
+    .eq('id', userId)
+    .single();
+
+  if (userRoleError || !userRoleData) return false;
+
+  const roleData = Array.isArray(userRoleData.role) ? userRoleData.role[0] : userRoleData.role;
+
+  const { data: accessData, error: accessError } = await supabase
+    .from('user_form_access')
+    .select('access_type')
+    .eq('form_id', taskId)
+    .eq('role_id', roleData.id)
+    .single();
+
+  if (accessError || !accessData) return false;
+
+  return ['read', 'edit'].includes(accessData.access_type);
+}
+
+/**
+ * Complex permission check for task responses access
+ * Checks: 1. Task creator 2. Admin/root permissions 3. user_form_access table
+ * This is similar to checkFormResponsesOverviewAccess but for tasks
+ */
+export async function checkTaskResponsesAccess(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+
+  const taskId = getPathParam('/api/tasks/[id]/responses', path, 'id');
+  if (!taskId) return false;
+
+  const supabase = await getSupabase();
+
+  // Check if task exists and get creator
+  const { data: task, error: taskError } = await supabase
+    .from('forms') // Tasks are stored in forms table
+    .select('id, created_by')
+    .eq('id', taskId)
+    .single();
+
+  if (taskError || !task) return false;
+
+  // Creator has access
+  if (task.created_by === userId) return true;
+
+  // Basic role check for admin, root, class-teacher
+  if (ADMINS.includes(userRole.name)) return true;
+
+  // Check user_form_access for edit permissions
+  const { data: userRoleData, error: userRoleError } = await supabase
+    .from('users')
+    .select('role:roles(id)')
+    .eq('id', userId)
+    .single();
+
+  if (userRoleError || !userRoleData) return false;
+
+  const roleData = Array.isArray(userRoleData.role) ? userRoleData.role[0] : userRoleData.role;
+
+  const { data: accessData, error: accessError } = await supabase
+    .from('user_form_access')
+    .select('access_type')
+    .eq('form_id', taskId)
     .eq('role_id', roleData.id)
     .single();
 
@@ -349,8 +462,109 @@ export async function checkAssignedStudentsAccess(args: PermissionCheckArgs): Pr
   if (!targetUserId) return false;
 
   // Admin-level roles have full access
-  if (['root', 'admin', 'manager', 'class-teacher'].includes(userRole.name)) return true;
+  if (ADMINS.includes(userRole.name)) return true;
 
   // Self-access for teachers to see their assigned students
   return targetUserId === userId;
+}
+
+/**
+ * Complex permission check for task assignments access
+ * Checks: 1. Task creator 2. Admin/root permissions 3. user_form_access table
+ * This is similar to checkFormAccess but for tasks
+ */
+export async function checkTaskAssignmentsAccess(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+
+  const taskId = getPathParam('/api/tasks/[id]/assignments', path, 'id');
+  if (!taskId) return false;
+
+  const supabase = await getSupabase();
+
+  // Check if task exists and get creator
+  const { data: task, error: taskError } = await supabase
+    .from('forms') // Tasks are stored in forms table
+    .select('id, created_by')
+    .eq('id', taskId)
+    .single();
+
+  if (taskError || !task) return false;
+
+  // Creator has access
+  if (task.created_by === userId) return true;
+
+  // Basic role check for admin, root, class-teacher
+  if (ADMINS.includes(userRole.name)) return true;
+
+  // Check user_form_access for read/edit permissions
+  const { data: userRoleData, error: userRoleError } = await supabase
+    .from('users')
+    .select('role:roles(id)')
+    .eq('id', userId)
+    .single();
+
+  if (userRoleError || !userRoleData) return false;
+
+  const roleData = Array.isArray(userRoleData.role) ? userRoleData.role[0] : userRoleData.role;
+
+  const { data: accessData, error: accessError } = await supabase
+    .from('user_form_access')
+    .select('access_type')
+    .eq('form_id', taskId)
+    .eq('role_id', roleData.id)
+    .single();
+
+  if (accessError || !accessData) return false;
+
+  return ['read', 'edit'].includes(accessData.access_type);
+}
+
+export async function checkTaskAssignAccess(args: PermissionCheckArgs): Promise<boolean> {
+  const { userRole, userId, path } = args;
+  if (!userRole) return false;
+  
+  // Admins have full access
+  if (ADMINS.includes(userRole.name)) {
+    return true;
+  }
+  
+  // Extract task ID from /api/tasks/[id]/assign
+  const taskId = getPathParam('/api/tasks/[id]/assign', path, 'id');
+  if (!taskId) return false;
+  
+  const supabase = await createServerSupabase();
+  
+  // Check if user is the task creator
+  const { data: task, error: taskError } = await supabase
+    .from('forms')
+    .select('created_by')
+    .eq('id', taskId)
+    .eq('form_type', 'task')
+    .single();
+  
+  if (taskError || !task) return false;
+  
+  // Allow access if user is the task creator
+  if (task.created_by === userId) return true;
+  
+  // Check if user has edit access to this task through user_form_access
+  const { data: accessData, error: accessError } = await supabase
+    .from('user_form_access')
+    .select('access_type')
+    .eq('form_id', taskId)
+    .eq('user_id', userId)
+    .single();
+  
+  if (accessError && accessError.code !== 'PGRST116') {
+    console.error('Error checking task assign access:', accessError);
+    return false;
+  }
+  
+  // If found in user_form_access, check if user has edit permission
+  if (accessData) {
+    return accessData.access_type === 'edit';
+  }
+  
+  return false;
 }

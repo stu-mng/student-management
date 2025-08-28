@@ -279,7 +279,7 @@ export default function DashboardPage() {
       setStudents(students.filter((student) => student.id !== id))
     } catch (error) {
       console.error("刪除學生錯誤:", error)
-      alert('刪除學生時發生錯誤');
+      toast.error('刪除學生時發生錯誤');
     }
   }
 

@@ -2,6 +2,7 @@
 
 import type { Form, FormField, FormFieldOption, FormSection, Role, RolePermission, RolesListResponse } from "@/app/api/types";
 import { useAuth } from "@/components/auth-provider";
+import { apiClient, apiClientSilent, type ApiResponse } from "@/lib/api-utils";
 import type { FormFieldValidationRules } from "@/types";
 import type { DropResult } from "@hello-pangea/dnd";
 import { useParams, usePathname } from "next/navigation";
@@ -225,9 +226,9 @@ export function FormProvider({ children }: FormProviderProps) {
   // 載入角色列表
   const loadRoles = useCallback(async () => {
     try {
-      const response = await fetch('/api/roles')
-      if (response.ok) {
-        const result: RolesListResponse = await response.json()
+      const response = await apiClientSilent.get<ApiResponse<unknown[]>>('/api/roles')
+      if (response.status === 200) {
+        const result: RolesListResponse = response.data as any
         const rolesList = result.data.map((role: Role) => ({
           value: role.name,
           label: role.display_name || role.name
@@ -410,28 +411,18 @@ export function FormProvider({ children }: FormProviderProps) {
       setLoading(true)
       setError(null)
       
-      const headers: HeadersInit = {}
-      if (isPreviewing && previewRole?.name) {
-        headers['x-preview-role'] = previewRole.name
-      }
-      const response = await fetch(`/api/forms/${formId}`, { headers })
+      const response = await apiClientSilent.get<ApiResponse<unknown>>(`/api/forms/${formId}`)
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('表單不存在')
-        } else if (response.status === 403) {
-          throw new Error('您沒有權限查看此表單')
-        } else {
-          throw new Error('載入表單時發生錯誤')
+      if (response.status === 200) {
+        const formData = (response.data as any)?.data
+        setForm(formData)
+        
+        // 在編輯頁面時初始化編輯狀態
+        if (pathname.includes('/edit')) {
+          initializeEditState(formData)
         }
-      }
-
-      const result = await response.json()
-      setForm(result.data)
-      
-      // 在編輯頁面時初始化編輯狀態
-      if (pathname.includes('/edit')) {
-        initializeEditState(result.data)
+      } else {
+        throw new Error('載入表單時發生錯誤')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '載入表單時發生錯誤')
@@ -719,21 +710,7 @@ export function FormProvider({ children }: FormProviderProps) {
         resolveSectionId,
       })
 
-      const response = await fetch(`/api/forms/${form.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Save draft error:', errorData)
-        throw new Error(errorData.error || 'Failed to save draft')
-      }
-
-      toast.success('草稿已保存')
+      await apiClient.put<ApiResponse<unknown>>(`/api/forms/${form.id}`, formData)
       await refetchForm()
       
       // 更新初始狀態
@@ -797,21 +774,7 @@ export function FormProvider({ children }: FormProviderProps) {
         resolveSectionId,
       })
 
-      const response = await fetch(`/api/forms/${form.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Publish form error:', errorData)
-        throw new Error(errorData.error || 'Failed to publish form')
-      }
-
-      toast.success('表單已發布')
+      await apiClient.put<ApiResponse<unknown>>(`/api/forms/${form.id}`, formData)
       await refetchForm()
       
       // 更新初始狀態

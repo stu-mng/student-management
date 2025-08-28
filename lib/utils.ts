@@ -388,3 +388,10 @@ export function getRoleOrder(role?: { name: string; order?: number } | null): nu
   // 向後兼容性：使用舊的 name 映射
   return getRoleSortKey(role?.name || '');
 }
+
+// 獲取計算後的域名
+export function getComputedDomain(): string {
+  const envDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN as string | undefined) || "";
+  if (typeof window === "undefined") return envDomain;
+  return envDomain || window.location.origin;
+}

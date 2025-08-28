@@ -8,7 +8,7 @@ async function getSupabase() {
   return await createServerSupabase();
 }
 
-function isPrivileged(role: Role | null, names: Array<Role['name']>): boolean {
+export function isPrivileged(role: Role | null, names: Array<Role['name']>): boolean {
   return !!role && names.includes(role.name);
 }
 
@@ -105,7 +105,7 @@ export async function checkFormAccessPermission(args: PermissionCheckArgs): Prom
 export async function checkFormAccess(args: PermissionCheckArgs): Promise<boolean> {
   const { userRole, userId, path } = args;
   if (!userRole) return false;
-  if (isPrivileged(userRole, ['admin', 'root'])) return true;
+  if (isPrivileged(userRole, ADMINS)) return true;
 
   const formId = getPathParam('/api/forms/[id]', path, 'id');
   if (!formId) return false;
@@ -133,7 +133,7 @@ export async function checkFormAccess(args: PermissionCheckArgs): Promise<boolea
 export async function checkFormEditAccess(args: PermissionCheckArgs): Promise<boolean> {
   const { userRole, userId, path } = args;
   if (!userRole) return false;
-  if (isPrivileged(userRole, ['admin', 'root'])) return true;
+  if (isPrivileged(userRole, ADMINS)) return true;
 
   const formId = getPathParam('/api/forms/[id]', path, 'id');
   if (!formId) return false;
@@ -156,12 +156,6 @@ export async function checkFormEditAccess(args: PermissionCheckArgs): Promise<bo
     .single();
   if (accessError || !accessData) return false;
   return accessData.access_type === 'edit';
-}
-
-export async function checkFormDeleteAccess(args: PermissionCheckArgs): Promise<boolean> {
-  const { userRole } = args;
-  if (!userRole) return false;
-  return isPrivileged(userRole, ['admin', 'root', 'manager', 'class-teacher']);
 }
 
 export async function checkFormResponseAccess(args: PermissionCheckArgs): Promise<boolean> {

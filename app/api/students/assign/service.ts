@@ -1,19 +1,13 @@
 import type { BulkAssignPermissionRequest, BulkAssignPermissionResponse, Student, User } from "@/app/api/types";
+import { apiClientSilent } from '@/lib/api-utils';
 
 /**
  * Fetch all users with role 'teacher'
  */
 export async function fetchTeachers(): Promise<User[]> {
   try {
-    const response = await fetch('/api/users?role=teacher');
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch teachers');
-    }
-    
-    const data = await response.json();
-    return data.data;
+    const response = await apiClientSilent.get<{ data: User[] }>('/api/users?role=teacher');
+    return response.data.data;
   } catch (error) {
     console.error('Error fetching teachers:', error);
     throw error;
@@ -25,15 +19,8 @@ export async function fetchTeachers(): Promise<User[]> {
  */
 export async function fetchStudents(): Promise<Student[]> {
   try {
-    const response = await fetch('/api/students');
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch students');
-    }
-    
-    const data = await response.json();
-    return data.data;
+    const response = await apiClientSilent.get<{ data: Student[] }>('/api/students');
+    return response.data.data;
   } catch (error) {
     console.error('Error fetching students:', error);
     throw error;
@@ -45,15 +32,10 @@ export async function fetchStudents(): Promise<Student[]> {
  */
 export async function fetchAssignedStudents(userId: string): Promise<string[]> {
   try {
-    const response = await fetch(`/api/students/assigned/${userId}`);
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch assigned students');
-    }
+    const response = await apiClientSilent.get<string[]>(`/api/students/assigned/${userId}`);
     
     // API now returns an array of student IDs directly
-    return await response.json();
+    return response.data;
   } catch (error) {
     console.error('Error fetching assigned students:', error);
     throw error;
@@ -77,20 +59,9 @@ export async function bulkAssignStudentsToTeacher(
       student_ids: studentIds
     };
     
-    const response = await fetch('/api/students/assign', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = await apiClientSilent.post<BulkAssignPermissionResponse>('/api/students/assign', payload);
     
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to assign students to teacher');
-    }
-    
-    return await response.json();
+    return response.data;
   } catch (error) {
     console.error('Error assigning students to teacher:', error);
     throw error;

@@ -8,6 +8,7 @@ export { DroppableFolder } from './droppable-folder';
 export { EmptyState } from './empty-state';
 export { FileItem } from './file-item';
 export { FileList } from './file-list';
+export { InlinePreview } from './inline-preview';
 export { MoveToTrashDialog } from './move-to-trash-dialog';
 export { RenameDialog } from './rename-dialog';
 export { SearchToolbar } from './search-toolbar';

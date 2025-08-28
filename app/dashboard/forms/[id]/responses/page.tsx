@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, MessageSquare } from "lucide-react"
 
+import { apiClientSilent, type ApiResponse, type DriveApiResponse } from "@/lib/api-utils"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -318,9 +319,9 @@ export default function FormResponsesPage() {
     }
 
     try {
-      const response = await fetch(`/api/drive/${fileId}`)
-      if (response.ok) {
-        const data = await response.json()
+      const response = await apiClientSilent.get<DriveApiResponse>(`/api/drive/${fileId}`)
+      if (response.status === 200) {
+        const data = response.data
         if (data.success && data.file) {
           const metadata = {
             name: data.file.name,
@@ -366,21 +367,21 @@ export default function FormResponsesPage() {
       try {
         // 同時獲取表單資料和權限資料
         const [formResponse, accessResponse] = await Promise.all([
-          fetch(`/api/forms/${formId}`),
-          fetch(`/api/forms/${formId}/access`)
+          apiClientSilent.get<ApiResponse<unknown>>(`/api/forms/${formId}`),
+          apiClientSilent.get<ApiResponse<unknown>>(`/api/forms/${formId}/access`)
         ])
 
-        if (!formResponse.ok) {
+        if (formResponse.status !== 200) {
           throw new Error('Failed to fetch form')
         }
 
-        const formData = await formResponse.json()
-        setForm(formData.data)
+        const formData = formResponse.data
+        setForm(formData?.data as any)
 
         // 建立欄位資訊映射（包含 upload_folder_id）
         const fieldsMap: Record<string, { upload_folder_id?: string }> = {}
-        if (formData.data?.sections) {
-          for (const section of formData.data.sections) {
+        if ((formData?.data as any)?.sections) {
+          for (const section of (formData.data as any).sections) {
             if (section.fields) {
               for (const field of section.fields) {
                 fieldsMap[field.id] = {
@@ -392,9 +393,9 @@ export default function FormResponsesPage() {
         }
         setFormFields(fieldsMap)
 
-        if (accessResponse.ok) {
-          const accessData = await accessResponse.json()
-          setAccessData(accessData.data)
+        if (accessResponse.status === 200) {
+          const accessData = accessResponse.data
+          setAccessData(accessData?.data as any)
         } else {
           setAccessData({ hasAccess: false, accessType: null })
         }
@@ -421,13 +422,13 @@ export default function FormResponsesPage() {
     setOverviewError(null)
     
     try {
-      const response = await fetch(`/api/forms/${formId}/responses/overview`)
-      if (!response.ok) {
+      const response = await apiClientSilent.get<ApiResponse<unknown[]>>(`/api/forms/${formId}/responses/overview`)
+      if (response.status !== 200) {
         throw new Error('Failed to fetch overview')
       }
       
-      const data = await response.json()
-      setOverview(data.data || [])
+      const data = response.data
+      setOverview((data?.data as any) || [])
     } catch (err) {
       setOverviewError(err instanceof Error ? err.message : 'Failed to load overview')
     } finally {
@@ -445,18 +446,18 @@ export default function FormResponsesPage() {
     setResponsesError(null)
     
     try {
-      const response = await fetch(`/api/forms/${formId}/responses?page=${page}&limit=${pagination.limit}`)
-      if (!response.ok) {
+      const response = await apiClientSilent.get<ApiResponse<{ data: unknown[]; page: number; limit: number; total: number }>>(`/api/forms/${formId}/responses?page=${page}&limit=${pagination.limit}`)
+      if (response.status !== 200) {
         throw new Error('Failed to fetch responses')
       }
       
-      const data = await response.json()
-      setResponses(data.data || [])
+      const data = response.data
+      setResponses((data?.data as any)?.data || [])
       setPagination({
-        page: data.page,
-        limit: data.limit,
-        total: data.total,
-        totalPages: Math.ceil(data.total / data.limit)
+        page: (data?.data as any)?.page || 1,
+        limit: (data?.data as any)?.limit || 10,
+        total: (data?.data as any)?.total || 0,
+        totalPages: Math.ceil(((data?.data as any)?.total || 0) / ((data?.data as any)?.limit || 10))
       })
     } catch (err) {
       setResponsesError(err instanceof Error ? err.message : 'Failed to load responses')
